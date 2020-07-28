@@ -1,5 +1,5 @@
 /*
-    props: connection, onUpdateVideoProgress, aCasting, 
+    props: connection, onUpdateVideoProgress, aCasting, offPath
       gCasting, quality, onQualityChange, onACastingChange, onGCastingChange
       deviceInfo, onOrientationChange, maxFontMultiplier, offlinePath
 */
@@ -16,17 +16,17 @@ import {
   StyleSheet,
   PanResponder,
   TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator
 } from 'react-native';
 
 import Orientation from 'react-native-orientation-locker';
-import RNVideo, {TextTrackType} from 'react-native-video';
-import GoogleCast, {CastButton} from 'react-native-google-cast';
+import RNVideo, { TextTrackType } from 'react-native-video';
+import GoogleCast, { CastButton } from 'react-native-google-cast';
 import PrefersHomeIndicatorAutoHidden from 'react-native-home-indicator';
 import {
   AirPlay,
   AirPlayButton,
-  AirPlayListener,
+  AirPlayListener
 } from 'react-native-airplay-ios';
 
 import ActionModal from './ActionModal';
@@ -34,13 +34,10 @@ import VideoTimer_V2 from './VideoTimer_V2';
 import VideoSettings_V2 from './VideoSettings_V2';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
 
-import networkSpeedService from '../../services/networkSpeed.service';
-
-import {svgs} from '../../img/svgs';
-import {DRUMEO_BLUE, LIGHT_BORDER_COLOR, iconStyles} from '../../Styles';
+import { svgs } from '../../img/svgs';
 
 const pixR = PixelRatio.get();
-const iconStyle = {width: 40, height: 40, fill: 'white'};
+const iconStyle = { width: 40, height: 40, fill: 'white' };
 const isiOS = Platform.OS === 'ios';
 const maxWidth = 700;
 let cTime,
@@ -64,7 +61,7 @@ export default class Video extends React.Component {
     rate: '1.0',
     paused: true,
     captionsHidden: true,
-    videoRefreshing: false,
+    videoRefreshing: false
   };
 
   constructor(props) {
@@ -75,7 +72,7 @@ export default class Video extends React.Component {
     gCasting = this.props.gCasting;
     connection = !!this.props.connection;
     cTime = props.content.lastWatchedPosInSec;
-    ({isTablet, windowWidth, windowHeight, orientation} = props.deviceProps);
+    ({ isTablet, windowWidth, windowHeight, orientation } = props.deviceProps);
     windowWidth = Math.round(windowWidth);
     windowHeight = Math.round(windowHeight);
     greaterWidthHeight =
@@ -149,30 +146,31 @@ export default class Video extends React.Component {
     if (!isiOS) return;
     let {
       props: {
-        content: {captions, signal, video_playback_endpoints},
-      },
+        content: { captions, signal, video_playback_endpoints }
+      }
     } = this;
     aListener = AirPlayListener.addListener(
       'deviceConnected',
-      async ({devices}) => {
+      async ({ devices }) => {
         try {
           if (devices[0].portType === 'AirPlay') {
             this.animateControls(0);
             aCasting = true;
             this.props.onACastingChange(true);
-            let svpe = this.state.vpe.find((v) => v.selected);
+            let svpe = this.state.vpe.find(v => v.selected);
             let networkSpeed = await networkSpeedService.getNetworkSpeed(
               this.state.vpe[0].file,
-              signal,
+              this.props.offlinePath,
+              signal
             );
             if (networkSpeed.aborted) return;
-            this.setState({videoRefreshing: !!captions}, () =>
+            this.setState({ videoRefreshing: !!captions }, () =>
               this.setState({
                 videoRefreshing: false,
                 vpe: [
-                  ...video_playback_endpoints.map((v) => ({
+                  ...video_playback_endpoints.map(v => ({
                     ...v,
-                    selected: v.height === svpe.height,
+                    selected: v.height === svpe.height
                   })),
                   {
                     height: 'Auto',
@@ -181,24 +179,24 @@ export default class Video extends React.Component {
                     file: Object.create(video_playback_endpoints)
                       .sort((i, j) => (i.height < j.height ? 1 : -1))
                       .find(
-                        (v) => v.height <= networkSpeed.recommendedVideoQuality,
-                      ).file,
-                  },
-                ],
-              }),
+                        v => v.height <= networkSpeed.recommendedVideoQuality
+                      ).file
+                  }
+                ]
+              })
             );
           } else {
             aCasting = undefined;
             this.props.onACastingChange?.();
-            this.setState({videoRefreshing: !!captions}, () =>
+            this.setState({ videoRefreshing: !!captions }, () =>
               this.setState({
                 videoRefreshing: false,
-                vpe: this.filterVideosByResolution(),
-              }),
+                vpe: this.filterVideosByResolution()
+              })
             );
           }
         } catch (e) {}
-      },
+      }
     );
   }
 
@@ -214,22 +212,22 @@ export default class Video extends React.Component {
         this.props.onGCastingChange?.(false);
         this.setState({
           videoRefreshing: false,
-          vpe: this.filterVideosByResolution(),
+          vpe: this.filterVideosByResolution()
         });
-      },
+      }
     );
 
     gListenerMP = GoogleCast.EventEmitter.addListener(
       GoogleCast.MEDIA_PROGRESS_UPDATED,
-      ({mediaProgress: {progress}}) => {
+      ({ mediaProgress: { progress } }) => {
         progress = Math.round(progress);
-        let {lengthInSec} = this.props.content;
+        let { lengthInSec } = this.props.content;
         if (progress === parseInt(lengthInSec) - 1) {
           GoogleCast.pause();
           return this.onEnd();
         }
-        this.onProgress({currentTime: progress});
-      },
+        this.onProgress({ currentTime: progress });
+      }
     );
 
     gListenerSS = GoogleCast.EventEmitter.addListener(
@@ -239,13 +237,13 @@ export default class Video extends React.Component {
         gCasting = true;
         this.props.onGCastingChange?.(true);
         this.gCastMedia();
-      },
+      }
     );
   };
 
   gCastMedia = async () => {
     let {
-      state: {vpe, mp3s, captionsHidden},
+      state: { vpe, mp3s, captionsHidden },
       props: {
         type,
         content: {
@@ -253,16 +251,17 @@ export default class Video extends React.Component {
           signal,
           description,
           thumbnailUrl,
-          video_playback_endpoints,
-        },
-      },
+          video_playback_endpoints
+        }
+      }
     } = this;
-    let svpe = vpe.find((v) => v.selected);
+    let svpe = vpe.find(v => v.selected);
     try {
       if (!captionsHidden) GoogleCast.toggleSubtitles(true);
       let networkSpeed = await networkSpeedService.getNetworkSpeed(
         vpe[0].file,
-        signal,
+        this.props.offlinePath,
+        signal
       );
       if (networkSpeed.aborted) return;
       this.setState(
@@ -270,9 +269,9 @@ export default class Video extends React.Component {
           paused: false,
           videoRefreshing: true,
           vpe: [
-            ...video_playback_endpoints.map((v) => ({
+            ...video_playback_endpoints.map(v => ({
               ...v,
-              selected: v.height === svpe.height,
+              selected: v.height === svpe.height
             })),
             {
               height: 'Auto',
@@ -280,10 +279,10 @@ export default class Video extends React.Component {
               actualH: networkSpeed.recommendedVideoQuality,
               file: Object.create(video_playback_endpoints)
                 .sort((i, j) => (i.height < j.height ? 1 : -1))
-                .find((v) => v.height <= networkSpeed.recommendedVideoQuality)
-                .file,
-            },
-          ],
+                .find(v => v.height <= networkSpeed.recommendedVideoQuality)
+                .file
+            }
+          ]
         },
         async () => {
           let castOptions = {
@@ -294,12 +293,12 @@ export default class Video extends React.Component {
             imageUrl: thumbnailUrl || '',
             mediaUrl:
               (type === 'video'
-                ? this.state.vpe.find((v) => v.selected).file
-                : mp3s.find((mp3) => mp3.selected).value) || '',
+                ? this.state.vpe.find(v => v.selected).file
+                : mp3s.find(mp3 => mp3.selected).value) || ''
           };
           await GoogleCast.castMedia(castOptions);
           GoogleCast.seek(cTime);
-        },
+        }
       );
     } catch (e) {
       gCasting = false;
@@ -310,14 +309,14 @@ export default class Video extends React.Component {
 
   updateVideoProgress = async () => {
     let {
-      content: {videoId, id, lengthInSec},
+      content: { videoId, id, lengthInSec }
     } = this.props;
     this.props.onUpdateVideoProgress?.(videoId, id, lengthInSec);
   };
 
   orientationListener = (o, force) => {
     if (isTablet) Orientation.unlockAllOrientations();
-    let {paused} = this.state;
+    let { paused } = this.state;
     let isLandscape = o.indexOf('AND') > 0;
 
     if (
@@ -350,56 +349,56 @@ export default class Video extends React.Component {
       return this.setState(
         {
           tabOrientation: o,
-          fullscreen: force ? !this.state.fullscreen : this.state.fullscreen,
+          fullscreen: force ? !this.state.fullscreen : this.state.fullscreen
         },
         () => {
           this.props.onOrientationChange?.(o);
-          this.onProgress({currentTime: cTime});
+          this.onProgress({ currentTime: cTime });
           if (force) StatusBar.setHidden(this.state.fullscreen);
           if (this.props.onFullscreen)
             this.props.onFullscreen(this.state.fullscreen);
-        },
+        }
       );
-    this.setState({fullscreen: isLandscape}, () => {
+    this.setState({ fullscreen: isLandscape }, () => {
       StatusBar.setHidden(isLandscape);
-      this.onProgress({currentTime: cTime});
+      this.onProgress({ currentTime: cTime });
       if (this.props.onFullscreen)
         this.props.onFullscreen(this.state.fullscreen);
     });
   };
 
   filterVideosByResolution = () => {
-    let vpe = this.props.content.video_playback_endpoints.map((v) => ({
-      ...v,
+    let vpe = this.props.content.video_playback_endpoints.map(v => ({
+      ...v
     }));
     if (!aCasting)
-      vpe = vpe.filter((v) =>
+      vpe = vpe.filter(v =>
         windowWidth < windowHeight
           ? v.height <= -~windowWidth * pixR
-          : v.height <= -~windowHeight * pixR,
+          : v.height <= -~windowHeight * pixR
       );
     vpe = aCasting
-      ? vpe.map((v) => ({
+      ? vpe.map(v => ({
           ...v,
-          selected: v.height === this.props.quality,
+          selected: v.height === this.props.quality
         }))
       : [
-          ...vpe.map((v) => ({
+          ...vpe.map(v => ({
             ...v,
-            selected: v.height === this.props.quality,
+            selected: v.height === this.props.quality
           })),
           {
             height: 'Auto',
             file: vpe[vpe.length - 1].file,
             actualH: vpe[vpe.length - 1].height,
-            selected: this.props.quality === 'Auto',
-          },
+            selected: this.props.quality === 'Auto'
+          }
         ];
 
-    if (!vpe.find((v) => v.selected))
-      return vpe.map((v) => ({
+    if (!vpe.find(v => v.selected))
+      return vpe.map(v => ({
         ...v,
-        selected: v.height === 720,
+        selected: v.height === 720
       }));
     return vpe;
   };
@@ -407,29 +406,30 @@ export default class Video extends React.Component {
   selectQuality = async (q, skipRender) => {
     let recommendedVideoQuality;
     let {
-      state: {vpe},
+      state: { vpe },
       props: {
-        content: {signal},
-      },
+        content: { signal }
+      }
     } = this;
     if (q === 'Auto') {
       let networkSpeed = await networkSpeedService.getNetworkSpeed(
         vpe[0].file,
-        signal,
+        this.props.offlinePath,
+        signal
       );
       if (networkSpeed.aborted) return;
       recommendedVideoQuality = Object.create(vpe)
         .sort((i, j) => (i.height < j.height ? 1 : -1))
-        .find((rsv) => rsv.height <= networkSpeed.recommendedVideoQuality);
+        .find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
     }
     let newVPE = {
       videoRefreshing: gCasting,
       vpe: aCasting
-        ? vpe.map((v) => ({
+        ? vpe.map(v => ({
             ...v,
-            selected: v.height === q,
+            selected: v.height === q
           }))
-        : vpe.map((v) => ({
+        : vpe.map(v => ({
             ...v,
             selected: v.height === q,
             file:
@@ -441,21 +441,21 @@ export default class Video extends React.Component {
                 ? recommendedVideoQuality.height
                 : v.height === 'Auto'
                 ? v.actualH
-                : v.height,
-          })),
+                : v.height
+          }))
     };
-    if (!newVPE.vpe.find((v) => v.selected))
-      newVPE.vpe = newVPE.vpe.map((v) => ({
+    if (!newVPE.vpe.find(v => v.selected))
+      newVPE.vpe = newVPE.vpe.map(v => ({
         ...v,
-        selected: v.height === 720,
+        selected: v.height === 720
       }));
     if (skipRender) return newVPE.vpe;
     else return this.setState(newVPE);
   };
 
   getVideoDimensions = () => {
-    let {fullscreen} = this.state;
-    let {width, height} = this.props.content.video_playback_endpoints[0];
+    let { fullscreen } = this.state;
+    let { width, height } = this.props.content.video_playback_endpoints[0];
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
 
@@ -480,7 +480,7 @@ export default class Video extends React.Component {
       // videoW = Math.round((videoH * greaterVDim) / lowerVDim);
     }
 
-    return {width: videoW, height: videoH};
+    return { width: videoW, height: videoH };
   };
 
   pResponder = () => {
@@ -496,7 +496,7 @@ export default class Video extends React.Component {
         this.controlsTO = setTimeout(
           () =>
             this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-          3000,
+          3000
         );
       },
       onPanResponderTerminate: () => {
@@ -506,49 +506,48 @@ export default class Video extends React.Component {
         this.controlsTO = setTimeout(
           () =>
             this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-          3000,
+          3000
         );
       },
-      onPanResponderGrant: ({nativeEvent: {locationX}}, {dx, dy}) => {
+      onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(this.controlsTO);
         this.animateControls(0);
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime:
-                (locationX / videoW) * this.props.content.lengthInSec,
+              currentTime: (locationX / videoW) * this.props.content.lengthInSec
             });
           this.videoRef.seek(
-            (locationX / videoW) * this.props.content.lengthInSec,
+            (locationX / videoW) * this.props.content.lengthInSec
           );
         }
         if (gCasting)
           GoogleCast.seek(
-            (locationX / videoW) * this.props.content.lengthInSec,
+            (locationX / videoW) * this.props.content.lengthInSec
           );
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
-      onPanResponderMove: (e, {moveX}) => {
+      onPanResponderMove: (e, { moveX }) => {
         this.seeking = true;
         moveX = moveX - (windowWidth - videoW) / 2;
         this.translateBlueX.setValue(moveX - videoW);
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime: (moveX / videoW) * this.props.content.lengthInSec,
+              currentTime: (moveX / videoW) * this.props.content.lengthInSec
             });
           this.videoRef.seek((moveX / videoW) * this.props.content.lengthInSec);
         }
         if (gCasting)
           GoogleCast.seek((moveX / videoW) * this.props.content.lengthInSec);
         this.videoTimer.setProgress(
-          (moveX / videoW) * this.props.content.lengthInSec,
+          (moveX / videoW) * this.props.content.lengthInSec
         );
-      },
+      }
     }).panHandlers;
   };
 
-  onProgress = ({currentTime}) => {
+  onProgress = ({ currentTime }) => {
     cTime = currentTime;
     if (this.seeking) return;
     clearTimeout(this.bufferingTO);
@@ -556,25 +555,25 @@ export default class Video extends React.Component {
     delete this.bufferingTO;
     this.bufferingOpacity.setValue(0);
     this.translateBlueX.setValue(
-      (currentTime * videoW) / this.props.content.lengthInSec - videoW,
+      (currentTime * videoW) / this.props.content.lengthInSec - videoW
     );
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
     if (!aCasting) {
       this.bufferingTO = setTimeout(
         () =>
           this.bufferingOpacity.setValue(
-            this.state.paused || aCasting || gCasting ? 0 : 1,
+            this.state.paused || aCasting || gCasting ? 0 : 1
           ),
-        3000,
+        3000
       );
       this.bufferingTooLongTO = setTimeout(
         () => this.selectQuality('Auto'),
-        10000,
+        10000
       );
     }
   };
 
-  toggleControls = (controlsOverwrite) => {
+  toggleControls = controlsOverwrite => {
     clearTimeout(this.controlsTO);
     controlsOverwrite = isNaN(controlsOverwrite)
       ? this.translateControls._value
@@ -584,13 +583,13 @@ export default class Video extends React.Component {
     this.animateControls(controlsOverwrite);
     this.controlsTO = setTimeout(
       () => !this.state.paused && this.animateControls(-greaterWidthHeight),
-      3000,
+      3000
     );
   };
 
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
     this.updateVideoProgress();
-    this.setState(({paused}) => {
+    this.setState(({ paused }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
       if (gCasting && !skipActionOnCasting)
         if (paused) GoogleCast.pause();
@@ -599,7 +598,7 @@ export default class Video extends React.Component {
       clearTimeout(this.bufferingTO);
       clearTimeout(this.bufferingTooLongTO);
       this.bufferingOpacity.setValue(paused || aCasting || gCasting ? 0 : 1);
-      return {paused};
+      return { paused };
     });
   };
 
@@ -609,17 +608,17 @@ export default class Video extends React.Component {
       toValue,
       speed: speed || 100,
       bounciness: 12,
-      useNativeDriver: true,
+      useNativeDriver: true
     }).start();
     this.translateControls._value = toValue;
   };
 
   handleBack = () => {
-    let {fullscreen, tabOrientation} = this.state;
+    let { fullscreen, tabOrientation } = this.state;
     if (fullscreen)
       return this.orientationListener(
         isTablet ? tabOrientation : fullscreen ? 'PORT' : 'LANDLEFT',
-        true,
+        true
       );
     this.animateControls(greaterWidthHeight, 1);
     this.props.onBack();
@@ -629,7 +628,7 @@ export default class Video extends React.Component {
     if (this.videoRef) {
       if (!isiOS)
         this.onProgress({
-          currentTime: cTime || this.props.content.lastWatchedPosInSec,
+          currentTime: cTime || this.props.content.lastWatchedPosInSec
         });
       this.videoRef.seek(cTime || this.props.content.lastWatchedPosInSec);
     }
@@ -643,16 +642,16 @@ export default class Video extends React.Component {
       {
         rate,
         captionsHidden: captions === 'Off',
-        vpe: await this.selectQuality(quality, true),
+        vpe: await this.selectQuality(quality, true)
       },
       () => {
         this.props.onQualityChange?.(quality);
         if (gCasting) this.gCastMedia();
-      },
+      }
     );
   };
 
-  formatMP3Name = (mp3) => {
+  formatMP3Name = mp3 => {
     switch (mp3) {
       case 'mp3_no_drums_no_click_url':
         return 'Music Only'.toUpperCase();
@@ -665,32 +664,32 @@ export default class Video extends React.Component {
     }
   };
 
-  selectMp3 = (selectedMp3) => {
+  selectMp3 = selectedMp3 => {
     if (this.mp3ActionModal) this.mp3ActionModal.toggleModal();
     this.setState(
-      ({mp3s}) => ({
-        mp3s: mp3s.map((mp3) => ({
+      ({ mp3s }) => ({
+        mp3s: mp3s.map(mp3 => ({
           ...mp3,
-          selected: mp3.id === selectedMp3.id,
-        })),
+          selected: mp3.id === selectedMp3.id
+        }))
       }),
       () => {
         if (gCasting) this.gCastMedia();
-      },
+      }
     );
   };
 
   onEnd = () => {
     this.orientationListener(
       isTablet ? this.state.tabOrientation : 'PORT',
-      true,
+      true
     );
     this.updateVideoProgress();
-    this.setState({paused: true, fullscreen: false}, () => {
+    this.setState({ paused: true, fullscreen: false }, () => {
       cTime = 0;
       StatusBar.setHidden(false);
       if (this.videoRef) {
-        if (!isiOS) this.onProgress({currentTime: 0});
+        if (!isiOS) this.onProgress({ currentTime: 0 });
         this.videoRef.seek(0);
       }
       if (gCasting) GoogleCast.seek(0);
@@ -704,7 +703,7 @@ export default class Video extends React.Component {
     if (!this.state.paused) this.togglePaused();
   };
 
-  onSeek = (time) => {
+  onSeek = time => {
     time = parseFloat(time);
     let fullLength = parseFloat(this.props.content.lengthInSec);
     if (time < 0) time = 0;
@@ -712,12 +711,12 @@ export default class Video extends React.Component {
 
     this.updateVideoProgress();
     if (this.videoRef) this.videoRef.seek(time);
-    if (!isiOS || gCasting) this.onProgress({currentTime: time});
+    if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     if (gCasting) GoogleCast.seek(time);
   };
 
-  manageOfflinePath = (path) => {
-    let {offPath} = this.props;
+  manageOfflinePath = path => {
+    let { offPath } = this.props;
     let isOnline = path.indexOf('http') > -1,
       isDataImg = path.indexOf('data:image') > -1,
       isAndroidPath = path.indexOf('file://') > -1,
@@ -735,28 +734,28 @@ export default class Video extends React.Component {
     return path;
   };
 
-  onError = ({error: {code}}) => {
+  onError = ({ error: { code } }) => {
     if (code === -11855) {
       this.setState(
-        ({vpe}) => {
-          let selectedHeight = vpe.find((v) => v.selected).height;
+        ({ vpe }) => {
+          let selectedHeight = vpe.find(v => v.selected).height;
           return {
             vpe: vpe.filter(
-              (v) => v.height < selectedHeight || v.height === 'Auto',
-            ),
+              v => v.height < selectedHeight || v.height === 'Auto'
+            )
           };
         },
         () => {
-          let {vpe} = this.state;
+          let { vpe } = this.state;
           this.props.onQualityChange?.(vpe[vpe.length - 2].height);
-        },
+        }
       );
     } else if (code === -1009 && !connection) {
       this.onLoad();
     } else {
       this.alert.toggle(
         `We're sorry, there was an issue loading this video, try reloading the lesson.`,
-        `If the problem persists please contact support.`,
+        `If the problem persists please contact support.`
       );
     }
   };
@@ -771,7 +770,7 @@ export default class Video extends React.Component {
         fullscreen,
         tabOrientation,
         captionsHidden,
-        videoRefreshing,
+        videoRefreshing
       },
       props: {
         type,
@@ -784,36 +783,37 @@ export default class Video extends React.Component {
           thumbnailUrl,
           nextLessonUrl,
           previousLessonId,
-          previousLessonUrl,
-        },
-      },
+          previousLessonUrl
+        }
+      }
     } = this;
 
     return (
       <View
         style={[
-          {alignItems: 'center', zIndex: 1},
+          { alignItems: 'center', zIndex: 1 },
           fullscreen
             ? {
                 width: '100%',
                 height: '100%',
                 position: 'absolute',
-                justifyContent: 'center',
+                justifyContent: 'center'
               }
-            : {},
-        ]}>
+            : {}
+        ]}
+      >
         <View
-          style={[styles.videoBackgorund, {marginTop: fullscreen ? 0 : -11}]}
+          style={[styles.videoBackgorund, { marginTop: fullscreen ? 0 : -11 }]}
         />
         <View style={this.getVideoDimensions()}>
           {videoRefreshing ? (
-            <View style={{width: '100%', height: '100%'}} />
+            <View style={{ width: '100%', height: '100%' }} />
           ) : (
             <RNVideo
               paused={paused}
               controls={false}
               onEnd={this.onEnd}
-              resizeMode="cover"
+              resizeMode='cover'
               onLoad={this.onLoad}
               rate={parseFloat(rate)}
               playInBackground={true}
@@ -822,17 +822,17 @@ export default class Video extends React.Component {
               onProgress={this.onProgress}
               ignoreSilentSwitch={'ignore'}
               progressUpdateInterval={1000}
-              ref={(r) => (this.videoRef = r)}
+              ref={r => (this.videoRef = r)}
               onRemotePlayPause={this.togglePaused}
               fullscreen={isiOS ? false : fullscreen}
-              style={{width: '100%', height: '100%'}}
+              style={{ width: '100%', height: '100%' }}
               onAudioBecomingNoisy={this.onAudioBecomingNoisy}
               source={{
                 uri: this.manageOfflinePath(
                   type === 'audio'
-                    ? mp3s.find((mp3) => mp3.selected).value
-                    : vpe.find((v) => v.selected).file,
-                ),
+                    ? mp3s.find(mp3 => mp3.selected).value
+                    : vpe.find(v => v.selected).file
+                )
               }}
               onExternalPlaybackChange={() => {
                 if (isiOS) AirPlay.startScan();
@@ -842,7 +842,7 @@ export default class Video extends React.Component {
                 : {
                     selectedTextTrack: {
                       type: 'title',
-                      value: captionsHidden ? 'Disabled' : 'English',
+                      value: captionsHidden ? 'Disabled' : 'English'
                     },
                     textTracks:
                       type === 'video'
@@ -852,16 +852,16 @@ export default class Video extends React.Component {
                               uri:
                                 'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
                               title: 'Disabled',
-                              type: TextTrackType.VTT, // "text/vtt"
+                              type: TextTrackType.VTT // "text/vtt"
                             },
                             {
                               language: 'en',
                               uri: captions,
                               title: 'English',
-                              type: TextTrackType.VTT, // "text/vtt"
-                            },
+                              type: TextTrackType.VTT // "text/vtt"
+                            }
                           ]
-                        : [],
+                        : []
                   })}
             />
           )}
@@ -870,17 +870,18 @@ export default class Video extends React.Component {
             style={{
               width: '100%',
               height: '100%',
-              ...styles.controlsContainer,
-            }}>
+              ...styles.controlsContainer
+            }}
+          >
             {type === 'audio' && (
               <Image
                 style={{
                   width: '100%',
                   height: '100%',
-                  position: 'absolute',
+                  position: 'absolute'
                 }}
                 source={{
-                  uri: this.manageOfflinePath(thumbnailUrl),
+                  uri: this.manageOfflinePath(thumbnailUrl)
                 }}
               />
             )}
@@ -891,19 +892,20 @@ export default class Video extends React.Component {
                   type === 'video'
                     ? this.translateControls.interpolate({
                         outputRange: [0, 0.5],
-                        inputRange: [-videoW, 0],
+                        inputRange: [-videoW, 0]
                       })
-                    : 0.5,
+                    : 0.5
               }}
             />
             <Animated.View
               style={{
                 position: 'absolute',
                 alignSelf: 'center',
-                opacity: this.bufferingOpacity,
-              }}>
+                opacity: this.bufferingOpacity
+              }}
+            >
               <ActivityIndicator
-                color="white"
+                color='white'
                 size={'large'}
                 animating={buffering}
               />
@@ -912,42 +914,48 @@ export default class Video extends React.Component {
               style={{
                 ...styles.backContainer,
                 transform: [
-                  {translateX: type === 'video' ? this.translateControls : 0},
-                ],
+                  { translateX: type === 'video' ? this.translateControls : 0 }
+                ]
               }}
-              onPress={this.handleBack}>
-              {svgs[fullscreen ? 'x' : 'arrowLeft'](iconStyles.smallBackArrow)}
+              onPress={this.handleBack}
+            >
+              {svgs[fullscreen ? 'x' : 'arrowLeft'](styles.smallBackArrow)}
             </TouchableOpacity>
             <Animated.View
               style={{
                 flexDirection: 'row',
                 transform: [
-                  {translateX: type === 'video' ? this.translateControls : 0},
-                ],
-              }}>
+                  { translateX: type === 'video' ? this.translateControls : 0 }
+                ]
+              }}
+            >
               <TouchableOpacity
                 onPress={this.props.goToPreviousLesson}
                 style={{
                   flex: 1,
                   alignItems: 'center',
-                  opacity: previousLessonId || previousLessonUrl ? 1 : 0.5,
+                  opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
                 }}
-                disabled={!(previousLessonId || previousLessonUrl)}>
+                disabled={!(previousLessonId || previousLessonUrl)}
+              >
                 {svgs.prevLesson(iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
-                style={{flex: 1, alignItems: 'center'}}
-                onPress={() => this.onSeek((cTime -= 10))}>
+                style={{ flex: 1, alignItems: 'center' }}
+                onPress={() => this.onSeek((cTime -= 10))}
+              >
                 {svgs.back10(iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.togglePaused}
-                style={{flex: 1, alignItems: 'center'}}>
+                style={{ flex: 1, alignItems: 'center' }}
+              >
                 {svgs[paused ? 'playSvg' : 'pause'](iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
-                style={{flex: 1, alignItems: 'center'}}
-                onPress={() => this.onSeek((cTime += 10))}>
+                style={{ flex: 1, alignItems: 'center' }}
+                onPress={() => this.onSeek((cTime += 10))}
+              >
                 {svgs.forward10(iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
@@ -955,12 +963,13 @@ export default class Video extends React.Component {
                 style={{
                   flex: 1,
                   alignItems: 'center',
-                  opacity: nextLessonId || nextLessonUrl ? 1 : 0.5,
+                  opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
                 }}
-                disabled={!(nextLessonUrl || nextLessonId)}>
+                disabled={!(nextLessonUrl || nextLessonId)}
+              >
                 {svgs.prevLesson({
                   ...iconStyle,
-                  style: {transform: [{rotate: '180deg'}]},
+                  style: { transform: [{ rotate: '180deg' }] }
                 })}
               </TouchableOpacity>
             </Animated.View>
@@ -973,29 +982,31 @@ export default class Video extends React.Component {
                   : 11,
                 ...styles.bottomControlsContainer,
                 transform: [
-                  {translateX: type === 'video' ? this.translateControls : 0},
-                ],
-              }}>
+                  { translateX: type === 'video' ? this.translateControls : 0 }
+                ]
+              }}
+            >
               <VideoTimer_V2
                 formatTime={formatTime}
                 lengthInSec={lengthInSec}
-                ref={(r) => (this.videoTimer = r)}
+                ref={r => (this.videoTimer = r)}
               />
               {connection && type !== 'audio' && (
                 <TouchableOpacity
                   style={{
-                    padding: 10,
+                    padding: 10
                   }}
                   underlayColor={'transparent'}
                   onPress={() => {
                     this.videoSettings.toggle();
-                  }}>
-                  {svgs.videoQuality({width: 20, height: 20, fill: 'white'})}
+                  }}
+                >
+                  {svgs.videoQuality({ width: 20, height: 20, fill: 'white' })}
                 </TouchableOpacity>
               )}
               {type !== 'audio' && (
                 <TouchableOpacity
-                  style={{padding: 10}}
+                  style={{ padding: 10 }}
                   underlayColor={'transparent'}
                   onPress={() =>
                     this.orientationListener(
@@ -1004,22 +1015,25 @@ export default class Video extends React.Component {
                         : fullscreen
                         ? 'PORT'
                         : 'LANDLEFT',
-                      true,
+                      true
                     )
-                  }>
-                  {svgs.fullScreen({height: 20, width: 20, fill: 'white'})}
+                  }
+                >
+                  {svgs.fullScreen({ height: 20, width: 20, fill: 'white' })}
                 </TouchableOpacity>
               )}
               {type === 'audio' && (
                 <TouchableOpacity
                   style={styles.mp3TogglerContainer}
-                  onPress={() => this.mp3ActionModal.toggleModal()}>
+                  onPress={() => this.mp3ActionModal.toggleModal()}
+                >
                   <Text
                     maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                    style={styles.mp3TogglerText}>
-                    {this.formatMP3Name(mp3s.find((mp3) => mp3.selected).key)}
+                    style={styles.mp3TogglerText}
+                  >
+                    {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
                   </Text>
-                  {svgs.arrowDown({height: 20, width: 20, fill: '#ffffff'})}
+                  {svgs.arrowDown({ height: 20, width: 20, fill: '#ffffff' })}
                 </TouchableOpacity>
               )}
             </Animated.View>
@@ -1034,13 +1048,15 @@ export default class Video extends React.Component {
                 position: 'absolute',
                 transform: [
                   {
-                    translateX: type === 'video' ? this.translateControls : 0,
-                  },
-                ],
-              }}>
+                    translateX: type === 'video' ? this.translateControls : 0
+                  }
+                ]
+              }}
+            >
               <TouchableOpacity
                 activeOpacity={1}
-                onPress={() => AirPlay.startScan()}>
+                onPress={() => AirPlay.startScan()}
+              >
                 <AirPlayButton />
               </TouchableOpacity>
             </Animated.View>
@@ -1051,14 +1067,15 @@ export default class Video extends React.Component {
               right: 60,
               position: 'absolute',
               transform: [
-                {translateX: type === 'video' ? this.translateControls : 0},
-              ],
-            }}>
+                { translateX: type === 'video' ? this.translateControls : 0 }
+              ]
+            }}
+          >
             <CastButton
               style={{
                 width: 29,
                 height: 29,
-                tintColor: 'white',
+                tintColor: 'white'
               }}
             />
           </Animated.View>
@@ -1080,28 +1097,29 @@ export default class Video extends React.Component {
                   ? type === 'video'
                     ? this.translateControls
                     : 0
-                  : 0,
-              },
-            ],
-          }}>
+                  : 0
+              }
+            ]
+          }}
+        >
           <View style={styles.timerGrey}>
             <Animated.View
               style={{
                 ...styles.timerBlue,
-                transform: [{translateX: this.translateBlueX}],
+                transform: [{ translateX: this.translateBlueX }]
               }}
             />
             <Animated.View
               style={{
                 ...styles.timerDot,
-                transform: [{translateX: this.translateBlueX}],
+                transform: [{ translateX: this.translateBlueX }],
                 opacity:
                   type === 'video'
                     ? this.translateControls.interpolate({
                         outputRange: [0, 1],
-                        inputRange: [-videoW, 0],
+                        inputRange: [-videoW, 0]
                       })
-                    : 1,
+                    : 1
               }}
             />
           </View>
@@ -1111,7 +1129,7 @@ export default class Video extends React.Component {
         <VideoSettings_V2
           qualities={vpe}
           showRate={!gCasting && !aCasting}
-          ref={(r) => (this.videoSettings = r)}
+          ref={r => (this.videoSettings = r)}
           onSaveSettings={this.onSaveSettings}
           showCaptions={!!captions && !gCasting && !aCasting}
         />
@@ -1119,25 +1137,28 @@ export default class Video extends React.Component {
           <ActionModal
             modalStyle={{
               width: '80%',
-              backgroundColor: 'white',
+              backgroundColor: 'white'
             }}
-            ref={(r) => (this.mp3ActionModal = r)}>
-            {mp3s.map((mp3) => (
+            ref={r => (this.mp3ActionModal = r)}
+          >
+            {mp3s.map(mp3 => (
               <TouchableOpacity
                 key={mp3.id}
                 style={styles.mp3OptionContainer}
-                onPress={() => this.selectMp3(mp3)}>
+                onPress={() => this.selectMp3(mp3)}
+              >
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
                   style={{
                     ...styles.mp3OptionText,
-                    color: mp3.selected ? DRUMEO_BLUE : 'black',
-                  }}>
+                    color: mp3.selected ? 'pink' : 'black'
+                  }}
+                >
                   {this.formatMP3Name(mp3.key)}
                 </Text>
                 {mp3.selected && (
-                  <View style={{marginRight: 10}}>
-                    {svgs.check({height: 23, width: 23, fill: DRUMEO_BLUE})}
+                  <View style={{ marginRight: 10 }}>
+                    {svgs.check({ height: 23, width: 23, fill: 'pink' })}
                   </View>
                 )}
               </TouchableOpacity>
@@ -1146,18 +1167,19 @@ export default class Video extends React.Component {
         )}
         <AnimatedCustomAlert
           hideTryAgainBtn={true}
-          ref={(r) => (this.alert = r)}
+          ref={r => (this.alert = r)}
           additionalBtn={
             <TouchableOpacity
               style={{
                 marginTop: 10,
                 borderRadius: 50,
-                backgroundColor: DRUMEO_BLUE,
+                backgroundColor: 'pink'
               }}
               onPress={() => {
                 this.alert.toggle();
                 if (this.props.onRefresh) this.props.onRefresh();
-              }}>
+              }}
+            >
               <Text
                 maxFontSizeMultiplier={this.props.maxFontMultiplier}
                 style={{
@@ -1165,25 +1187,28 @@ export default class Video extends React.Component {
                   fontSize: 15,
                   color: '#ffffff',
                   textAlign: 'center',
-                  fontFamily: 'OpenSans-Bold',
-                }}>
+                  fontFamily: 'OpenSans-Bold'
+                }}
+              >
                 RELOAD LESSON
               </Text>
             </TouchableOpacity>
           }
           additionalTextBtn={
             <TouchableOpacity
-              style={{padding: 15}}
-              onPress={this.props.toSupport}>
+              style={{ padding: 15 }}
+              onPress={this.props.toSupport}
+            >
               <Text
                 maxFontSizeMultiplier={this.props.maxFontMultiplier}
                 style={{
                   fontSize: 12,
-                  color: DRUMEO_BLUE,
+                  color: 'pink',
                   textAlign: 'center',
                   fontFamily: 'OpenSans',
-                  textDecorationLine: 'underline',
-                }}>
+                  textDecorationLine: 'underline'
+                }}
+              >
                 CONTACT SUPPORT
               </Text>
             </TouchableOpacity>
@@ -1198,24 +1223,24 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     position: 'absolute',
-    backgroundColor: 'black',
+    backgroundColor: 'black'
   },
   backContainer: {
     top: 0,
     left: 0,
     padding: 15,
     position: 'absolute',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   controlsContainer: {
     position: 'absolute',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   timerContainer: {
     height: 29,
     marginTop: -11,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   timerGrey: {
     height: 7,
@@ -1223,19 +1248,19 @@ const styles = StyleSheet.create({
     marginTop: 11,
     alignItems: 'center',
     flexDirection: 'row',
-    backgroundColor: '#2F3334',
+    backgroundColor: '#2F3334'
   },
   timerBlue: {
     width: '100%',
     height: '100%',
-    backgroundColor: DRUMEO_BLUE,
+    backgroundColor: 'pink'
   },
   timerDot: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: DRUMEO_BLUE,
-    marginLeft: Math.sqrt(Math.pow(11, 2) - Math.pow(3.5, 2)) - 11,
+    backgroundColor: 'pink',
+    marginLeft: Math.sqrt(Math.pow(11, 2) - Math.pow(3.5, 2)) - 11
   },
   timerCover: {
     top: 0,
@@ -1243,31 +1268,31 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     position: 'absolute',
-    backgroundColor: 'transparent',
+    backgroundColor: 'transparent'
   },
   constrolsBackground: {
     width: '100%',
     height: '100%',
     position: 'absolute',
     justifyContent: 'center',
-    backgroundColor: 'black',
+    backgroundColor: 'black'
   },
   bottomControlsContainer: {
     width: '100%',
     position: 'absolute',
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   mp3TogglerContainer: {
     position: 'absolute',
     alignItems: 'center',
-    flexDirection: 'row',
+    flexDirection: 'row'
   },
   mp3TogglerText: {
     fontSize: 12,
     color: 'white',
-    fontFamily: 'OpenSans',
+    fontFamily: 'OpenSans'
   },
   mp3OptionContainer: {
     padding: 10,
@@ -1275,13 +1300,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     backgroundColor: 'white',
-    borderBottomColor: LIGHT_BORDER_COLOR,
+    borderBottomColor: 'orange'
   },
   mp3OptionText: {
     flex: 1,
     fontSize: 10,
     paddingLeft: 13,
     color: '#ffffff',
-    fontFamily: 'OpenSans',
+    fontFamily: 'OpenSans'
   },
+  smallBackArrow: {
+    fill: '#ffffff',
+    height: 18,
+    width: 18
+  }
 });

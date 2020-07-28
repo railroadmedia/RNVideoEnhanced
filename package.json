@@ -10,6 +10,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "react-native-airplay-ios": "^1.0.7",
+    "react-native-google-cast": "^3.3.0",
+    "react-native-home-indicator": "^0.2.5",
+    "react-native-orientation-locker": "^1.1.8",
     "react-native-video": "^4.4.5"
   },
   "devDependencies": {

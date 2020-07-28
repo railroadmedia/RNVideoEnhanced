@@ -34,7 +34,7 @@ import VideoTimer_V2 from './VideoTimer_V2';
 import VideoSettings_V2 from './VideoSettings_V2';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
 
-import { svgs } from '../../img/svgs';
+import { svgs } from './img/svgs';
 
 const pixR = PixelRatio.get();
 const iconStyle = { width: 40, height: 40, fill: 'white' };

@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-navigation';
 
 import ExpandableView from './ExpandableView';
 
-import { download } from '../../img/svgs';
+import { download } from './img/svgs';
 
 let isiOS;
 export default class VideoSettings extends React.PureComponent {

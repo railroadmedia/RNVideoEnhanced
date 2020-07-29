@@ -10,7 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "react-native-airplay-ios": "^1.0.7",
+    "react-native-airplay-ios": "github:gazedash/react-native-airplay-ios",
     "react-native-device-info": "^5.6.3",
     "react-native-google-cast": "^3.3.0",
     "react-native-home-indicator": "^0.2.5",

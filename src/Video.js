@@ -12,6 +12,7 @@ import {
   Animated,
   Platform,
   StatusBar,
+  Dimensions,
   PixelRatio,
   StyleSheet,
   PanResponder,
@@ -20,6 +21,7 @@ import {
 } from 'react-native';
 
 import RNFetchBlob from 'rn-fetch-blob';
+import DeviceInfo from 'react-native-device-info';
 import Orientation from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
 import GoogleCast, { CastButton } from 'react-native-google-cast';
@@ -37,19 +39,18 @@ import AnimatedCustomAlert from './AnimatedCustomAlert';
 
 import { svgs } from './img/svgs';
 
+const maxWidth = 700;
 const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
+const isTablet = DeviceInfo.isTablet();
 const iconStyle = { width: 40, height: 40, fill: 'white' };
-const maxWidth = 700;
 let cTime,
   videoW,
   videoH,
-  isTablet,
   aCasting,
   gCasting,
   aListener,
   connection,
-  orientation,
   gListenerMP,
   gListenerSE,
   gListenerSS,
@@ -74,9 +75,8 @@ export default class Video extends React.Component {
     gCasting = this.props.gCasting;
     connection = !!this.props.connection;
     cTime = props.content.lastWatchedPosInSec;
-    ({ isTablet, windowWidth, windowHeight, orientation } = props.deviceProps);
-    windowWidth = Math.round(windowWidth);
-    windowHeight = Math.round(windowHeight);
+    windowWidth = Math.round(Dimensions.get('screen').width);
+    windowHeight = Math.round(Dimensions.get('screen').height);
     greaterWidthHeight =
       windowWidth < windowHeight ? windowHeight : windowWidth;
     offlinePath =
@@ -93,8 +93,7 @@ export default class Video extends React.Component {
     this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     if (isTablet)
-      this.state.tabOrientation =
-        orientation || Orientation.getInitialOrientation();
+      this.state.tabOrientation = Orientation.getInitialOrientation();
 
     try {
       this.state.mp3s[0].selected = true;

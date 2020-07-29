@@ -37,6 +37,8 @@ import VideoTimer from './VideoTimer';
 import VideoSettings from './VideoSettings';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
 
+import networkSpeedService from './services/networkSpeed.service';
+
 import { svgs } from './img/svgs';
 
 const maxWidth = 700;

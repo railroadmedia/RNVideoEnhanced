@@ -1,7 +1,7 @@
 /*
-    props: connection, onUpdateVideoProgress, aCasting, offPath
+    props: connection, onUpdateVideoProgress, aCasting,
       gCasting, quality, onQualityChange, onACastingChange, onGCastingChange
-      deviceInfo, onOrientationChange, maxFontMultiplier, offlinePath
+      deviceProps, onOrientationChange, maxFontMultiplier, offlinePath
 */
 import React from 'react';
 import {
@@ -30,15 +30,15 @@ import {
 } from 'react-native-airplay-ios';
 
 import ActionModal from './ActionModal';
-import VideoTimer_V2 from './VideoTimer_V2';
-import VideoSettings_V2 from './VideoSettings_V2';
+import VideoTimer from './VideoTimer';
+import VideoSettings from './VideoSettings';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
 
 import { svgs } from './img/svgs';
 
 const pixR = PixelRatio.get();
-const iconStyle = { width: 40, height: 40, fill: 'white' };
 const isiOS = Platform.OS === 'ios';
+const iconStyle = { width: 40, height: 40, fill: 'white' };
 const maxWidth = 700;
 let cTime,
   videoW,
@@ -716,18 +716,18 @@ export default class Video extends React.Component {
   };
 
   manageOfflinePath = path => {
-    let { offPath } = this.props;
+    let { offlinePath } = this.props;
     let isOnline = path.indexOf('http') > -1,
       isDataImg = path.indexOf('data:image') > -1,
       isAndroidPath = path.indexOf('file://') > -1,
       isiOSPath = !isOnline && !isDataImg && !isAndroidPath;
     if (!isOnline) {
       if (isiOSPath) {
-        path = `${offPath}/${path}`;
+        path = `${offlinePath}/${path}`;
         return path;
       }
       if (isAndroidPath) {
-        path = path.replace('file://', `file://${offPath}`);
+        path = path.replace('file://', `file://${offlinePath}`);
         return path;
       }
     }
@@ -919,7 +919,11 @@ export default class Video extends React.Component {
               }}
               onPress={this.handleBack}
             >
-              {svgs[fullscreen ? 'x' : 'arrowLeft'](styles.smallBackArrow)}
+              {svgs[fullscreen ? 'x' : 'arrowLeft']({
+                fill: '#ffffff',
+                height: 18,
+                width: 18
+              })}
             </TouchableOpacity>
             <Animated.View
               style={{
@@ -986,10 +990,11 @@ export default class Video extends React.Component {
                 ]
               }}
             >
-              <VideoTimer_V2
+              <VideoTimer
                 formatTime={formatTime}
                 lengthInSec={lengthInSec}
                 ref={r => (this.videoTimer = r)}
+                maxFontMultiplier={this.props.maxFontMultiplier}
               />
               {connection && type !== 'audio' && (
                 <TouchableOpacity
@@ -1126,11 +1131,12 @@ export default class Video extends React.Component {
           <View style={styles.timerCover} />
         </Animated.View>
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
-        <VideoSettings_V2
+        <VideoSettings
           qualities={vpe}
           showRate={!gCasting && !aCasting}
           ref={r => (this.videoSettings = r)}
           onSaveSettings={this.onSaveSettings}
+          maxFontMultiplier={this.props.maxFontMultiplier}
           showCaptions={!!captions && !gCasting && !aCasting}
         />
         {type === 'audio' && (
@@ -1167,7 +1173,9 @@ export default class Video extends React.Component {
         )}
         <AnimatedCustomAlert
           hideTryAgainBtn={true}
+          windowWidth={windowWidth}
           ref={r => (this.alert = r)}
+          maxFontMultiplier={this.props.maxFontMultiplier}
           additionalBtn={
             <TouchableOpacity
               style={{
@@ -1308,10 +1316,5 @@ const styles = StyleSheet.create({
     paddingLeft: 13,
     color: '#ffffff',
     fontFamily: 'OpenSans'
-  },
-  smallBackArrow: {
-    fill: '#ffffff',
-    height: 18,
-    width: 18
   }
 });

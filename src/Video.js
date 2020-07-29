@@ -19,6 +19,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 
+import RNFetchBlob from 'rn-fetch-blob';
 import Orientation from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
 import GoogleCast, { CastButton } from 'react-native-google-cast';
@@ -53,6 +54,7 @@ let cTime,
   gListenerSE,
   gListenerSS,
   windowWidth,
+  offlinePath,
   windowHeight,
   greaterWidthHeight;
 
@@ -77,6 +79,10 @@ export default class Video extends React.Component {
     windowHeight = Math.round(windowHeight);
     greaterWidthHeight =
       windowWidth < windowHeight ? windowHeight : windowWidth;
+    offlinePath =
+      props.offlinePath || isiOS
+        ? RNFetchBlob.fs.dirs.LibraryDir
+        : RNFetchBlob.fs.dirs.DocumentDir;
     this.getVideoDimensions();
 
     this.bufferingOpacity = new Animated.Value(1);
@@ -160,7 +166,7 @@ export default class Video extends React.Component {
             let svpe = this.state.vpe.find(v => v.selected);
             let networkSpeed = await networkSpeedService.getNetworkSpeed(
               this.state.vpe[0].file,
-              this.props.offlinePath,
+              offlinePath,
               signal
             );
             if (networkSpeed.aborted) return;
@@ -260,7 +266,7 @@ export default class Video extends React.Component {
       if (!captionsHidden) GoogleCast.toggleSubtitles(true);
       let networkSpeed = await networkSpeedService.getNetworkSpeed(
         vpe[0].file,
-        this.props.offlinePath,
+        offlinePath,
         signal
       );
       if (networkSpeed.aborted) return;
@@ -414,7 +420,7 @@ export default class Video extends React.Component {
     if (q === 'Auto') {
       let networkSpeed = await networkSpeedService.getNetworkSpeed(
         vpe[0].file,
-        this.props.offlinePath,
+        offlinePath,
         signal
       );
       if (networkSpeed.aborted) return;
@@ -716,7 +722,6 @@ export default class Video extends React.Component {
   };
 
   manageOfflinePath = path => {
-    let { offlinePath } = this.props;
     let isOnline = path.indexOf('http') > -1,
       isDataImg = path.indexOf('data:image') > -1,
       isAndroidPath = path.indexOf('file://') > -1,

@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   mediumText: {
     color: '#000000',
     fontSize: 14,
-    fontFamily: 'OpenSans'
+    fontFamily: 'OpenSans-Regular'
   },
   buttonStyle: {
     borderWidth: 2,

@@ -75,7 +75,7 @@ export default class VideoSettings extends React.PureComponent {
   render() {
     let {
       state: { quality, rate, captions },
-      props: { qualities, showCaptions, showRate, theme }
+      props: { qualities, showCaptions, showRate }
     } = this;
     return (
       <Modal
@@ -85,7 +85,7 @@ export default class VideoSettings extends React.PureComponent {
         supportedOrientations={['portrait', 'landscape']}
       >
         <SafeAreaView
-          style={{ flex: 1, backgroundColor: 'purple' }}
+          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, .5)' }}
           forceInset={{
             top: 'always',
             left: 'always',
@@ -125,12 +125,13 @@ export default class VideoSettings extends React.PureComponent {
                       <Text
                         maxFontSizeMultiplier={this.props.maxFontMultiplier}
                         style={{
-                          color: q.height === quality.height ? 'blue' : 'pink',
+                          color:
+                            q.height === quality.height ? 'blue' : 'yellow',
                           fontFamily:
                             q.height === quality.height
                               ? 'OpenSans-Bold'
                               : isiOS
-                              ? 'OpenSans'
+                              ? 'OpenSans-Regular'
                               : 'OpenSans-Regular'
                         }}
                       >
@@ -169,12 +170,12 @@ export default class VideoSettings extends React.PureComponent {
                           <Text
                             maxFontSizeMultiplier={this.props.maxFontMultiplier}
                             style={{
-                              color: s === rate ? 'blue' : 'pink',
+                              color: s === rate ? 'blue' : 'yellow',
                               fontFamily:
                                 s === rate
                                   ? 'OpenSans-Bold'
                                   : isiOS
-                                  ? 'OpenSans'
+                                  ? 'OpenSans-Regular'
                                   : 'OpenSans-Regular'
                             }}
                           >
@@ -211,7 +212,7 @@ export default class VideoSettings extends React.PureComponent {
                               c === captions
                                 ? 'OpenSans-Bold'
                                 : isiOS
-                                ? 'OpenSans'
+                                ? 'OpenSans-Regular'
                                 : 'OpenSans-Regular'
                           }}
                         >

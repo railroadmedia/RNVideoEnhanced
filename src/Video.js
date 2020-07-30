@@ -330,8 +330,7 @@ export default class Video extends React.Component {
 
     if (
       !force &&
-      ((!isTablet &&
-        (paused || o.includes('FACE') || o.includes('UPSIDE'))) ||
+      ((!isTablet && (paused || o.includes('FACE') || o.includes('UPSIDE'))) ||
         (isTablet && o.includes('UNKNOWN')))
     )
       return;
@@ -801,14 +800,14 @@ export default class Video extends React.Component {
         forceInset={{
           left: 'never',
           right: 'never',
-          top: fullscreen? 'never': 'always',
-          bottom: fullscreen? 'never': 'always',
+          top: fullscreen ? 'never' : 'always',
+          bottom: fullscreen ? 'never' : 'always'
         }}
         style={[
           { alignItems: 'center', zIndex: 1, marginBottom: -11 },
           fullscreen
             ? {
-              top: 0,
+                top: 0,
                 width: '100%',
                 height: '100%',
                 position: 'absolute',

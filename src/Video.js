@@ -20,6 +20,8 @@ import {
   ActivityIndicator
 } from 'react-native';
 
+import { SafeAreaView } from 'react-navigation';
+
 import RNFetchBlob from 'rn-fetch-blob';
 import DeviceInfo from 'react-native-device-info';
 import Orientation from 'react-native-orientation-locker';
@@ -324,18 +326,18 @@ export default class Video extends React.Component {
   orientationListener = (o, force) => {
     if (isTablet) Orientation.unlockAllOrientations();
     let { paused } = this.state;
-    let isLandscape = o.indexOf('AND') > 0;
+    let isLandscape = o.includes('LAND');
 
     if (
       !force &&
       ((!isTablet &&
-        (paused || o.indexOf('KNO') > 0 || o.indexOf('DOWN') > 0)) ||
-        (isTablet && o.indexOf('KNO') > 0))
+        (paused || o.includes('FACE') || o.includes('UPSIDE'))) ||
+        (isTablet && o.includes('UNKNOWN')))
     )
       return;
-    if (o.indexOf('LEFT') > 0) {
+    if (o.includes('LEFT')) {
       Orientation.lockToLandscapeLeft();
-    } else if (o.indexOf('RIGHT') > 0) {
+    } else if (o.includes('RIGHT')) {
       Orientation.lockToLandscapeRight();
     } else {
       if (!isTablet) Orientation.lockToPortrait();
@@ -795,11 +797,18 @@ export default class Video extends React.Component {
     } = this;
 
     return (
-      <View
+      <SafeAreaView
+        forceInset={{
+          left: 'never',
+          right: 'never',
+          top: fullscreen? 'never': 'always',
+          bottom: fullscreen? 'never': 'always',
+        }}
         style={[
-          { alignItems: 'center', zIndex: 1 },
+          { alignItems: 'center', zIndex: 1, marginBottom: -11 },
           fullscreen
             ? {
+              top: 0,
                 width: '100%',
                 height: '100%',
                 position: 'absolute',
@@ -1228,7 +1237,7 @@ export default class Video extends React.Component {
             </TouchableOpacity>
           }
         />
-      </View>
+      </SafeAreaView>
     );
   }
 }

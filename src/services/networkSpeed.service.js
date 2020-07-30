@@ -7,7 +7,7 @@ export default {
     return new Promise((res, rej) => {
       let start, end;
       try {
-        signal.addEventListener('abort', () => {
+        signal?.addEventListener('abort', () => {
           task.cancel(err => {});
           res({ aborted: true });
         });

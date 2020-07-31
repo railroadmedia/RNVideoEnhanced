@@ -102,7 +102,7 @@ export default class VideoSettings extends React.PureComponent {
               style={[
                 styles.scrollContainer,
                 {
-                  backgroundColor: propStyle?.background
+                  backgroundColor: propStyle?.background || 'white'
                 }
               ]}
             >
@@ -160,7 +160,7 @@ export default class VideoSettings extends React.PureComponent {
                 <View
                   style={{
                     height: 0.5,
-                    backgroundColor: propStyle?.separatorColor
+                    backgroundColor: propStyle?.separatorColor || 'black'
                   }}
                 />
                 {showRate && (
@@ -207,7 +207,7 @@ export default class VideoSettings extends React.PureComponent {
                 <View
                   style={{
                     height: 0.5,
-                    backgroundColor: propStyle?.separatorColor
+                    backgroundColor: propStyle?.separatorColor || 'black'
                   }}
                 />
                 {showCaptions && (
@@ -253,7 +253,7 @@ export default class VideoSettings extends React.PureComponent {
                   <View
                     style={{
                       height: 0.5,
-                      backgroundColor: propStyle?.separatorColor
+                      backgroundColor: propStyle?.separatorColor || 'black'
                     }}
                   />
                 )}
@@ -262,12 +262,19 @@ export default class VideoSettings extends React.PureComponent {
                 onPress={this.onSave}
                 style={[
                   styles.action,
-                  { margin: 20, backgroundColor: propStyle?.save?.background }
+                  {
+                    margin: 20,
+                    marginBottom: 0,
+                    backgroundColor: propStyle?.save?.background || 'black'
+                  }
                 ]}
               >
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                  style={[styles.actionText, { color: propStyle?.save?.color }]}
+                  style={[
+                    styles.actionText,
+                    { color: propStyle?.save?.color || 'white' }
+                  ]}
                 >
                   SAVE
                 </Text>

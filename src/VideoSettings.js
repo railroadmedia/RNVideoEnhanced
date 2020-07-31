@@ -75,7 +75,7 @@ export default class VideoSettings extends React.PureComponent {
   render() {
     let {
       state: { quality, rate, captions },
-      props: { qualities, showCaptions, showRate }
+      props: { qualities, showCaptions, showRate, styles: propStyle }
     } = this;
     return (
       <Modal
@@ -85,7 +85,7 @@ export default class VideoSettings extends React.PureComponent {
         supportedOrientations={['portrait', 'landscape']}
       >
         <SafeAreaView
-          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, .5)' }}
+          style={{ flex: 1 }}
           forceInset={{
             top: 'always',
             left: 'always',
@@ -102,14 +102,17 @@ export default class VideoSettings extends React.PureComponent {
               style={[
                 styles.scrollContainer,
                 {
-                  backgroundColor: 'pink'
+                  backgroundColor: propStyle?.background
                 }
               ]}
             >
               <ScrollView>
                 <ExpandableView
                   iconColor={'blue'}
-                  titleStyle={styles.expandableTitle}
+                  titleStyle={{
+                    ...styles.expandableTitle,
+                    color: propStyle?.selectedOptionTextColor
+                  }}
                   title={
                     quality.height === 'Auto'
                       ? `Auto ${quality.actualH}p`
@@ -119,14 +122,19 @@ export default class VideoSettings extends React.PureComponent {
                   {qualities.map(q => (
                     <TouchableOpacity
                       key={q.height}
-                      style={[styles.option, { borderColor: 'pink' }]}
+                      style={[
+                        styles.option,
+                        { borderColor: propStyle?.optionsBorderColor }
+                      ]}
                       onPress={() => this.onQualityChange(q)}
                     >
                       <Text
                         maxFontSizeMultiplier={this.props.maxFontMultiplier}
                         style={{
                           color:
-                            q.height === quality.height ? 'blue' : 'yellow',
+                            q.height === quality.height
+                              ? propStyle?.selectedOptionTextColor
+                              : propStyle?.unselectedOptionTextColor,
                           fontFamily:
                             q.height === quality.height
                               ? 'OpenSans-Bold'
@@ -150,27 +158,36 @@ export default class VideoSettings extends React.PureComponent {
                 </ExpandableView>
                 <View
                   style={{
-                    backgroundColor: 'pink',
-                    height: 0.5
+                    height: 0.5,
+                    backgroundColor: propStyle?.separatorColor
                   }}
                 />
                 {showRate && (
                   <ExpandableView
                     title={`${rate}X`}
                     iconColor={'blue'}
-                    titleStyle={styles.expandableTitle}
+                    titleStyle={{
+                      ...styles.expandableTitle,
+                      color: propStyle?.selectedOptionTextColor
+                    }}
                   >
                     {['0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'].map(
                       s => (
                         <TouchableOpacity
                           key={s}
-                          style={[styles.option, { borderColor: 'pink' }]}
+                          style={[
+                            styles.option,
+                            { borderColor: propStyle?.optionsBorderColor }
+                          ]}
                           onPress={() => this.onRateChange(s)}
                         >
                           <Text
                             maxFontSizeMultiplier={this.props.maxFontMultiplier}
                             style={{
-                              color: s === rate ? 'blue' : 'yellow',
+                              color:
+                                s === rate
+                                  ? propStyle?.selectedOptionTextColor
+                                  : propStyle?.unselectedOptionTextColor,
                               fontFamily:
                                 s === rate
                                   ? 'OpenSans-Bold'
@@ -188,26 +205,35 @@ export default class VideoSettings extends React.PureComponent {
                 )}
                 <View
                   style={{
-                    backgroundColor: 'pink',
-                    height: 0.5
+                    height: 0.5,
+                    backgroundColor: propStyle?.separatorColor
                   }}
                 />
                 {showCaptions && (
                   <ExpandableView
                     title={`Captions ${captions}`}
                     iconColor={'blue'}
-                    titleStyle={styles.expandableTitle}
+                    titleStyle={{
+                      ...styles.expandableTitle,
+                      color: propStyle?.selectedOptionTextColor
+                    }}
                   >
                     {['On', 'Off'].map(c => (
                       <TouchableOpacity
                         key={c}
-                        style={[styles.option, { borderColor: 'pink' }]}
+                        style={[
+                          styles.option,
+                          { borderColor: propStyle?.optionsBorderColor }
+                        ]}
                         onPress={() => this.onCaptionsChange(c)}
                       >
                         <Text
                           maxFontSizeMultiplier={this.props.maxFontMultiplier}
                           style={{
-                            color: c === captions ? 'blue' : 'pink',
+                            color:
+                              c === captions
+                                ? propStyle?.selectedOptionTextColor
+                                : propStyle?.unselectedOptionTextColor,
                             fontFamily:
                               c === captions
                                 ? 'OpenSans-Bold'
@@ -225,27 +251,39 @@ export default class VideoSettings extends React.PureComponent {
                 {showCaptions && (
                   <View
                     style={{
-                      backgroundColor: 'pink',
-                      height: 0.5
+                      height: 0.5,
+                      backgroundColor: propStyle?.separatorColor
                     }}
                   />
                 )}
               </ScrollView>
               <TouchableOpacity
                 onPress={this.onSave}
-                style={[styles.action, { margin: 20, backgroundColor: 'blue' }]}
+                style={[
+                  styles.action,
+                  { margin: 20, backgroundColor: propStyle?.save?.background }
+                ]}
               >
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                  style={styles.actionText}
+                  style={[styles.actionText, { color: propStyle?.save?.color }]}
                 >
                   SAVE
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.action} onPress={this.onCancel}>
+              <TouchableOpacity
+                style={{
+                  ...styles.action,
+                  backgroundColor: propStyle?.cancel?.background
+                }}
+                onPress={this.onCancel}
+              >
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                  style={[styles.actionText, { color: 'blue' }]}
+                  style={[
+                    styles.actionText,
+                    { color: propStyle?.cancel?.color }
+                  ]}
                 >
                   CANCEL
                 </Text>
@@ -270,7 +308,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   expandableTitle: {
-    color: 'blue',
     paddingHorizontal: 20,
     fontFamily: 'OpenSans-Bold'
   },
@@ -287,7 +324,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 30
   },
   actionText: {
-    color: 'white',
     textAlign: 'center',
     fontFamily: 'OpenSans-Bold'
   }

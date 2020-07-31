@@ -781,6 +781,19 @@ export default class Video extends React.Component {
       },
       props: {
         type,
+        styles: {
+          settings,
+          timerText,
+          mp3ListPopup,
+          reloadLesson,
+          contactSupport,
+          smallPlayerControls,
+          largePlayerControls,
+          mp3TogglerTextColor,
+          timerCursorBackground,
+          afterTimerCursorBackground,
+          beforeTimerCursorBackground
+        },
         content: {
           captions,
           buffering,
@@ -933,11 +946,13 @@ export default class Video extends React.Component {
               }}
               onPress={this.handleBack}
             >
-              {svgs[fullscreen ? 'x' : 'arrowLeft']({
-                fill: '#ffffff',
-                height: 18,
-                width: 18
-              })}
+              {svgs[fullscreen ? 'x' : 'arrowLeft'](
+                smallPlayerControls || {
+                  fill: '#ffffff',
+                  height: 18,
+                  width: 18
+                }
+              )}
             </TouchableOpacity>
             <Animated.View
               style={{
@@ -956,25 +971,27 @@ export default class Video extends React.Component {
                 }}
                 disabled={!(previousLessonId || previousLessonUrl)}
               >
-                {svgs.prevLesson(iconStyle)}
+                {svgs.prevLesson(largePlayerControls || iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, alignItems: 'center' }}
                 onPress={() => this.onSeek((cTime -= 10))}
               >
-                {svgs.back10(iconStyle)}
+                {svgs.back10(largePlayerControls || iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.togglePaused}
                 style={{ flex: 1, alignItems: 'center' }}
               >
-                {svgs[paused ? 'playSvg' : 'pause'](iconStyle)}
+                {svgs[paused ? 'playSvg' : 'pause'](
+                  largePlayerControls || iconStyle
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, alignItems: 'center' }}
                 onPress={() => this.onSeek((cTime += 10))}
               >
-                {svgs.forward10(iconStyle)}
+                {svgs.forward10(largePlayerControls || iconStyle)}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.props.goToNextLesson}
@@ -986,7 +1003,7 @@ export default class Video extends React.Component {
                 disabled={!(nextLessonUrl || nextLessonId)}
               >
                 {svgs.prevLesson({
-                  ...iconStyle,
+                  ...(largePlayerControls || iconStyle),
                   style: { transform: [{ rotate: '180deg' }] }
                 })}
               </TouchableOpacity>
@@ -1005,6 +1022,7 @@ export default class Video extends React.Component {
               }}
             >
               <VideoTimer
+                styles={timerText}
                 formatTime={formatTime}
                 lengthInSec={lengthInSec}
                 ref={r => (this.videoTimer = r)}
@@ -1020,7 +1038,13 @@ export default class Video extends React.Component {
                     this.videoSettings.toggle();
                   }}
                 >
-                  {svgs.videoQuality({ width: 20, height: 20, fill: 'white' })}
+                  {svgs.videoQuality(
+                    smallPlayerControls || {
+                      width: 20,
+                      height: 20,
+                      fill: 'white'
+                    }
+                  )}
                 </TouchableOpacity>
               )}
               {type !== 'audio' && (
@@ -1038,7 +1062,13 @@ export default class Video extends React.Component {
                     )
                   }
                 >
-                  {svgs.fullScreen({ height: 20, width: 20, fill: 'white' })}
+                  {svgs.fullScreen(
+                    smallPlayerControls || {
+                      width: 20,
+                      height: 20,
+                      fill: 'white'
+                    }
+                  )}
                 </TouchableOpacity>
               )}
               {type === 'audio' && (
@@ -1048,11 +1078,20 @@ export default class Video extends React.Component {
                 >
                   <Text
                     maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                    style={styles.mp3TogglerText}
+                    style={{
+                      ...styles.mp3TogglerText,
+                      color: mp3TogglerTextColor || 'white'
+                    }}
                   >
                     {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
                   </Text>
-                  {svgs.arrowDown({ height: 20, width: 20, fill: '#ffffff' })}
+                  {svgs.arrowDown(
+                    smallPlayerControls || {
+                      height: 20,
+                      width: 20,
+                      fill: '#ffffff'
+                    }
+                  )}
                 </TouchableOpacity>
               )}
             </Animated.View>
@@ -1091,11 +1130,13 @@ export default class Video extends React.Component {
             }}
           >
             <CastButton
-              style={{
-                width: 29,
-                height: 29,
-                tintColor: 'white'
-              }}
+              style={
+                smallPlayerControls || {
+                  width: 29,
+                  height: 29,
+                  tintColor: 'white'
+                }
+              }
             />
           </Animated.View>
         </View>
@@ -1121,16 +1162,23 @@ export default class Video extends React.Component {
             ]
           }}
         >
-          <View style={styles.timerGrey}>
+          <View
+            style={{
+              ...styles.timerGrey,
+              backgroundColor: afterTimerCursorBackground || '#2F3334'
+            }}
+          >
             <Animated.View
               style={{
                 ...styles.timerBlue,
-                transform: [{ translateX: this.translateBlueX }]
+                transform: [{ translateX: this.translateBlueX }],
+                backgroundColor: beforeTimerCursorBackground || 'red'
               }}
             />
             <Animated.View
               style={{
                 ...styles.timerDot,
+                backgroundColor: timerCursorBackground || 'red',
                 transform: [{ translateX: this.translateBlueX }],
                 opacity:
                   type === 'video'
@@ -1146,6 +1194,7 @@ export default class Video extends React.Component {
         </Animated.View>
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         <VideoSettings
+          styles={settings}
           qualities={vpe}
           showRate={!gCasting && !aCasting}
           ref={r => (this.videoSettings = r)}
@@ -1155,30 +1204,40 @@ export default class Video extends React.Component {
         />
         {type === 'audio' && (
           <ActionModal
-            modalStyle={{
-              width: '80%',
-              backgroundColor: 'white'
-            }}
+            modalStyle={{ width: '80%' }}
             ref={r => (this.mp3ActionModal = r)}
           >
             {mp3s.map(mp3 => (
               <TouchableOpacity
                 key={mp3.id}
-                style={styles.mp3OptionContainer}
                 onPress={() => this.selectMp3(mp3)}
+                style={{
+                  ...styles.mp3OptionContainer,
+                  backgroundColor: mp3ListPopup?.background || '#F7F9FC',
+                  borderBottomColor:
+                    mp3ListPopup?.borderBottomColor || '#E1E6EB'
+                }}
               >
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
                   style={{
                     ...styles.mp3OptionText,
-                    color: mp3.selected ? 'pink' : 'black'
+                    color: mp3.selected
+                      ? mp3ListPopup?.selectedTextColor || 'blue'
+                      : mp3ListPopup?.unselectedTextColor || 'black'
                   }}
                 >
                   {this.formatMP3Name(mp3.key)}
                 </Text>
                 {mp3.selected && (
                   <View style={{ marginRight: 10 }}>
-                    {svgs.check({ height: 23, width: 23, fill: 'pink' })}
+                    {svgs.check(
+                      mp3ListPopup?.checkIcon || {
+                        height: 23,
+                        width: 23,
+                        fill: 'pink'
+                      }
+                    )}
                   </View>
                 )}
               </TouchableOpacity>
@@ -1195,7 +1254,7 @@ export default class Video extends React.Component {
               style={{
                 marginTop: 10,
                 borderRadius: 50,
-                backgroundColor: 'pink'
+                backgroundColor: reloadLesson.background || 'black'
               }}
               onPress={() => {
                 this.alert.toggle();
@@ -1207,9 +1266,9 @@ export default class Video extends React.Component {
                 style={{
                   padding: 15,
                   fontSize: 15,
-                  color: '#ffffff',
                   textAlign: 'center',
-                  fontFamily: 'OpenSans-Bold'
+                  fontFamily: 'OpenSans-Bold',
+                  color: reloadLesson.color || 'white'
                 }}
               >
                 RELOAD LESSON
@@ -1225,10 +1284,10 @@ export default class Video extends React.Component {
                 maxFontSizeMultiplier={this.props.maxFontMultiplier}
                 style={{
                   fontSize: 12,
-                  color: 'pink',
                   textAlign: 'center',
                   fontFamily: 'OpenSans-Regular',
-                  textDecorationLine: 'underline'
+                  textDecorationLine: 'underline',
+                  color: contactSupport.color || 'black'
                 }}
               >
                 CONTACT SUPPORT
@@ -1269,19 +1328,16 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 11,
     alignItems: 'center',
-    flexDirection: 'row',
-    backgroundColor: '#2F3334'
+    flexDirection: 'row'
   },
   timerBlue: {
     width: '100%',
-    height: '100%',
-    backgroundColor: 'pink'
+    height: '100%'
   },
   timerDot: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: 'pink',
     marginLeft: Math.sqrt(Math.pow(11, 2) - Math.pow(3.5, 2)) - 11
   },
   timerCover: {
@@ -1313,22 +1369,18 @@ const styles = StyleSheet.create({
   },
   mp3TogglerText: {
     fontSize: 12,
-    color: 'white',
     fontFamily: 'OpenSans-Regular'
   },
   mp3OptionContainer: {
     padding: 10,
     alignItems: 'center',
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    backgroundColor: 'white',
-    borderBottomColor: 'orange'
+    borderBottomWidth: 1
   },
   mp3OptionText: {
     flex: 1,
     fontSize: 10,
     paddingLeft: 13,
-    color: '#ffffff',
     fontFamily: 'OpenSans-Regular'
   }
 });

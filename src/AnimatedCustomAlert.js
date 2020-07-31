@@ -56,7 +56,7 @@ export default class Alerts extends React.PureComponent {
               {
                 opacity: this.state.opacity,
                 maxWidth: this.props.windowWidth - 50,
-                backgroundColor: propStyle.background || 'white'
+                backgroundColor: propStyle?.background || 'white'
               }
             ]}
           >
@@ -66,7 +66,7 @@ export default class Alerts extends React.PureComponent {
               style={[
                 styles.mediumTitle,
                 styles.text,
-                { color: propStyle.titleTextColor || 'black' }
+                { color: propStyle?.titleTextColor || 'black' }
               ]}
             >
               {this.title}
@@ -77,7 +77,7 @@ export default class Alerts extends React.PureComponent {
               style={[
                 styles.mediumText,
                 styles.text,
-                { color: propStyle.subtitleTextColor || 'black' }
+                { color: propStyle?.subtitleTextColor || 'black' }
               ]}
             >
               {this.message}

@@ -105,10 +105,6 @@ export default class Video extends React.Component {
   }
 
   componentDidMount() {
-    this.alert.toggle(
-      `We're sorry, there was an issue loading this video, try reloading the lesson.`,
-      `If the problem persists please contact support.`
-    );
     this.appleCastingListeners();
     this.googleCastingListeners();
     this.selectQuality(this.props.quality || 'Auto');

@@ -1,8 +1,6 @@
 import Video from './src/Video';
-import Test from './src/Test';
 
 export default Video;
-export const Test = { Test };
 export const videoMock = {
   comments: [
     {

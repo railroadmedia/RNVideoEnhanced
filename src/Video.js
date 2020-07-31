@@ -105,6 +105,10 @@ export default class Video extends React.Component {
   }
 
   componentDidMount() {
+    this.alert.toggle(
+      `We're sorry, there was an issue loading this video, try reloading the lesson.`,
+      `If the problem persists please contact support.`
+    );
     this.appleCastingListeners();
     this.googleCastingListeners();
     this.selectQuality(this.props.quality || 'Auto');
@@ -782,11 +786,10 @@ export default class Video extends React.Component {
       props: {
         type,
         styles: {
+          alert,
           settings,
           timerText,
           mp3ListPopup,
-          reloadLesson,
-          contactSupport,
           smallPlayerControls,
           largePlayerControls,
           mp3TogglerTextColor,
@@ -946,13 +949,12 @@ export default class Video extends React.Component {
               }}
               onPress={this.handleBack}
             >
-              {svgs[fullscreen ? 'x' : 'arrowLeft'](
-                smallPlayerControls || {
-                  fill: '#ffffff',
-                  height: 18,
-                  width: 18
-                }
-              )}
+              {svgs[fullscreen ? 'x' : 'arrowLeft']({
+                width: 18,
+                height: 18,
+                fill: '#ffffff',
+                ...smallPlayerControls
+              })}
             </TouchableOpacity>
             <Animated.View
               style={{
@@ -971,27 +973,28 @@ export default class Video extends React.Component {
                 }}
                 disabled={!(previousLessonId || previousLessonUrl)}
               >
-                {svgs.prevLesson(largePlayerControls || iconStyle)}
+                {svgs.prevLesson({ ...iconStyle, ...largePlayerControls })}
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, alignItems: 'center' }}
                 onPress={() => this.onSeek((cTime -= 10))}
               >
-                {svgs.back10(largePlayerControls || iconStyle)}
+                {svgs.back10({ ...iconStyle, ...largePlayerControls })}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.togglePaused}
                 style={{ flex: 1, alignItems: 'center' }}
               >
-                {svgs[paused ? 'playSvg' : 'pause'](
-                  largePlayerControls || iconStyle
-                )}
+                {svgs[paused ? 'playSvg' : 'pause']({
+                  ...iconStyle,
+                  ...largePlayerControls
+                })}
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, alignItems: 'center' }}
                 onPress={() => this.onSeek((cTime += 10))}
               >
-                {svgs.forward10(largePlayerControls || iconStyle)}
+                {svgs.forward10({ ...iconStyle, ...largePlayerControls })}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.props.goToNextLesson}
@@ -1003,7 +1006,7 @@ export default class Video extends React.Component {
                 disabled={!(nextLessonUrl || nextLessonId)}
               >
                 {svgs.prevLesson({
-                  ...(largePlayerControls || iconStyle),
+                  ...{ ...iconStyle, ...largePlayerControls },
                   style: { transform: [{ rotate: '180deg' }] }
                 })}
               </TouchableOpacity>
@@ -1038,13 +1041,12 @@ export default class Video extends React.Component {
                     this.videoSettings.toggle();
                   }}
                 >
-                  {svgs.videoQuality(
-                    smallPlayerControls || {
-                      width: 20,
-                      height: 20,
-                      fill: 'white'
-                    }
-                  )}
+                  {svgs.videoQuality({
+                    width: 20,
+                    height: 20,
+                    fill: 'white',
+                    ...smallPlayerControls
+                  })}
                 </TouchableOpacity>
               )}
               {type !== 'audio' && (
@@ -1062,13 +1064,12 @@ export default class Video extends React.Component {
                     )
                   }
                 >
-                  {svgs.fullScreen(
-                    smallPlayerControls || {
-                      width: 20,
-                      height: 20,
-                      fill: 'white'
-                    }
-                  )}
+                  {svgs.fullScreen({
+                    width: 20,
+                    height: 20,
+                    fill: 'white',
+                    ...smallPlayerControls
+                  })}
                 </TouchableOpacity>
               )}
               {type === 'audio' && (
@@ -1085,13 +1086,12 @@ export default class Video extends React.Component {
                   >
                     {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
                   </Text>
-                  {svgs.arrowDown(
-                    smallPlayerControls || {
-                      height: 20,
-                      width: 20,
-                      fill: '#ffffff'
-                    }
-                  )}
+                  {svgs.arrowDown({
+                    height: 20,
+                    width: 20,
+                    fill: '#ffffff',
+                    ...smallPlayerControls
+                  })}
                 </TouchableOpacity>
               )}
             </Animated.View>
@@ -1130,13 +1130,12 @@ export default class Video extends React.Component {
             }}
           >
             <CastButton
-              style={
-                smallPlayerControls || {
-                  width: 29,
-                  height: 29,
-                  tintColor: 'white'
-                }
-              }
+              style={{
+                width: 29,
+                height: 29,
+                tintColor: 'white',
+                ...smallPlayerControls
+              }}
             />
           </Animated.View>
         </View>
@@ -1231,13 +1230,12 @@ export default class Video extends React.Component {
                 </Text>
                 {mp3.selected && (
                   <View style={{ marginRight: 10 }}>
-                    {svgs.check(
-                      mp3ListPopup?.checkIcon || {
-                        height: 23,
-                        width: 23,
-                        fill: 'pink'
-                      }
-                    )}
+                    {svgs.check({
+                      width: 23,
+                      height: 23,
+                      fill: 'black',
+                      ...mp3ListPopup?.checkIcon
+                    })}
                   </View>
                 )}
               </TouchableOpacity>
@@ -1245,7 +1243,7 @@ export default class Video extends React.Component {
           </ActionModal>
         )}
         <AnimatedCustomAlert
-          hideTryAgainBtn={true}
+          styles={alert}
           windowWidth={windowWidth}
           ref={r => (this.alert = r)}
           maxFontMultiplier={this.props.maxFontMultiplier}
@@ -1254,7 +1252,7 @@ export default class Video extends React.Component {
               style={{
                 marginTop: 10,
                 borderRadius: 50,
-                backgroundColor: reloadLesson.background || 'black'
+                backgroundColor: alert?.reloadLesson?.background || 'black'
               }}
               onPress={() => {
                 this.alert.toggle();
@@ -1268,7 +1266,7 @@ export default class Video extends React.Component {
                   fontSize: 15,
                   textAlign: 'center',
                   fontFamily: 'OpenSans-Bold',
-                  color: reloadLesson.color || 'white'
+                  color: alert?.reloadLesson?.color || 'white'
                 }}
               >
                 RELOAD LESSON
@@ -1278,7 +1276,10 @@ export default class Video extends React.Component {
           additionalTextBtn={
             <TouchableOpacity
               style={{ padding: 15 }}
-              onPress={this.props.toSupport}
+              onPress={() => {
+                this.alert.toggle();
+                this.props.toSupport();
+              }}
             >
               <Text
                 maxFontSizeMultiplier={this.props.maxFontMultiplier}
@@ -1287,7 +1288,7 @@ export default class Video extends React.Component {
                   textAlign: 'center',
                   fontFamily: 'OpenSans-Regular',
                   textDecorationLine: 'underline',
-                  color: contactSupport.color || 'black'
+                  color: alert?.contactSupport?.color || 'black'
                 }}
               >
                 CONTACT SUPPORT

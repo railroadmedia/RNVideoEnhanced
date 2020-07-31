@@ -36,14 +36,14 @@ export default class VideoTimer_V2 extends React.PureComponent {
       <React.Fragment>
         <Text
           maxFontSizeMultiplier={this.props.maxFontMultiplier}
-          style={propStyle?.left || { color: 'white', padding: 10 }}
+          style={{ color: 'white', padding: 10, ...propStyle?.left }}
         >
           {progress}
         </Text>
         <View style={{ flex: 1 }} />
         <Text
           maxFontSizeMultiplier={this.props.maxFontMultiplier}
-          style={propStyle?.right || { color: 'white', padding: 10 }}
+          style={{ color: 'white', padding: 10, ...propStyle?.right }}
         >
           {this.formatTime(lengthInSec)}
         </Text>

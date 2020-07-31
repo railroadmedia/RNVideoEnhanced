@@ -151,7 +151,8 @@ export default class VideoSettings extends React.PureComponent {
                         download({
                           width: 20,
                           height: 20,
-                          fill: 'pink'
+                          fill: 'black',
+                          ...propStyle?.downloadIcon
                         })}
                     </TouchableOpacity>
                   ))}

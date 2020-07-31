@@ -35,7 +35,7 @@ export default class Alerts extends React.PureComponent {
   };
 
   render() {
-    const { theme } = this.props;
+    const { styles: propStyle } = this.props;
     return (
       <Modal
         testID='modal'
@@ -54,116 +54,37 @@ export default class Alerts extends React.PureComponent {
             style={[
               styles.animatedView,
               {
-                backgroundColor: 'red',
                 opacity: this.state.opacity,
-                maxWidth: this.props.windowWidth - 50
+                maxWidth: this.props.windowWidth - 50,
+                backgroundColor: propStyle.background || 'white'
               }
             ]}
           >
             <Text
               maxFontSizeMultiplier={this.props.maxFontMultiplier}
               testID='alertTitle'
-              style={[styles.mediumTitle, styles.text, { color: 'red' }]}
+              style={[
+                styles.mediumTitle,
+                styles.text,
+                { color: propStyle.titleTextColor || 'black' }
+              ]}
             >
               {this.title}
             </Text>
             <Text
               maxFontSizeMultiplier={this.props.maxFontMultiplier}
               testID='alertMessage'
-              style={[styles.mediumText, styles.text, { color: 'red' }]}
+              style={[
+                styles.mediumText,
+                styles.text,
+                { color: propStyle.subtitleTextColor || 'black' }
+              ]}
             >
               {this.message}
             </Text>
-            {this.props.onDelete ? (
-              <React.Fragment>
-                <TouchableOpacity
-                  testID='deleteBtn'
-                  onPress={this.props.onDelete}
-                  style={[styles.buttonStyle, styles.btn]}
-                >
-                  <Text
-                    maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                    style={[
-                      styles.buttonText,
-                      { padding: 15, color: '#ffffff' }
-                    ]}
-                  >
-                    DELETE
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID='cancelBtn'
-                  onPress={() => this.toggle()}
-                >
-                  <Text
-                    maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                    style={[
-                      styles.buttonText,
-                      {
-                        color: 'green',
-                        marginTop: 10
-                      }
-                    ]}
-                  >
-                    CANCEL
-                  </Text>
-                </TouchableOpacity>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                {this.props.additionalBtn}
-                {!this.props.hideTryAgainBtn && (
-                  <TouchableOpacity
-                    testID={`${this.props.propTestID}TryAgainTO`}
-                    onPress={() => {
-                      if (!this.props.cancelBtnText && this.props.onTryAgain)
-                        this.props.onTryAgain();
-                      this.toggle();
-                    }}
-                  >
-                    <Text
-                      maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                      testID='tryAgainBtnText'
-                      style={[
-                        styles.text,
-                        styles.buttonText,
-                        {
-                          color: 'green',
-                          marginTop: 10
-                        }
-                      ]}
-                    >
-                      {this.props.cancelBtnText || 'TRY AGAIN'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {this.props.additionalTextBtn}
-              </React.Fragment>
-            )}
+            {this.props.additionalBtn}
+            {this.props.additionalTextBtn}
           </Animated.View>
-          {this.props.onHelperText && (
-            <TouchableOpacity
-              testID='helpBtn'
-              style={{ position: 'absolute', bottom: 60 }}
-              onPress={this.props.onHelperText}
-            >
-              <Text
-                maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                style={[styles.mediumText, { color: '#ffffff' }]}
-              >
-                Do you need help?
-              </Text>
-              <Text
-                maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                style={[
-                  styles.mediumText,
-                  { color: '#ffffff', textDecorationLine: 'underline' }
-                ]}
-              >
-                CONTACT SUPPORT
-              </Text>
-            </TouchableOpacity>
-          )}
         </TouchableOpacity>
       </Modal>
     );
@@ -175,7 +96,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'yellow'
+    backgroundColor: 'rgba(0,0,0,.5)'
   },
   text: {
     textAlign: 'center',
@@ -187,31 +108,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 5
   },
-  btn: {
-    backgroundColor: 'green',
-    marginTop: 10,
-    borderColor: 'green'
-  },
   mediumTitle: {
-    color: '#000000',
     fontSize: 20,
     fontFamily: 'OpenSans-Bold'
   },
   mediumText: {
-    color: '#000000',
     fontSize: 14,
     fontFamily: 'OpenSans-Regular'
-  },
-  buttonStyle: {
-    borderWidth: 2,
-    borderRadius: 25,
-    minHeight: 46,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  buttonText: {
-    textAlign: 'center',
-    fontFamily: 'RobotoCondensed-Bold',
-    fontSize: 15
   }
 });

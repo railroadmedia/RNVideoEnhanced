@@ -1,7 +1,7 @@
 /*
     props: connection, onUpdateVideoProgress, aCasting,
       gCasting, quality, onQualityChange, onACastingChange, onGCastingChange
-      deviceProps, onOrientationChange, maxFontMultiplier, offlinePath
+      onOrientationChange, maxFontMultiplier, offlinePath
 */
 import React from 'react';
 import {
@@ -165,7 +165,7 @@ export default class Video extends React.Component {
           if (devices[0].portType === 'AirPlay') {
             this.animateControls(0);
             aCasting = true;
-            this.props.onACastingChange(true);
+            this.props.onACastingChange?.(true);
             let svpe = this.state.vpe.find(v => v.selected);
             let networkSpeed = await networkSpeedService.getNetworkSpeed(
               this.state.vpe[0].file,
@@ -363,15 +363,13 @@ export default class Video extends React.Component {
           this.props.onOrientationChange?.(o);
           this.onProgress({ currentTime: cTime });
           if (force) StatusBar.setHidden(this.state.fullscreen);
-          if (this.props.onFullscreen)
-            this.props.onFullscreen(this.state.fullscreen);
+          this.props.onFullscreen?.(this.state.fullscreen);
         }
       );
     this.setState({ fullscreen: isLandscape }, () => {
       StatusBar.setHidden(isLandscape);
       this.onProgress({ currentTime: cTime });
-      if (this.props.onFullscreen)
-        this.props.onFullscreen(this.state.fullscreen);
+      this.props.onFullscreen?.(this.state.fullscreen);
     });
   };
 
@@ -1252,7 +1250,7 @@ export default class Video extends React.Component {
               }}
               onPress={() => {
                 this.alert.toggle();
-                if (this.props.onRefresh) this.props.onRefresh();
+                this.props.onRefresh();
               }}
             >
               <Text
@@ -1274,7 +1272,7 @@ export default class Video extends React.Component {
               style={{ padding: 15 }}
               onPress={() => {
                 this.alert.toggle();
-                this.props.toSupport();
+                this.props.toSupport?.();
               }}
             >
               <Text

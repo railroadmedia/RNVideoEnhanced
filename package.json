@@ -15,6 +15,7 @@
     "react-native-google-cast": "^3.3.0",
     "react-native-home-indicator": "^0.2.5",
     "react-native-orientation-locker": "^1.1.8",
+    "react-native-svg": "^12.1.0",
     "react-native-video": "github:railroadmedia/react-native-video#bogdan-vol-drumeo-mobile-patches",
     "rn-fetch-blob": "^0.12.0"
   },

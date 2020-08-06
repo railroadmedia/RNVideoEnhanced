@@ -418,15 +418,17 @@ export default class Video extends React.Component {
       }
     } = this;
     if (q === 'Auto') {
-      let networkSpeed = await networkSpeedService.getNetworkSpeed(
-        vpe[0].file,
-        offlinePath,
-        signal
-      );
-      if (networkSpeed.aborted) return;
-      recommendedVideoQuality = Object.create(vpe)
-        .sort((i, j) => (i.height < j.height ? 1 : -1))
-        .find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
+      recommendedVideoQuality = vpe.find(v => !v?.file.includes('http'));
+      if (!recommendedVideoQuality) {
+        let networkSpeed = await networkSpeedService.getNetworkSpeed(
+          vpe[0].file,
+          signal
+        );
+        if (networkSpeed.aborted) return;
+        recommendedVideoQuality = Object.create(vpe)
+          .sort((i, j) => (i.height < j.height ? 1 : -1))
+          .find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
+      }
     }
     let newVPE = {
       videoRefreshing: gCasting,

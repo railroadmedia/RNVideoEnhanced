@@ -11,13 +11,13 @@
   },
   "dependencies": {
     "react-native-airplay-ios": "github:gazedash/react-native-airplay-ios",
-    "react-native-device-info": "^5.6.3",
-    "react-native-google-cast": "^3.3.0",
-    "react-native-home-indicator": "^0.2.5",
-    "react-native-orientation-locker": "^1.1.8",
-    "react-native-svg": "^12.1.0",
+    "react-native-device-info": "*",
+    "react-native-google-cast": "*",
+    "react-native-home-indicator": "*",
+    "react-native-orientation-locker": "*",
+    "react-native-svg": "*",
     "react-native-video": "github:railroadmedia/react-native-video#bogdan-vol-drumeo-mobile-patches",
-    "rn-fetch-blob": "^0.12.0"
+    "rn-fetch-blob": "*"
   },
   "devDependencies": {
     "@babel/core": "^7.8.4",

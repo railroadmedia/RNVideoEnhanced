@@ -726,16 +726,8 @@ export default class Video extends React.Component {
       isDataImg = path.indexOf('data:image') > -1,
       isAndroidPath = path.indexOf('file://') > -1,
       isiOSPath = !isOnline && !isDataImg && !isAndroidPath;
-    if (!isOnline) {
-      if (isiOSPath) {
-        path = `${offlinePath}/${path}`;
-        return path;
-      }
-      if (isAndroidPath) {
-        path = path.replace('file://', `file://${offlinePath}`);
-        return path;
-      }
-    }
+    if (isiOSPath) return `${offlinePath}/${path}`;
+    if (isAndroidPath) return path.replace('file://', `file://${offlinePath}`);
     return path;
   };
 
@@ -1238,7 +1230,6 @@ export default class Video extends React.Component {
         )}
         <AnimatedCustomAlert
           styles={alert}
-          windowWidth={windowWidth}
           ref={r => (this.alert = r)}
           maxFontMultiplier={this.props.maxFontMultiplier}
           additionalBtn={

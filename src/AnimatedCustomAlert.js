@@ -54,8 +54,8 @@ export default class Alerts extends React.PureComponent {
             style={[
               styles.animatedView,
               {
+                marginHorizontal: 50,
                 opacity: this.state.opacity,
-                maxWidth: this.props.windowWidth - 50,
                 backgroundColor: propStyle?.background || 'white'
               }
             ]}

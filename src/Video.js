@@ -127,11 +127,11 @@ export default class Video extends React.Component {
 
   shouldComponentUpdate(nextProps, nextState) {
     if (this.props.type !== nextProps.type) return true;
-    for (key in this.state) {
+    for (let key in this.state) {
       if (typeof this.state[key] === 'object')
-        for (oKey in this.state[key]) {
+        for (let oKey in this.state[key]) {
           if (typeof this.state[key][oKey] === 'object')
-            for (ooKey in this.state[key][oKey]) {
+            for (let ooKey in this.state[key][oKey]) {
               if (this.state[key][oKey][ooKey] !== nextState[key][oKey][ooKey])
                 return true;
             }
@@ -638,7 +638,7 @@ export default class Video extends React.Component {
         this.onProgress({
           currentTime: cTime || this.props.content.lastWatchedPosInSec
         });
-      this.videoRef.seek(cTime || this.props.content.lastWatchedPosInSec);
+      this.videoRef.seek(cTime || this.props.content.lastWatchedPosInSec || 0);
     }
     if (gCasting)
       GoogleCast.seek(cTime || this.props.content.lastWatchedPosInSec);

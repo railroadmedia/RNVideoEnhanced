@@ -138,9 +138,7 @@ export default class VideoSettings extends React.PureComponent {
                           fontFamily:
                             q.height === quality.height
                               ? 'OpenSans-Bold'
-                              : isiOS
-                              ? 'OpenSans-Regular'
-                              : 'OpenSans-Regular'
+                              : 'OpenSans'
                         }}
                       >
                         {q.height}
@@ -190,11 +188,7 @@ export default class VideoSettings extends React.PureComponent {
                                   ? propStyle?.selectedOptionTextColor
                                   : propStyle?.unselectedOptionTextColor,
                               fontFamily:
-                                s === rate
-                                  ? 'OpenSans-Bold'
-                                  : isiOS
-                                  ? 'OpenSans-Regular'
-                                  : 'OpenSans-Regular'
+                                s === rate ? 'OpenSans-Bold' : 'OpenSans'
                             }}
                           >
                             {s}X
@@ -236,11 +230,7 @@ export default class VideoSettings extends React.PureComponent {
                                 ? propStyle?.selectedOptionTextColor
                                 : propStyle?.unselectedOptionTextColor,
                             fontFamily:
-                              c === captions
-                                ? 'OpenSans-Bold'
-                                : isiOS
-                                ? 'OpenSans-Regular'
-                                : 'OpenSans-Regular'
+                              c === captions ? 'OpenSans-Bold' : 'OpenSans'
                           }}
                         >
                           {c}

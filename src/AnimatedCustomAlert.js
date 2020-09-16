@@ -114,6 +114,6 @@ const styles = StyleSheet.create({
   },
   mediumText: {
     fontSize: 14,
-    fontFamily: 'OpenSans-Regular'
+    fontFamily: 'OpenSans'
   }
 });

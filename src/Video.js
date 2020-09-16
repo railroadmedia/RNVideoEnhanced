@@ -1273,7 +1273,7 @@ export default class Video extends React.Component {
                 style={{
                   fontSize: 12,
                   textAlign: 'center',
-                  fontFamily: 'OpenSans-Regular',
+                  fontFamily: 'OpenSans',
                   textDecorationLine: 'underline',
                   color: alert?.contactSupport?.color || 'black'
                 }}
@@ -1357,7 +1357,7 @@ const styles = StyleSheet.create({
   },
   mp3TogglerText: {
     fontSize: 12,
-    fontFamily: 'OpenSans-Regular'
+    fontFamily: 'OpenSans'
   },
   mp3OptionContainer: {
     padding: 10,
@@ -1369,6 +1369,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     paddingLeft: 13,
-    fontFamily: 'OpenSans-Regular'
+    fontFamily: 'OpenSans'
   }
 });

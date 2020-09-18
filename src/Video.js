@@ -724,16 +724,6 @@ export default class Video extends React.Component {
     if (gCasting) GoogleCast.seek(time);
   };
 
-  manageOfflinePath = path => {
-    let isOnline = path.indexOf('http') > -1,
-      isDataImg = path.indexOf('data:image') > -1,
-      isAndroidPath = path.indexOf('file://') > -1,
-      isiOSPath = !isOnline && !isDataImg && !isAndroidPath;
-    if (isiOSPath) return `${offlinePath}/${path}`;
-    if (isAndroidPath) return path.replace('file://', `file://${offlinePath}`);
-    return path;
-  };
-
   onError = ({ error: { code } }) => {
     if (code === -11855) {
       this.setState(
@@ -805,29 +795,25 @@ export default class Video extends React.Component {
         forceInset={{
           left: 'never',
           right: 'never',
-          top: fullscreen ? 'never' : 'always',
-          bottom: fullscreen ? 'never' : 'always'
+          bottom: 'never',
+          top: fullscreen ? 'never' : 'always'
         }}
         style={[
-          { alignItems: 'center', zIndex: 1, marginBottom: -11 },
+          { alignItems: 'center', zIndex: 1, overflow: 'hidden' },
           fullscreen
             ? {
                 top: 0,
                 width: '100%',
                 height: '100%',
                 position: 'absolute',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                backgroundColor: 'black'
               }
             : {}
         ]}
       >
-        <View
-          style={[styles.videoBackgorund, { marginTop: fullscreen ? 0 : -11 }]}
-        />
-        <View style={this.getVideoDimensions()}>
-          {videoRefreshing ? (
-            <View style={{ width: '100%', height: '100%' }} />
-          ) : (
+        <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
+          {!videoRefreshing && (
             <RNVideo
               paused={paused}
               controls={false}
@@ -847,11 +833,10 @@ export default class Video extends React.Component {
               style={{ width: '100%', height: '100%' }}
               onAudioBecomingNoisy={this.onAudioBecomingNoisy}
               source={{
-                uri: this.manageOfflinePath(
+                uri:
                   type === 'audio'
                     ? mp3s.find(mp3 => mp3.selected).value
                     : vpe.find(v => v.selected).file
-                )
               }}
               onExternalPlaybackChange={() => {
                 if (isiOS) AirPlay.startScan();
@@ -894,13 +879,11 @@ export default class Video extends React.Component {
           >
             {type === 'audio' && (
               <Image
+                source={{ uri: thumbnailUrl }}
                 style={{
                   width: '100%',
                   height: '100%',
                   position: 'absolute'
-                }}
-                source={{
-                  uri: this.manageOfflinePath(thumbnailUrl)
                 }}
               />
             )}

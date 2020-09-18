@@ -628,6 +628,7 @@ export default class Video extends React.Component {
         isTablet ? tabOrientation : fullscreen ? 'PORT' : 'LANDLEFT',
         true
       );
+    if (isTablet) Orientation.unlockAllOrientations();
     this.animateControls(greaterWidthHeight, 1);
     this.props.onBack();
   };

@@ -51,10 +51,12 @@ const iconStyle = { width: 40, height: 40, fill: 'white' };
 let cTime,
   videoW,
   videoH,
+  quality,
   aCasting,
   gCasting,
   aListener,
   connection,
+  orientation,
   gListenerMP,
   gListenerSE,
   gListenerSS,
@@ -75,10 +77,12 @@ export default class Video extends React.Component {
     super(props);
 
     if (gCasting) GoogleCast.pause();
-    aCasting = this.props.aCasting;
-    gCasting = this.props.gCasting;
-    connection = !!this.props.connection;
+    connection = !!props.connection;
+    quality = props.quality || quality;
+    aCasting = props.aCasting || aCasting;
+    gCasting = props.gCasting || gCasting;
     cTime = props.content.lastWatchedPosInSec;
+    orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
     greaterWidthHeight =
@@ -97,7 +101,8 @@ export default class Video extends React.Component {
     this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     if (isTablet)
-      this.state.tabOrientation = Orientation.getInitialOrientation();
+      this.state.tabOrientation =
+        orientation || Orientation.getInitialOrientation();
 
     try {
       this.state.mp3s[0].selected = true;
@@ -107,7 +112,7 @@ export default class Video extends React.Component {
   componentDidMount() {
     this.appleCastingListeners();
     this.googleCastingListeners();
-    this.selectQuality(this.props.quality || 'Auto');
+    this.selectQuality(quality || 'Auto');
     AppState.addEventListener('change', this.handleAppStateChange);
     Orientation.addDeviceOrientationListener(this.orientationListener);
   }
@@ -324,6 +329,7 @@ export default class Video extends React.Component {
   };
 
   orientationListener = (o, force) => {
+    orientation = o;
     if (isTablet) Orientation.unlockAllOrientations();
     let { paused } = this.state;
     let isLandscape = o.includes('LAND');
@@ -386,18 +392,18 @@ export default class Video extends React.Component {
     vpe = aCasting
       ? vpe.map(v => ({
           ...v,
-          selected: v.height === this.props.quality
+          selected: v.height === quality
         }))
       : [
           ...vpe.map(v => ({
             ...v,
-            selected: v.height === this.props.quality
+            selected: v.height === quality
           })),
           {
             height: 'Auto',
             file: vpe[vpe.length - 1].file,
             actualH: vpe[vpe.length - 1].height,
-            selected: this.props.quality === 'Auto'
+            selected: quality === 'Auto'
           }
         ];
 
@@ -646,19 +652,19 @@ export default class Video extends React.Component {
     this.bufferingOpacity.setValue(0);
   };
 
-  onSaveSettings = async (rate, quality, captions) => {
+  onSaveSettings = async (rate, qual, captions) =>
     this.setState(
       {
         rate,
         captionsHidden: captions === 'Off',
-        vpe: await this.selectQuality(quality, true)
+        vpe: await this.selectQuality(qual, true)
       },
       () => {
-        this.props.onQualityChange?.(quality);
+        quality = qual;
+        this.props.onQualityChange?.(qual);
         if (gCasting) this.gCastMedia();
       }
     );
-  };
 
   formatMP3Name = mp3 => {
     switch (mp3) {
@@ -764,6 +770,7 @@ export default class Video extends React.Component {
       },
       props: {
         type,
+        settingsMode,
         styles: {
           alert,
           settings,
@@ -916,7 +923,9 @@ export default class Video extends React.Component {
               style={{
                 ...styles.backContainer,
                 transform: [
-                  { translateX: type === 'video' ? this.translateControls : 0 }
+                  {
+                    translateX: type === 'video' ? this.translateControls : 0
+                  }
                 ]
               }}
               onPress={this.handleBack}
@@ -932,7 +941,9 @@ export default class Video extends React.Component {
               style={{
                 flexDirection: 'row',
                 transform: [
-                  { translateX: type === 'video' ? this.translateControls : 0 }
+                  {
+                    translateX: type === 'video' ? this.translateControls : 0
+                  }
                 ]
               }}
             >
@@ -945,13 +956,19 @@ export default class Video extends React.Component {
                 }}
                 disabled={!(previousLessonId || previousLessonUrl)}
               >
-                {svgs.prevLesson({ ...iconStyle, ...largePlayerControls })}
+                {svgs.prevLesson({
+                  ...iconStyle,
+                  ...largePlayerControls
+                })}
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, alignItems: 'center' }}
                 onPress={() => this.onSeek((cTime -= 10))}
               >
-                {svgs.back10({ ...iconStyle, ...largePlayerControls })}
+                {svgs.back10({
+                  ...iconStyle,
+                  ...largePlayerControls
+                })}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.togglePaused}
@@ -966,7 +983,10 @@ export default class Video extends React.Component {
                 style={{ flex: 1, alignItems: 'center' }}
                 onPress={() => this.onSeek((cTime += 10))}
               >
-                {svgs.forward10({ ...iconStyle, ...largePlayerControls })}
+                {svgs.forward10({
+                  ...iconStyle,
+                  ...largePlayerControls
+                })}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={this.props.goToNextLesson}
@@ -992,7 +1012,9 @@ export default class Video extends React.Component {
                   : 11,
                 ...styles.bottomControlsContainer,
                 transform: [
-                  { translateX: type === 'video' ? this.translateControls : 0 }
+                  {
+                    translateX: type === 'video' ? this.translateControls : 0
+                  }
                 ]
               }}
             >
@@ -1097,7 +1119,9 @@ export default class Video extends React.Component {
               right: 60,
               position: 'absolute',
               transform: [
-                { translateX: type === 'video' ? this.translateControls : 0 }
+                {
+                  translateX: type === 'video' ? this.translateControls : 0
+                }
               ]
             }}
           >
@@ -1165,8 +1189,11 @@ export default class Video extends React.Component {
         </Animated.View>
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         <VideoSettings
+          qualities={vpe.sort((i, j) =>
+            i.height < j.height || j.height === 'Auto' ? 1 : -1
+          )}
           styles={settings}
-          qualities={vpe}
+          settingsMode={settingsMode}
           showRate={!gCasting && !aCasting}
           ref={r => (this.videoSettings = r)}
           onSaveSettings={this.onSaveSettings}

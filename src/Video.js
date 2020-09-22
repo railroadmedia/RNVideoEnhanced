@@ -354,6 +354,7 @@ export default class Video extends React.Component {
     if (dimsShouldChange) {
       windowHeight = windowWidth + windowHeight;
       windowWidth = windowHeight - windowWidth;
+      if (windowWidth > this.props.maxWidth) windowWidth = this.props.maxWidth;
       windowHeight = windowHeight - windowWidth;
       greaterWidthHeight =
         windowWidth < windowHeight ? windowHeight : windowWidth;

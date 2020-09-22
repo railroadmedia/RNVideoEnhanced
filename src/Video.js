@@ -43,7 +43,6 @@ import networkSpeedService from './services/networkSpeed.service';
 
 import { svgs } from './img/svgs';
 
-const maxWidth = 700;
 const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
 const isTablet = DeviceInfo.isTablet();
@@ -85,6 +84,7 @@ export default class Video extends React.Component {
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
+    if (windowWidth > props.maxWidth) windowWidth = props.maxWidth;
     greaterWidthHeight =
       windowWidth < windowHeight ? windowHeight : windowWidth;
     offlinePath =
@@ -473,16 +473,8 @@ export default class Video extends React.Component {
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
 
-    videoW = fullscreen
-      ? (windowHeight * width) / height
-      : isTablet
-      ? maxWidth
-      : windowWidth;
-    videoH = fullscreen
-      ? windowHeight
-      : isTablet
-      ? (maxWidth / width) * height
-      : (windowWidth / width) * height;
+    videoW = fullscreen ? (windowHeight * width) / height : windowWidth;
+    videoH = fullscreen ? windowHeight : (windowWidth / width) * height;
 
     if (videoW > windowWidth) {
       videoW = Math.round(windowWidth);

@@ -763,6 +763,7 @@ export default class Video extends React.Component {
       },
       props: {
         type,
+        maxWidth,
         settingsMode,
         styles: {
           alert,
@@ -817,6 +818,17 @@ export default class Video extends React.Component {
             : {}
         ]}
       >
+        {!maxWidth && (
+          <View
+            style={{
+              top: 0,
+              width: '100%',
+              height: '50%',
+              position: 'absolute',
+              backgroundColor: 'black'
+            }}
+          />
+        )}
         <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
           {!videoRefreshing && (
             <RNVideo

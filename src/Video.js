@@ -822,8 +822,8 @@ export default class Video extends React.Component {
           <View
             style={{
               top: 0,
+              bottom: 11,
               width: '100%',
-              height: '50%',
               position: 'absolute',
               backgroundColor: 'black'
             }}

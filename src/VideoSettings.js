@@ -397,11 +397,12 @@ export default class VideoSettings extends React.PureComponent {
                 }}
                 onPress={this.onCancel}
               >
-                {x({
-                  width: 18,
-                  height: 18,
-                  fill: 'black'
-                })}
+                {settingsMode === 'bottom' &&
+                  x({
+                    width: 18,
+                    height: 18,
+                    fill: 'black'
+                  })}
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
                   style={[

@@ -799,7 +799,12 @@ export default class Video extends React.Component {
           top: fullscreen ? 'never' : 'always'
         }}
         style={[
-          { alignItems: 'center', zIndex: 1, overflow: 'hidden' },
+          {
+            zIndex: 1,
+            marginBottom: -11,
+            overflow: 'hidden',
+            alignItems: 'center'
+          },
           fullscreen
             ? {
                 top: 0,

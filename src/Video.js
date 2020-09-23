@@ -323,7 +323,7 @@ export default class Video extends React.Component {
     let {
       content: { videoId, id, lengthInSec }
     } = this.props;
-    this.props.onUpdateVideoProgress?.(videoId, id, lengthInSec);
+    this.props.onUpdateVideoProgress?.(videoId, id, lengthInSec, cTime);
   };
 
   orientationListener = (o, force) => {

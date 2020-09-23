@@ -1039,7 +1039,7 @@ export default class Video extends React.Component {
                 ref={r => (this.videoTimer = r)}
                 maxFontMultiplier={this.props.maxFontMultiplier}
               />
-              {connection && type !== 'audio' && (
+              {settingsMode !== 'bottom' && connection && type !== 'audio' && (
                 <TouchableOpacity
                   style={{
                     padding: 10
@@ -1107,11 +1107,9 @@ export default class Video extends React.Component {
           {isiOS && (
             <Animated.View
               style={{
-                top: 5,
-                width: 1,
-                right: 60,
-                height: 1,
+                top: 7,
                 position: 'absolute',
+                right: settingsMode === 'bottom' ? 39 : 10,
                 transform: [
                   {
                     translateX: type === 'video' ? this.translateControls : 0
@@ -1130,8 +1128,8 @@ export default class Video extends React.Component {
           <Animated.View
             style={{
               top: 7,
-              right: 60,
               position: 'absolute',
+              right: settingsMode === 'bottom' ? 68 : 39,
               transform: [
                 {
                   translateX: type === 'video' ? this.translateControls : 0
@@ -1148,6 +1146,34 @@ export default class Video extends React.Component {
               }}
             />
           </Animated.View>
+          {settingsMode === 'bottom' && connection && type !== 'audio' && (
+            <Animated.View
+              style={{
+                top: 7,
+                right: 10,
+                position: 'absolute',
+                transform: [
+                  {
+                    translateX: type === 'video' ? this.translateControls : 0
+                  }
+                ]
+              }}
+            >
+              <TouchableOpacity
+                underlayColor={'transparent'}
+                onPress={() => {
+                  this.videoSettings.toggle();
+                }}
+              >
+                {svgs.menu({
+                  width: 29,
+                  height: 29,
+                  fill: 'white',
+                  ...smallPlayerControls
+                })}
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
         <Animated.View
           {...this.pResponder()}

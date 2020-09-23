@@ -84,7 +84,6 @@ export default class Video extends React.Component {
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
-    if (windowWidth > props.maxWidth) windowWidth = props.maxWidth;
     greaterWidthHeight =
       windowWidth < windowHeight ? windowHeight : windowWidth;
     offlinePath =
@@ -353,7 +352,6 @@ export default class Video extends React.Component {
     if (dimsShouldChange) {
       windowHeight = windowWidth + windowHeight;
       windowWidth = windowHeight - windowWidth;
-      if (windowWidth > this.props.maxWidth) windowWidth = this.props.maxWidth;
       windowHeight = windowHeight - windowWidth;
       greaterWidthHeight =
         windowWidth < windowHeight ? windowHeight : windowWidth;
@@ -468,13 +466,20 @@ export default class Video extends React.Component {
   };
 
   getVideoDimensions = () => {
-    let { fullscreen } = this.state;
+    let {
+      props: { maxWidth },
+      state: { fullscreen }
+    } = this;
     let { width, height } = this.props.content.video_playback_endpoints[0];
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
 
-    videoW = fullscreen ? (windowHeight * width) / height : windowWidth;
-    videoH = fullscreen ? windowHeight : (windowWidth / width) * height;
+    videoW = fullscreen
+      ? (windowHeight * width) / height
+      : maxWidth || windowWidth;
+    videoH = fullscreen
+      ? windowHeight
+      : ((maxWidth || windowWidth) / width) * height;
 
     if (videoW > windowWidth) {
       videoW = Math.round(windowWidth);

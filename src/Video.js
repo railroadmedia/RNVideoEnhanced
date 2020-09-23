@@ -102,8 +102,7 @@ export default class Video extends React.Component {
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     if (isTablet)
       this.state.tabOrientation =
-        orientation || Orientation.getInitialOrientation();
-
+        orientation || (windowWidth > windowHeight ? 'LANDSCAPE' : 'PORTRAIT');
     try {
       this.state.mp3s[0].selected = true;
     } catch (e) {}
@@ -482,9 +481,14 @@ export default class Video extends React.Component {
       videoH = Math.round((videoW * lowerVDim) / greaterVDim);
     }
 
-    if (windowWidth > windowHeight && isTablet && !fullscreen) {
-      // videoH = Math.round(windowHeight / 2);
-      // videoW = Math.round((videoH * greaterVDim) / lowerVDim);
+    if (
+      windowWidth > windowHeight &&
+      isTablet &&
+      !fullscreen &&
+      !this.props.maxWidth
+    ) {
+      videoH = Math.round(windowHeight / 2);
+      videoW = Math.round((videoH * greaterVDim) / lowerVDim);
     }
 
     return { width: videoW, height: videoH };

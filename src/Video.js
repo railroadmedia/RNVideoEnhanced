@@ -50,7 +50,6 @@ const iconStyle = { width: 40, height: 40, fill: 'white' };
 let cTime,
   videoW,
   videoH,
-  quality,
   aCasting,
   gCasting,
   aListener,
@@ -62,6 +61,7 @@ let cTime,
   windowWidth,
   offlinePath,
   windowHeight,
+  quality = 'Auto',
   greaterWidthHeight;
 
 export default class Video extends React.Component {

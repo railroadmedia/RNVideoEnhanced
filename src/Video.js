@@ -426,6 +426,7 @@ export default class Video extends React.Component {
       if (!recommendedVideoQuality) {
         let networkSpeed = await networkSpeedService.getNetworkSpeed(
           vpe[0].file,
+          offlinePath,
           signal
         );
         if (networkSpeed.aborted) return;

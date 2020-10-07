@@ -16,7 +16,7 @@
     "react-native-home-indicator": "*",
     "react-native-orientation-locker": "*",
     "react-native-svg": "*",
-    "react-native-video": "github:railroadmedia/react-native-video#bogdan-vol-drumeo-mobile-patches",
+    "react-native-video": "https://github.com/bogdan-vol/react-native-video.git",
     "rn-fetch-blob": "*"
   },
   "devDependencies": {

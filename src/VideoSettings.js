@@ -36,11 +36,12 @@ export default class VideoSettings extends React.PureComponent {
     this.setState(state => {
       modalVisible =
         modalVisible === 'boolean' ? modalVisible : !state.modalVisible;
-      if (modalVisible) this.prevQuality = this.state.quality;
+      if (modalVisible) this.prevQuality = state.quality;
       else delete this.prevQuality;
       return {
         modalVisible,
-        subSettings: ''
+        subSettings: '',
+        quality: this.props.qualities.find(q => q.selected)
       };
     });
 

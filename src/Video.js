@@ -655,18 +655,15 @@ export default class Video extends React.Component {
     this.bufferingOpacity.setValue(0);
   };
 
-  onSaveSettings = async (rate, qual, captions) =>
-    this.setState(
-      {
-        rate,
-        captionsHidden: captions === 'Off',
-        vpe: await this.selectQuality(qual, true)
-      },
-      () => {
-        quality = qual;
-        this.props.onQualityChange?.(qual);
-        if (gCasting) this.gCastMedia();
-      }
+  onSaveSettings = (rate, qual, captions) =>
+    this.setState({ rate, captionsHidden: captions === 'Off' }, () =>
+      this.selectQuality(qual, true).then(vpe =>
+        this.setState({ vpe }, () => {
+          quality = qual;
+          this.props.onQualityChange?.(qual);
+          if (gCasting) this.gCastMedia();
+        })
+      )
     );
 
   formatMP3Name = mp3 => {

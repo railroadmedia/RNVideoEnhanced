@@ -32,21 +32,15 @@ export default class ActionModal extends React.Component {
   }
 
   toggleModal = mState =>
-    new Promise(res =>
-      this.setState(
-        ({ modalVisible }) => ({
-          modalVisible: mState === undefined ? !modalVisible : mState
-        }),
-        () => (isiOS ? (this.modalDismissed = res) : res())
-      )
-    );
+    this.setState(({ modalVisible }) => ({
+      modalVisible: mState === undefined ? !modalVisible : mState
+    }));
 
   render() {
     return (
       <Modal
         transparent={true}
         visible={this.state.modalVisible}
-        onDismiss={() => this.modalDismissed()}
         onRequestClose={() => this.toggleModal()}
         supportedOrientations={['portrait', 'landscape']}
         animationType='slide'

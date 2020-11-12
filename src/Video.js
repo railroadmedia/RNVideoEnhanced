@@ -965,7 +965,8 @@ export default class Video extends React.Component {
                     flexDirection: 'row',
                     transform: [
                       {
-                        translateX: type === 'video' ? this.translateControls : 0
+                        translateX:
+                          type === 'video' ? this.translateControls : 0
                       }
                     ]
                   }}
@@ -1027,91 +1028,92 @@ export default class Video extends React.Component {
                   </TouchableOpacity>
                 </Animated.View>
                 <Animated.View
-              style={{
-                bottom: fullscreen
-                  ? windowHeight > videoH
-                    ? 29
-                    : 29 + 25
-                  : 11,
-                ...styles.bottomControlsContainer,
-                transform: [
-                  {
-                    translateX: type === 'video' ? this.translateControls : 0
-                  }
-                ]
-              }}
-            >
-              <VideoTimer
-                styles={timerText}
-                formatTime={formatTime}
-                lengthInSec={lengthInSec}
-                ref={r => (this.videoTimer = r)}
-                maxFontMultiplier={this.props.maxFontMultiplier}
-              />
-              {settingsMode !== 'bottom' && connection && type !== 'audio' && (
-                <TouchableOpacity
                   style={{
-                    padding: 10
+                    bottom: fullscreen
+                      ? windowHeight > videoH
+                        ? 29
+                        : 29 + 25
+                      : 11,
+                    ...styles.bottomControlsContainer,
+                    transform: [
+                      {
+                        translateX:
+                          type === 'video' ? this.translateControls : 0
+                      }
+                    ]
                   }}
-                  underlayColor={'transparent'}
-                  onPress={() => {
-                    this.videoSettings.toggle();
-                  }}
                 >
-                  {svgs.videoQuality({
-                    width: 20,
-                    height: 20,
-                    fill: 'white',
-                    ...smallPlayerControls
-                  })}
-                </TouchableOpacity>
-              )}
-              {type !== 'audio' && (
-                <TouchableOpacity
-                  style={{ padding: 10 }}
-                  underlayColor={'transparent'}
-                  onPress={() =>
-                    this.orientationListener(
-                      isTablet
-                        ? tabOrientation
-                        : fullscreen
-                        ? 'PORT'
-                        : 'LANDLEFT',
-                      true
-                    )
-                  }
-                >
-                  {svgs.fullScreen({
-                    width: 20,
-                    height: 20,
-                    fill: 'white',
-                    ...smallPlayerControls
-                  })}
-                </TouchableOpacity>
-              )}
-              {type === 'audio' && (
-                <TouchableOpacity
-                  style={styles.mp3TogglerContainer}
-                  onPress={() => this.mp3ActionModal.toggleModal()}
-                >
-                  <Text
-                    maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                    style={{
-                      ...styles.mp3TogglerText,
-                      color: mp3TogglerTextColor || 'white'
-                    }}
-                  >
-                    {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
-                  </Text>
-                  {svgs.arrowDown({
-                    height: 20,
-                    width: 20,
-                    fill: '#ffffff',
-                    ...smallPlayerControls
-                  })}
-                </TouchableOpacity>
-              )}
-            </Animated.View>
+                  <VideoTimer
+                    styles={timerText}
+                    formatTime={formatTime}
+                    lengthInSec={lengthInSec}
+                    ref={r => (this.videoTimer = r)}
+                    maxFontMultiplier={this.props.maxFontMultiplier}
+                  />
+                  {settingsMode !== 'bottom' && connection && type !== 'audio' && (
+                    <TouchableOpacity
+                      style={{
+                        padding: 10
+                      }}
+                      underlayColor={'transparent'}
+                      onPress={() => {
+                        this.videoSettings.toggle();
+                      }}
+                    >
+                      {svgs.videoQuality({
+                        width: 20,
+                        height: 20,
+                        fill: 'white',
+                        ...smallPlayerControls
+                      })}
+                    </TouchableOpacity>
+                  )}
+                  {type !== 'audio' && (
+                    <TouchableOpacity
+                      style={{ padding: 10 }}
+                      underlayColor={'transparent'}
+                      onPress={() =>
+                        this.orientationListener(
+                          isTablet
+                            ? tabOrientation
+                            : fullscreen
+                            ? 'PORT'
+                            : 'LANDLEFT',
+                          true
+                        )
+                      }
+                    >
+                      {svgs.fullScreen({
+                        width: 20,
+                        height: 20,
+                        fill: 'white',
+                        ...smallPlayerControls
+                      })}
+                    </TouchableOpacity>
+                  )}
+                  {type === 'audio' && (
+                    <TouchableOpacity
+                      style={styles.mp3TogglerContainer}
+                      onPress={() => this.mp3ActionModal.toggleModal()}
+                    >
+                      <Text
+                        maxFontSizeMultiplier={this.props.maxFontMultiplier}
+                        style={{
+                          ...styles.mp3TogglerText,
+                          color: mp3TogglerTextColor || 'white'
+                        }}
+                      >
+                        {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
+                      </Text>
+                      {svgs.arrowDown({
+                        height: 20,
+                        width: 20,
+                        fill: '#ffffff',
+                        ...smallPlayerControls
+                      })}
+                    </TouchableOpacity>
+                  )}
+                </Animated.View>
               </>
             )}
           </TouchableOpacity>

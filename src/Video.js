@@ -1403,7 +1403,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent'
   },
   constrolsBackground: {
-    width: '100%',
+    width: '102%',
     height: '100%',
     position: 'absolute',
     justifyContent: 'center',

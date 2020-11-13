@@ -70,7 +70,8 @@ export default class Video extends React.Component {
     paused: true,
     captionsHidden: true,
     videoRefreshing: false,
-    showControls: true
+    showControls: true,
+    repeat: false
   };
 
   constructor(props) {
@@ -101,6 +102,7 @@ export default class Video extends React.Component {
     this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     this.state.paused = props.paused;
+    this.state.repeat = props.repeat ? props.repeat : false;
     this.state.showControls = props.showControls;
     if (isTablet)
       this.state.tabOrientation =
@@ -766,6 +768,7 @@ export default class Video extends React.Component {
         mp3s,
         rate,
         paused,
+        repeat,
         fullscreen,
         tabOrientation,
         captionsHidden,
@@ -847,6 +850,7 @@ export default class Video extends React.Component {
               controls={false}
               onEnd={this.onEnd}
               resizeMode='cover'
+              repeat={repeat}
               onLoad={this.onLoad}
               rate={parseFloat(rate)}
               playInBackground={true}

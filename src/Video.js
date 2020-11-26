@@ -332,6 +332,7 @@ export default class Video extends React.Component {
   };
 
   orientationListener = (o, force) => {
+    if (o === 'UNKNOWN') return;
     orientation = o;
     if (isTablet) Orientation.unlockAllOrientations();
     let { paused } = this.state;

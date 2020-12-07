@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-navigation';
 
 import RNFetchBlob from 'rn-fetch-blob';
+import YouTube from 'react-native-youtube';
 import DeviceInfo from 'react-native-device-info';
 import Orientation from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
@@ -779,6 +780,7 @@ export default class Video extends React.Component {
       props: {
         type,
         maxWidth,
+        youtubeId,
         settingsMode,
         styles: {
           alert,
@@ -846,61 +848,80 @@ export default class Video extends React.Component {
         )}
         <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
           {!videoRefreshing && (
-            <RNVideo
-              paused={paused}
-              controls={false}
-              onEnd={this.onEnd}
-              resizeMode='cover'
-              repeat={repeat}
-              onLoad={this.onLoad}
-              rate={parseFloat(rate)}
-              playInBackground={true}
-              playWhenInactive={true}
-              audioOnly={type === 'audio'}
-              onProgress={this.onProgress}
-              ignoreSilentSwitch={'ignore'}
-              progressUpdateInterval={1000}
-              ref={r => (this.videoRef = r)}
-              onRemotePlayPause={this.togglePaused}
-              fullscreen={isiOS ? false : fullscreen}
-              style={{ width: '100%', height: '100%' }}
-              onAudioBecomingNoisy={this.onAudioBecomingNoisy}
-              source={{
-                uri:
-                  type === 'audio'
-                    ? mp3s.find(mp3 => mp3.selected).value
-                    : vpe.find(v => v.selected).file
-              }}
-              onExternalPlaybackChange={() => {
-                if (isiOS) AirPlay.startScan();
-              }}
-              {...(aCasting || !captions
-                ? {}
-                : {
-                    selectedTextTrack: {
-                      type: 'title',
-                      value: captionsHidden ? 'Disabled' : 'English'
-                    },
-                    textTracks:
-                      type === 'video'
-                        ? [
-                            {
-                              language: 'en',
-                              uri:
-                                'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
-                              title: 'Disabled',
-                              type: TextTrackType.VTT // "text/vtt"
-                            },
-                            {
-                              language: 'en',
-                              uri: captions,
-                              title: 'English',
-                              type: TextTrackType.VTT // "text/vtt"
-                            }
-                          ]
-                        : []
-                  })}
-            />
+            <>
+              {youtubeId ? (
+                <YouTube
+                  videoId={youtubeId} // The YouTube video ID
+                  play={!paused} // control playback of video with true/false
+                  fullscreen={fullscreen} // control whether the video should play in fullscreen or inline
+                  loop // control whether the video should loop when ended
+                  onReady={e => this.setState({ isReady: true })}
+                  onChangeState={e => this.setState({ status: e.state })}
+                  onChangeQuality={e => this.setState({ quality: e.quality })}
+                  onError={e => this.setState({ error: e.error })}
+                  style={{ alignSelf: 'stretch', aspectRatio: 16 / 9 }}
+                  controls={0}
+                  showFullscreenButton={false}
+                  showinfo={false}
+                />
+              ) : (
+                <RNVideo
+                  paused={paused}
+                  controls={false}
+                  onEnd={this.onEnd}
+                  resizeMode='cover'
+                  repeat={repeat}
+                  onLoad={this.onLoad}
+                  rate={parseFloat(rate)}
+                  playInBackground={true}
+                  playWhenInactive={true}
+                  audioOnly={type === 'audio'}
+                  onProgress={this.onProgress}
+                  ignoreSilentSwitch={'ignore'}
+                  progressUpdateInterval={1000}
+                  ref={r => (this.videoRef = r)}
+                  onRemotePlayPause={this.togglePaused}
+                  fullscreen={isiOS ? false : fullscreen}
+                  style={{ width: '100%', height: '100%' }}
+                  onAudioBecomingNoisy={this.onAudioBecomingNoisy}
+                  source={{
+                    uri:
+                      type === 'audio'
+                        ? mp3s.find(mp3 => mp3.selected).value
+                        : vpe.find(v => v.selected).file
+                  }}
+                  onExternalPlaybackChange={() => {
+                    if (isiOS) AirPlay.startScan();
+                  }}
+                  {...(aCasting || !captions
+                    ? {}
+                    : {
+                        selectedTextTrack: {
+                          type: 'title',
+                          value: captionsHidden ? 'Disabled' : 'English'
+                        },
+                        textTracks:
+                          type === 'video'
+                            ? [
+                                {
+                                  language: 'en',
+                                  uri:
+                                    'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
+                                  title: 'Disabled',
+                                  type: TextTrackType.VTT // "text/vtt"
+                                },
+                                {
+                                  language: 'en',
+                                  uri: captions,
+                                  title: 'English',
+                                  type: TextTrackType.VTT // "text/vtt"
+                                }
+                              ]
+                            : []
+                      })}
+                />
+              )}
+            </>
           )}
           <TouchableOpacity
             onPress={this.toggleControls}

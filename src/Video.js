@@ -95,12 +95,13 @@ export default class Video extends React.Component {
         : RNFetchBlob.fs.dirs.DocumentDir;
     this.getVideoDimensions();
 
-    this.bufferingOpacity = new Animated.Value(1);
+    if (!props.content.youtubeId) this.bufferingOpacity = new Animated.Value(1);
     this.translateControls = new Animated.Value(0);
     this.translateBlueX = new Animated.Value(-videoW);
 
     this.state.mp3s = props.content.mp3s;
-    this.state.vpe = this.filterVideosByResolution();
+    if (!props.content.youtubeId)
+      this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
@@ -114,9 +115,11 @@ export default class Video extends React.Component {
   }
 
   componentDidMount() {
-    this.appleCastingListeners();
-    this.googleCastingListeners();
-    this.selectQuality(quality || 'Auto');
+    if (!this.props.content.youtubeId) {
+      this.appleCastingListeners();
+      this.googleCastingListeners();
+      this.selectQuality(quality || 'Auto');
+    }
     AppState.addEventListener('change', this.handleAppStateChange);
     Orientation.addDeviceOrientationListener(this.orientationListener);
   }
@@ -126,10 +129,10 @@ export default class Video extends React.Component {
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
-    if (aListener) aListener.remove();
-    if (gListenerMP) gListenerMP.remove();
-    if (gListenerSE) gListenerSE.remove();
-    if (gListenerSS) gListenerSS.remove();
+    aListener?.remove();
+    gListenerMP?.remove();
+    gListenerSE?.remove();
+    gListenerSS?.remove();
     AppState.removeEventListener('change', this.handleAppStateChange);
     Orientation.removeDeviceOrientationListener(this.orientationListener);
   }
@@ -327,9 +330,15 @@ export default class Video extends React.Component {
 
   updateVideoProgress = async () => {
     let {
-      content: { videoId, id, lengthInSec }
+      content: { videoId, id, lengthInSec, youtubeId }
     } = this.props;
-    this.props.onUpdateVideoProgress?.(videoId, id, lengthInSec, cTime);
+    this.props.onUpdateVideoProgress?.(
+      videoId,
+      id,
+      lengthInSec,
+      cTime,
+      youtubeId ? 'youtube' : 'vimeo'
+    );
   };
 
   orientationListener = (o, force) => {
@@ -474,11 +483,15 @@ export default class Video extends React.Component {
   };
 
   getVideoDimensions = () => {
+    let width, height;
     let {
       props: { maxWidth },
       state: { fullscreen }
     } = this;
-    let { width, height } = this.props.content.video_playback_endpoints[0];
+    if (this.props.content.youtubeId) {
+      width = windowWidth;
+      height = (9 / 16) * width;
+    } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
 
@@ -508,81 +521,87 @@ export default class Video extends React.Component {
   };
 
   pResponder = () => {
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderTerminationRequest: () => true,
-      onStartShouldSetPanResponderCapture: () => false,
-      onPanResponderRelease: () => {
-        delete this.seeking;
-        this.updateVideoProgress();
-        clearTimeout(this.controlsTO);
-        this.controlsTO = setTimeout(
-          () =>
-            this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-          3000
-        );
-      },
-      onPanResponderTerminate: () => {
-        delete this.seeking;
-        this.updateVideoProgress();
-        clearTimeout(this.controlsTO);
-        this.controlsTO = setTimeout(
-          () =>
-            this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-          3000
-        );
-      },
-      onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
-        clearTimeout(this.controlsTO);
-        this.animateControls(0);
-        if (this.videoRef) {
-          if (!isiOS)
-            this.onProgress({
-              currentTime: (locationX / videoW) * this.props.content.lengthInSec
-            });
-          this.videoRef.seek(
-            (locationX / videoW) * this.props.content.lengthInSec
+    let { youtubeId } = this.props.content;
+    return (
+      this.panResponder ||
+      (this.panResponder = PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onShouldBlockNativeResponder: () => true,
+        onPanResponderTerminationRequest: () => true,
+        onStartShouldSetPanResponderCapture: () => false,
+        onPanResponderRelease: () => {
+          delete this.seeking;
+          this.updateVideoProgress();
+          clearTimeout(this.controlsTO);
+          this.controlsTO = setTimeout(
+            () =>
+              this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
+            3000
+          );
+        },
+        onPanResponderTerminate: () => {
+          delete this.seeking;
+          this.updateVideoProgress();
+          clearTimeout(this.controlsTO);
+          this.controlsTO = setTimeout(
+            () =>
+              this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
+            3000
+          );
+        },
+        onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
+          clearTimeout(this.controlsTO);
+          this.animateControls(0);
+          if (this.videoRef) {
+            if (!isiOS)
+              this.onProgress({
+                currentTime:
+                  (locationX / videoW) * this.props.content.lengthInSec
+              });
+            this.videoRef[youtubeId ? 'seekTo' : 'seek'](
+              (locationX / videoW) * this.props.content.lengthInSec
+            );
+          }
+          if (gCasting)
+            GoogleCast.seek(
+              (locationX / videoW) * this.props.content.lengthInSec
+            );
+          return Math.abs(dx) > 2 || Math.abs(dy) > 2;
+        },
+        onPanResponderMove: (e, { moveX }) => {
+          this.seeking = true;
+          moveX = moveX - (windowWidth - videoW) / 2;
+          this.translateBlueX.setValue(moveX - videoW);
+          if (this.videoRef) {
+            if (!isiOS)
+              this.onProgress({
+                currentTime: (moveX / videoW) * this.props.content.lengthInSec
+              });
+            this.videoRef[youtubeId ? 'seekTo' : 'seek'](
+              (moveX / videoW) * this.props.content.lengthInSec
+            );
+          }
+          if (gCasting)
+            GoogleCast.seek((moveX / videoW) * this.props.content.lengthInSec);
+          this.videoTimer.setProgress(
+            (moveX / videoW) * this.props.content.lengthInSec
           );
         }
-        if (gCasting)
-          GoogleCast.seek(
-            (locationX / videoW) * this.props.content.lengthInSec
-          );
-        return Math.abs(dx) > 2 || Math.abs(dy) > 2;
-      },
-      onPanResponderMove: (e, { moveX }) => {
-        this.seeking = true;
-        moveX = moveX - (windowWidth - videoW) / 2;
-        this.translateBlueX.setValue(moveX - videoW);
-        if (this.videoRef) {
-          if (!isiOS)
-            this.onProgress({
-              currentTime: (moveX / videoW) * this.props.content.lengthInSec
-            });
-          this.videoRef.seek((moveX / videoW) * this.props.content.lengthInSec);
-        }
-        if (gCasting)
-          GoogleCast.seek((moveX / videoW) * this.props.content.lengthInSec);
-        this.videoTimer.setProgress(
-          (moveX / videoW) * this.props.content.lengthInSec
-        );
-      }
-    }).panHandlers;
+      }).panHandlers)
+    );
   };
 
   onProgress = ({ currentTime }) => {
     cTime = currentTime;
+    let { lengthInSec, youtubeId } = this.props.content;
     if (this.seeking) return;
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;
-    this.bufferingOpacity.setValue(0);
-    this.translateBlueX.setValue(
-      (currentTime * videoW) / this.props.content.lengthInSec - videoW
-    );
+    this.bufferingOpacity?.setValue(0);
+    this.translateBlueX.setValue((currentTime * videoW) / lengthInSec - videoW);
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
-    if (!aCasting) {
+    if (!aCasting && !youtubeId) {
       this.bufferingTO = setTimeout(
         () =>
           this.bufferingOpacity.setValue(
@@ -595,6 +614,7 @@ export default class Video extends React.Component {
         10000
       );
     }
+    if (lengthInSec && lengthInSec === parseInt(currentTime)) this.onEnd();
   };
 
   toggleControls = controlsOverwrite => {
@@ -621,7 +641,7 @@ export default class Video extends React.Component {
       this.animateControls(paused ? 0 : -greaterWidthHeight);
       clearTimeout(this.bufferingTO);
       clearTimeout(this.bufferingTooLongTO);
-      this.bufferingOpacity.setValue(paused || aCasting || gCasting ? 0 : 1);
+      this.bufferingOpacity?.setValue(paused || aCasting || gCasting ? 0 : 1);
       return { paused };
     });
   };
@@ -650,16 +670,20 @@ export default class Video extends React.Component {
   };
 
   onLoad = () => {
+    let { youtubeId, lastWatchedPosInSec } = this.props.content;
     if (this.videoRef) {
-      if (!isiOS)
+      if (!isiOS || youtubeId)
         this.onProgress({
-          currentTime: cTime || this.props.content.lastWatchedPosInSec
+          currentTime: cTime || lastWatchedPosInSec
         });
-      this.videoRef.seek(cTime || this.props.content.lastWatchedPosInSec || 0);
+      this.videoRef[youtubeId ? 'seekTo' : 'seek'](
+        cTime || lastWatchedPosInSec || 0
+      );
     }
-    if (gCasting)
-      GoogleCast.seek(cTime || this.props.content.lastWatchedPosInSec);
-    this.bufferingOpacity.setValue(0);
+    if (youtubeId)
+      this.setState({ paused: false }, () => this.setState({ paused: true }));
+    if (gCasting) GoogleCast.seek(cTime || lastWatchedPosInSec);
+    this.bufferingOpacity?.setValue(0);
   };
 
   onSaveSettings = (rate, qual, captions) =>
@@ -712,7 +736,7 @@ export default class Video extends React.Component {
       StatusBar.setHidden(false);
       if (this.videoRef) {
         if (!isiOS) this.onProgress({ currentTime: 0 });
-        this.videoRef.seek(0);
+        this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](0);
       }
       if (gCasting) GoogleCast.seek(0);
       this.animateControls(0);
@@ -730,9 +754,8 @@ export default class Video extends React.Component {
     let fullLength = parseFloat(this.props.content.lengthInSec);
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
-
     this.updateVideoProgress();
-    if (this.videoRef) this.videoRef.seek(time);
+    this.videoRef?.[this.props.content.youtubeId ? 'seekTo' : 'seek'](time);
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     if (gCasting) GoogleCast.seek(time);
   };
@@ -772,10 +795,10 @@ export default class Video extends React.Component {
         paused,
         repeat,
         fullscreen,
+        showControls,
         tabOrientation,
         captionsHidden,
-        videoRefreshing,
-        showControls
+        videoRefreshing
       },
       props: {
         type,
@@ -849,29 +872,43 @@ export default class Video extends React.Component {
         <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
           {!videoRefreshing && (
             <>
-              {youtubeId ? (
-                <YouTube
-                  videoId={youtubeId} // The YouTube video ID
-                  play={!paused} // control playback of video with true/false
-                  fullscreen={fullscreen} // control whether the video should play in fullscreen or inline
-                  loop // control whether the video should loop when ended
-                  onReady={e => this.setState({ isReady: true })}
-                  onChangeState={e => this.setState({ status: e.state })}
-                  onChangeQuality={e => this.setState({ quality: e.quality })}
-                  onError={e => this.setState({ error: e.error })}
-                  style={{ alignSelf: 'stretch', aspectRatio: 16 / 9 }}
-                  controls={0}
-                  showFullscreenButton={false}
-                  showinfo={false}
-                />
+              {!!youtubeId ? (
+                <>
+                  <YouTube
+                    rel={false}
+                    controls={0}
+                    play={!paused}
+                    fullscreen={false}
+                    videoId={youtubeId}
+                    onReady={this.onLoad}
+                    onError={this.onError}
+                    onProgress={this.onProgress}
+                    showFullscreenButton={false}
+                    ref={r => (this.videoRef = r)}
+                    style={{ alignSelf: 'stretch', aspectRatio: 16 / 9 }}
+                  />
+                  {paused && !lengthInSec && (
+                    <Image
+                      source={{
+                        uri: `https://i2.ytimg.com/vi/${youtubeId}/mqdefault.jpg`
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        position: 'absolute'
+                      }}
+                    />
+                  )}
+                </>
               ) : (
                 <RNVideo
                   paused={paused}
+                  repeat={repeat}
                   controls={false}
                   onEnd={this.onEnd}
                   resizeMode='cover'
-                  repeat={repeat}
                   onLoad={this.onLoad}
+                  onError={this.onError}
                   rate={parseFloat(rate)}
                   playInBackground={true}
                   playWhenInactive={true}
@@ -953,19 +990,21 @@ export default class Video extends React.Component {
                     : 0.5
               }}
             />
-            <Animated.View
-              style={{
-                position: 'absolute',
-                alignSelf: 'center',
-                opacity: this.bufferingOpacity
-              }}
-            >
-              <ActivityIndicator
-                color='white'
-                size={'large'}
-                animating={buffering}
-              />
-            </Animated.View>
+            {!!this.bufferingOpacity && (
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  alignSelf: 'center',
+                  opacity: this.bufferingOpacity
+                }}
+              >
+                <ActivityIndicator
+                  color='white'
+                  size={'large'}
+                  animating={buffering}
+                />
+              </Animated.View>
+            )}
             <TouchableOpacity
               style={{
                 ...styles.backContainer,
@@ -1011,15 +1050,17 @@ export default class Video extends React.Component {
                       ...largePlayerControls
                     })}
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{ flex: 1, alignItems: 'center' }}
-                    onPress={() => this.onSeek((cTime -= 10))}
-                  >
-                    {svgs.back10({
-                      ...iconStyle,
-                      ...largePlayerControls
-                    })}
-                  </TouchableOpacity>
+                  {!!lengthInSec && (
+                    <TouchableOpacity
+                      style={{ flex: 1, alignItems: 'center' }}
+                      onPress={() => this.onSeek((cTime -= 10))}
+                    >
+                      {svgs.back10({
+                        ...iconStyle,
+                        ...largePlayerControls
+                      })}
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     onPress={this.togglePaused}
                     style={{ flex: 1, alignItems: 'center' }}
@@ -1029,15 +1070,17 @@ export default class Video extends React.Component {
                       ...largePlayerControls
                     })}
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{ flex: 1, alignItems: 'center' }}
-                    onPress={() => this.onSeek((cTime += 10))}
-                  >
-                    {svgs.forward10({
-                      ...iconStyle,
-                      ...largePlayerControls
-                    })}
-                  </TouchableOpacity>
+                  {!!lengthInSec && (
+                    <TouchableOpacity
+                      style={{ flex: 1, alignItems: 'center' }}
+                      onPress={() => this.onSeek((cTime += 10))}
+                    >
+                      {svgs.forward10({
+                        ...iconStyle,
+                        ...largePlayerControls
+                      })}
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     onPress={this.props.goToNextLesson}
                     style={{
@@ -1076,24 +1119,27 @@ export default class Video extends React.Component {
                     ref={r => (this.videoTimer = r)}
                     maxFontMultiplier={this.props.maxFontMultiplier}
                   />
-                  {settingsMode !== 'bottom' && connection && type !== 'audio' && (
-                    <TouchableOpacity
-                      style={{
-                        padding: 10
-                      }}
-                      underlayColor={'transparent'}
-                      onPress={() => {
-                        this.videoSettings.toggle();
-                      }}
-                    >
-                      {svgs.videoQuality({
-                        width: 20,
-                        height: 20,
-                        fill: 'white',
-                        ...smallPlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
+                  {!youtubeId &&
+                    settingsMode !== 'bottom' &&
+                    connection &&
+                    type !== 'audio' && (
+                      <TouchableOpacity
+                        style={{
+                          padding: 10
+                        }}
+                        underlayColor={'transparent'}
+                        onPress={() => {
+                          this.videoSettings.toggle();
+                        }}
+                      >
+                        {svgs.videoQuality({
+                          width: 20,
+                          height: 20,
+                          fill: 'white',
+                          ...smallPlayerControls
+                        })}
+                      </TouchableOpacity>
+                    )}
                   {type !== 'audio' && (
                     <TouchableOpacity
                       style={{ padding: 10 }}
@@ -1143,48 +1189,53 @@ export default class Video extends React.Component {
               </>
             )}
           </TouchableOpacity>
-          {isiOS && (
-            <Animated.View
-              style={{
-                top: 7,
-                position: 'absolute',
-                right: settingsMode === 'bottom' ? 39 : 10,
-                transform: [
-                  {
-                    translateX: type === 'video' ? this.translateControls : 0
-                  }
-                ]
-              }}
-            >
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => AirPlay.startScan()}
+          {!youtubeId && (
+            <>
+              {isiOS && (
+                <Animated.View
+                  style={{
+                    top: 7,
+                    position: 'absolute',
+                    right: settingsMode === 'bottom' ? 39 : 10,
+                    transform: [
+                      {
+                        translateX:
+                          type === 'video' ? this.translateControls : 0
+                      }
+                    ]
+                  }}
+                >
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => AirPlay.startScan()}
+                  >
+                    <AirPlayButton />
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+              <Animated.View
+                style={{
+                  top: 7,
+                  position: 'absolute',
+                  right: settingsMode === 'bottom' ? 68 : 39,
+                  transform: [
+                    {
+                      translateX: type === 'video' ? this.translateControls : 0
+                    }
+                  ]
+                }}
               >
-                <AirPlayButton />
-              </TouchableOpacity>
-            </Animated.View>
+                <CastButton
+                  style={{
+                    width: 29,
+                    height: 29,
+                    tintColor: 'white',
+                    ...smallPlayerControls
+                  }}
+                />
+              </Animated.View>
+            </>
           )}
-          <Animated.View
-            style={{
-              top: 7,
-              position: 'absolute',
-              right: settingsMode === 'bottom' ? 68 : 39,
-              transform: [
-                {
-                  translateX: type === 'video' ? this.translateControls : 0
-                }
-              ]
-            }}
-          >
-            <CastButton
-              style={{
-                width: 29,
-                height: 29,
-                tintColor: 'white',
-                ...smallPlayerControls
-              }}
-            />
-          </Animated.View>
           {settingsMode === 'bottom' && connection && type !== 'audio' && (
             <Animated.View
               style={{
@@ -1214,7 +1265,7 @@ export default class Video extends React.Component {
             </Animated.View>
           )}
         </View>
-        {showControls && (
+        {!!lengthInSec && showControls && (
           <Animated.View
             {...this.pResponder()}
             style={{
@@ -1269,18 +1320,20 @@ export default class Video extends React.Component {
           </Animated.View>
         )}
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
-        <VideoSettings
-          qualities={vpe.sort((i, j) =>
-            i.height < j.height || j.height === 'Auto' ? 1 : -1
-          )}
-          styles={settings}
-          settingsMode={settingsMode}
-          showRate={!gCasting && !aCasting}
-          ref={r => (this.videoSettings = r)}
-          onSaveSettings={this.onSaveSettings}
-          maxFontMultiplier={this.props.maxFontMultiplier}
-          showCaptions={!!captions && !gCasting && !aCasting}
-        />
+        {!youtubeId && (
+          <VideoSettings
+            qualities={vpe.sort((i, j) =>
+              i.height < j.height || j.height === 'Auto' ? 1 : -1
+            )}
+            styles={settings}
+            settingsMode={settingsMode}
+            showRate={!gCasting && !aCasting}
+            ref={r => (this.videoSettings = r)}
+            onSaveSettings={this.onSaveSettings}
+            maxFontMultiplier={this.props.maxFontMultiplier}
+            showCaptions={!!captions && !gCasting && !aCasting}
+          />
+        )}
         {type === 'audio' && (
           <ActionModal
             modalStyle={{ width: '80%' }}

@@ -521,74 +521,69 @@ export default class Video extends React.Component {
   };
 
   pResponder = () => {
-    let { youtubeId } = this.props.content;
-    return (
-      this.panResponder ||
-      (this.panResponder = PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onShouldBlockNativeResponder: () => true,
-        onPanResponderTerminationRequest: () => true,
-        onStartShouldSetPanResponderCapture: () => false,
-        onPanResponderRelease: () => {
-          delete this.seeking;
-          this.updateVideoProgress();
-          clearTimeout(this.controlsTO);
-          this.controlsTO = setTimeout(
-            () =>
-              this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-            3000
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderTerminationRequest: () => true,
+      onStartShouldSetPanResponderCapture: () => false,
+      onPanResponderRelease: () => {
+        delete this.seeking;
+        this.updateVideoProgress();
+        clearTimeout(this.controlsTO);
+        this.controlsTO = setTimeout(
+          () =>
+            this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
+          3000
+        );
+      },
+      onPanResponderTerminate: () => {
+        delete this.seeking;
+        this.updateVideoProgress();
+        clearTimeout(this.controlsTO);
+        this.controlsTO = setTimeout(
+          () =>
+            this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
+          3000
+        );
+      },
+      onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
+        clearTimeout(this.controlsTO);
+        this.animateControls(0);
+        if (this.videoRef) {
+          if (!isiOS)
+            this.onProgress({
+              currentTime: (locationX / videoW) * this.props.content.lengthInSec
+            });
+          this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](
+            (locationX / videoW) * this.props.content.lengthInSec
           );
-        },
-        onPanResponderTerminate: () => {
-          delete this.seeking;
-          this.updateVideoProgress();
-          clearTimeout(this.controlsTO);
-          this.controlsTO = setTimeout(
-            () =>
-              this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-            3000
+        }
+        if (gCasting)
+          GoogleCast.seek(
+            (locationX / videoW) * this.props.content.lengthInSec
           );
-        },
-        onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
-          clearTimeout(this.controlsTO);
-          this.animateControls(0);
-          if (this.videoRef) {
-            if (!isiOS)
-              this.onProgress({
-                currentTime:
-                  (locationX / videoW) * this.props.content.lengthInSec
-              });
-            this.videoRef[youtubeId ? 'seekTo' : 'seek'](
-              (locationX / videoW) * this.props.content.lengthInSec
-            );
-          }
-          if (gCasting)
-            GoogleCast.seek(
-              (locationX / videoW) * this.props.content.lengthInSec
-            );
-          return Math.abs(dx) > 2 || Math.abs(dy) > 2;
-        },
-        onPanResponderMove: (e, { moveX }) => {
-          this.seeking = true;
-          moveX = moveX - (windowWidth - videoW) / 2;
-          this.translateBlueX.setValue(moveX - videoW);
-          if (this.videoRef) {
-            if (!isiOS)
-              this.onProgress({
-                currentTime: (moveX / videoW) * this.props.content.lengthInSec
-              });
-            this.videoRef[youtubeId ? 'seekTo' : 'seek'](
-              (moveX / videoW) * this.props.content.lengthInSec
-            );
-          }
-          if (gCasting)
-            GoogleCast.seek((moveX / videoW) * this.props.content.lengthInSec);
-          this.videoTimer.setProgress(
+        return Math.abs(dx) > 2 || Math.abs(dy) > 2;
+      },
+      onPanResponderMove: (e, { moveX }) => {
+        this.seeking = true;
+        moveX = moveX - (windowWidth - videoW) / 2;
+        this.translateBlueX.setValue(moveX - videoW);
+        if (this.videoRef) {
+          if (!isiOS)
+            this.onProgress({
+              currentTime: (moveX / videoW) * this.props.content.lengthInSec
+            });
+          this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](
             (moveX / videoW) * this.props.content.lengthInSec
           );
         }
-      }).panHandlers)
-    );
+        if (gCasting)
+          GoogleCast.seek((moveX / videoW) * this.props.content.lengthInSec);
+        this.videoTimer.setProgress(
+          (moveX / videoW) * this.props.content.lengthInSec
+        );
+      }
+    }).panHandlers;
   };
 
   onProgress = ({ currentTime }) => {
@@ -754,8 +749,10 @@ export default class Video extends React.Component {
     let fullLength = parseFloat(this.props.content.lengthInSec);
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
+
     this.updateVideoProgress();
-    this.videoRef?.[this.props.content.youtubeId ? 'seekTo' : 'seek'](time);
+    if (this.videoRef)
+      this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](time);
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     if (gCasting) GoogleCast.seek(time);
   };
@@ -818,6 +815,7 @@ export default class Video extends React.Component {
           beforeTimerCursorBackground
         },
         content: {
+          live,
           captions,
           buffering,
           formatTime,
@@ -830,7 +828,6 @@ export default class Video extends React.Component {
         }
       }
     } = this;
-
     return (
       <SafeAreaView
         forceInset={{
@@ -842,9 +839,9 @@ export default class Video extends React.Component {
         style={[
           {
             zIndex: 1,
-            marginBottom: -11,
             overflow: 'hidden',
-            alignItems: 'center'
+            alignItems: 'center',
+            marginBottom: live ? 0 : -11
           },
           fullscreen
             ? {
@@ -887,7 +884,7 @@ export default class Video extends React.Component {
                     ref={r => (this.videoRef = r)}
                     style={{ alignSelf: 'stretch', aspectRatio: 16 / 9 }}
                   />
-                  {paused && !lengthInSec && (
+                  {paused && live && (
                     <Image
                       source={{
                         uri: `https://i2.ytimg.com/vi/${youtubeId}/mqdefault.jpg`
@@ -1050,7 +1047,7 @@ export default class Video extends React.Component {
                       ...largePlayerControls
                     })}
                   </TouchableOpacity>
-                  {!!lengthInSec && (
+                  {live && (
                     <TouchableOpacity
                       style={{ flex: 1, alignItems: 'center' }}
                       onPress={() => this.onSeek((cTime -= 10))}
@@ -1070,7 +1067,7 @@ export default class Video extends React.Component {
                       ...largePlayerControls
                     })}
                   </TouchableOpacity>
-                  {!!lengthInSec && (
+                  {live && (
                     <TouchableOpacity
                       style={{ flex: 1, alignItems: 'center' }}
                       onPress={() => this.onSeek((cTime += 10))}
@@ -1113,6 +1110,7 @@ export default class Video extends React.Component {
                   }}
                 >
                   <VideoTimer
+                    live={live}
                     styles={timerText}
                     formatTime={formatTime}
                     lengthInSec={lengthInSec}
@@ -1265,7 +1263,7 @@ export default class Video extends React.Component {
             </Animated.View>
           )}
         </View>
-        {!!lengthInSec && showControls && (
+        {!live && showControls && (
           <Animated.View
             {...this.pResponder()}
             style={{

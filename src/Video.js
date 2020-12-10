@@ -129,10 +129,12 @@ export default class Video extends React.Component {
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
-    aListener?.remove();
-    gListenerMP?.remove();
-    gListenerSE?.remove();
-    gListenerSS?.remove();
+    if (!this.props.content.youtubeId) {
+      aListener?.remove();
+      gListenerMP?.remove();
+      gListenerSE?.remove();
+      gListenerSS?.remove();
+    }
     AppState.removeEventListener('change', this.handleAppStateChange);
     Orientation.removeDeviceOrientationListener(this.orientationListener);
   }

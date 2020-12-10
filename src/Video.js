@@ -78,7 +78,13 @@ export default class Video extends React.Component {
   constructor(props) {
     super(props);
 
-    if (gCasting) GoogleCast.pause();
+    if (gCasting) {
+      if (props.youtubeId) {
+        gCasting = false;
+        GoogleCast.endSession();
+      }
+      GoogleCast.pause();
+    }
     connection = !!props.connection;
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;

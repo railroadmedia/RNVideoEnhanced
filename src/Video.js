@@ -1047,7 +1047,7 @@ export default class Video extends React.Component {
                       ...largePlayerControls
                     })}
                   </TouchableOpacity>
-                  {live && (
+                  {!live && (
                     <TouchableOpacity
                       style={{ flex: 1, alignItems: 'center' }}
                       onPress={() => this.onSeek((cTime -= 10))}
@@ -1067,7 +1067,7 @@ export default class Video extends React.Component {
                       ...largePlayerControls
                     })}
                   </TouchableOpacity>
-                  {live && (
+                  {!live && (
                     <TouchableOpacity
                       style={{ flex: 1, alignItems: 'center' }}
                       onPress={() => this.onSeek((cTime += 10))}

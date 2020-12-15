@@ -646,7 +646,7 @@ export default class Video extends React.Component {
       clearTimeout(this.bufferingTO);
       clearTimeout(this.bufferingTooLongTO);
       this.bufferingOpacity?.setValue(paused || aCasting || gCasting ? 0 : 1);
-      return { paused, startTime: 0 };
+      return { paused, startTime: '' };
     });
   };
 
@@ -684,7 +684,7 @@ export default class Video extends React.Component {
         cTime || lastWatchedPosInSec || 0
       );
     }
-    if (youtubeId)
+    if (youtubeId && !this.props.live)
       this.setState({ paused: false }, () => this.setState({ paused: true }));
     if (gCasting) GoogleCast.seek(cTime || lastWatchedPosInSec);
     this.bufferingOpacity?.setValue(0);

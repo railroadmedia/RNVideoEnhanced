@@ -112,6 +112,7 @@ export default class Video extends React.Component {
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
     this.state.showControls = props.showControls;
+    this.state.startTime = props.content.startTime;
     if (isTablet)
       this.state.tabOrientation =
         orientation || (windowWidth > windowHeight ? 'LANDSCAPE' : 'PORTRAIT');
@@ -645,7 +646,7 @@ export default class Video extends React.Component {
       clearTimeout(this.bufferingTO);
       clearTimeout(this.bufferingTooLongTO);
       this.bufferingOpacity?.setValue(paused || aCasting || gCasting ? 0 : 1);
-      return { paused };
+      return { paused, startTime: 0 };
     });
   };
 
@@ -799,6 +800,7 @@ export default class Video extends React.Component {
         rate,
         paused,
         repeat,
+        startTime,
         fullscreen,
         showControls,
         tabOrientation,
@@ -807,6 +809,7 @@ export default class Video extends React.Component {
       },
       props: {
         type,
+        live,
         maxWidth,
         youtubeId,
         settingsMode,
@@ -823,7 +826,6 @@ export default class Video extends React.Component {
           beforeTimerCursorBackground
         },
         content: {
-          live,
           captions,
           buffering,
           formatTime,
@@ -1010,6 +1012,184 @@ export default class Video extends React.Component {
                 />
               </Animated.View>
             )}
+            {live && !!startTime ? (
+              <LiveTimer
+                startTime={startTime}
+                onFinish={() => this.togglePaused()}
+              />
+            ) : (
+              <>
+                {showControls && (
+                  <>
+                    <Animated.View
+                      style={{
+                        flexDirection: 'row',
+                        transform: [
+                          {
+                            translateX:
+                              type === 'video' ? this.translateControls : 0
+                          }
+                        ]
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={this.props.goToPreviousLesson}
+                        style={{
+                          flex: 1,
+                          alignItems: 'center',
+                          opacity:
+                            previousLessonId || previousLessonUrl ? 1 : 0.5
+                        }}
+                        disabled={!(previousLessonId || previousLessonUrl)}
+                      >
+                        {svgs.prevLesson({
+                          ...iconStyle,
+                          ...largePlayerControls
+                        })}
+                      </TouchableOpacity>
+                      {!live && (
+                        <TouchableOpacity
+                          style={{ flex: 1, alignItems: 'center' }}
+                          onPress={() => this.onSeek((cTime -= 10))}
+                        >
+                          {svgs.back10({
+                            ...iconStyle,
+                            ...largePlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        onPress={this.togglePaused}
+                        style={{ flex: 1, alignItems: 'center' }}
+                      >
+                        {svgs[paused ? 'playSvg' : 'pause']({
+                          ...iconStyle,
+                          ...largePlayerControls
+                        })}
+                      </TouchableOpacity>
+                      {!live && (
+                        <TouchableOpacity
+                          style={{ flex: 1, alignItems: 'center' }}
+                          onPress={() => this.onSeek((cTime += 10))}
+                        >
+                          {svgs.forward10({
+                            ...iconStyle,
+                            ...largePlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        onPress={this.props.goToNextLesson}
+                        style={{
+                          flex: 1,
+                          alignItems: 'center',
+                          opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
+                        }}
+                        disabled={!(nextLessonUrl || nextLessonId)}
+                      >
+                        {svgs.prevLesson({
+                          ...{ ...iconStyle, ...largePlayerControls },
+                          style: { transform: [{ rotate: '180deg' }] }
+                        })}
+                      </TouchableOpacity>
+                    </Animated.View>
+                    <Animated.View
+                      style={{
+                        bottom: fullscreen
+                          ? windowHeight > videoH
+                            ? 29
+                            : 29 + 25
+                          : 11,
+                        ...styles.bottomControlsContainer,
+                        transform: [
+                          {
+                            translateX:
+                              type === 'video' ? this.translateControls : 0
+                          }
+                        ]
+                      }}
+                    >
+                      <VideoTimer
+                        live={live}
+                        styles={timerText}
+                        formatTime={formatTime}
+                        lengthInSec={lengthInSec}
+                        ref={r => (this.videoTimer = r)}
+                        maxFontMultiplier={this.props.maxFontMultiplier}
+                      />
+                      {!youtubeId &&
+                        settingsMode !== 'bottom' &&
+                        connection &&
+                        type !== 'audio' && (
+                          <TouchableOpacity
+                            style={{
+                              padding: 10
+                            }}
+                            underlayColor={'transparent'}
+                            onPress={() => {
+                              this.videoSettings.toggle();
+                            }}
+                          >
+                            {svgs.videoQuality({
+                              width: 20,
+                              height: 20,
+                              fill: 'white',
+                              ...smallPlayerControls
+                            })}
+                          </TouchableOpacity>
+                        )}
+                      {type !== 'audio' && (
+                        <TouchableOpacity
+                          style={{ padding: 10 }}
+                          underlayColor={'transparent'}
+                          onPress={() =>
+                            this.orientationListener(
+                              isTablet
+                                ? tabOrientation
+                                : fullscreen
+                                ? 'PORT'
+                                : 'LANDLEFT',
+                              true
+                            )
+                          }
+                        >
+                          {svgs.fullScreen({
+                            width: 20,
+                            height: 20,
+                            fill: 'white',
+                            ...smallPlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                      {type === 'audio' && (
+                        <TouchableOpacity
+                          style={styles.mp3TogglerContainer}
+                          onPress={() => this.mp3ActionModal.toggleModal()}
+                        >
+                          <Text
+                            maxFontSizeMultiplier={this.props.maxFontMultiplier}
+                            style={{
+                              ...styles.mp3TogglerText,
+                              color: mp3TogglerTextColor || 'white'
+                            }}
+                          >
+                            {this.formatMP3Name(
+                              mp3s.find(mp3 => mp3.selected).key
+                            )}
+                          </Text>
+                          {svgs.arrowDown({
+                            height: 20,
+                            width: 20,
+                            fill: '#ffffff',
+                            ...smallPlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                    </Animated.View>
+                  </>
+                )}
+              </>
+            )}
             <TouchableOpacity
               style={{
                 ...styles.backContainer,
@@ -1028,172 +1208,6 @@ export default class Video extends React.Component {
                 ...smallPlayerControls
               })}
             </TouchableOpacity>
-            {showControls && (
-              <>
-                <Animated.View
-                  style={{
-                    flexDirection: 'row',
-                    transform: [
-                      {
-                        translateX:
-                          type === 'video' ? this.translateControls : 0
-                      }
-                    ]
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={this.props.goToPreviousLesson}
-                    style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
-                    }}
-                    disabled={!(previousLessonId || previousLessonUrl)}
-                  >
-                    {svgs.prevLesson({
-                      ...iconStyle,
-                      ...largePlayerControls
-                    })}
-                  </TouchableOpacity>
-                  {!live && (
-                    <TouchableOpacity
-                      style={{ flex: 1, alignItems: 'center' }}
-                      onPress={() => this.onSeek((cTime -= 10))}
-                    >
-                      {svgs.back10({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={this.togglePaused}
-                    style={{ flex: 1, alignItems: 'center' }}
-                  >
-                    {svgs[paused ? 'playSvg' : 'pause']({
-                      ...iconStyle,
-                      ...largePlayerControls
-                    })}
-                  </TouchableOpacity>
-                  {!live && (
-                    <TouchableOpacity
-                      style={{ flex: 1, alignItems: 'center' }}
-                      onPress={() => this.onSeek((cTime += 10))}
-                    >
-                      {svgs.forward10({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={this.props.goToNextLesson}
-                    style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
-                    }}
-                    disabled={!(nextLessonUrl || nextLessonId)}
-                  >
-                    {svgs.prevLesson({
-                      ...{ ...iconStyle, ...largePlayerControls },
-                      style: { transform: [{ rotate: '180deg' }] }
-                    })}
-                  </TouchableOpacity>
-                </Animated.View>
-                <Animated.View
-                  style={{
-                    bottom: fullscreen
-                      ? windowHeight > videoH
-                        ? 29
-                        : 29 + 25
-                      : 11,
-                    ...styles.bottomControlsContainer,
-                    transform: [
-                      {
-                        translateX:
-                          type === 'video' ? this.translateControls : 0
-                      }
-                    ]
-                  }}
-                >
-                  <VideoTimer
-                    live={live}
-                    styles={timerText}
-                    formatTime={formatTime}
-                    lengthInSec={lengthInSec}
-                    ref={r => (this.videoTimer = r)}
-                    maxFontMultiplier={this.props.maxFontMultiplier}
-                  />
-                  {!youtubeId &&
-                    settingsMode !== 'bottom' &&
-                    connection &&
-                    type !== 'audio' && (
-                      <TouchableOpacity
-                        style={{
-                          padding: 10
-                        }}
-                        underlayColor={'transparent'}
-                        onPress={() => {
-                          this.videoSettings.toggle();
-                        }}
-                      >
-                        {svgs.videoQuality({
-                          width: 20,
-                          height: 20,
-                          fill: 'white',
-                          ...smallPlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
-                  {type !== 'audio' && (
-                    <TouchableOpacity
-                      style={{ padding: 10 }}
-                      underlayColor={'transparent'}
-                      onPress={() =>
-                        this.orientationListener(
-                          isTablet
-                            ? tabOrientation
-                            : fullscreen
-                            ? 'PORT'
-                            : 'LANDLEFT',
-                          true
-                        )
-                      }
-                    >
-                      {svgs.fullScreen({
-                        width: 20,
-                        height: 20,
-                        fill: 'white',
-                        ...smallPlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                  {type === 'audio' && (
-                    <TouchableOpacity
-                      style={styles.mp3TogglerContainer}
-                      onPress={() => this.mp3ActionModal.toggleModal()}
-                    >
-                      <Text
-                        maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                        style={{
-                          ...styles.mp3TogglerText,
-                          color: mp3TogglerTextColor || 'white'
-                        }}
-                      >
-                        {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
-                      </Text>
-                      {svgs.arrowDown({
-                        height: 20,
-                        width: 20,
-                        fill: '#ffffff',
-                        ...smallPlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                </Animated.View>
-              </>
-            )}
           </TouchableOpacity>
           {!youtubeId && (
             <>
@@ -1438,6 +1452,133 @@ export default class Video extends React.Component {
     );
   }
 }
+class LiveTimer extends React.Component {
+  state = {
+    hours: '--',
+    minutes: '--',
+    seconds: '--'
+  };
+
+  constructor(props) {
+    super(props);
+    let startTime = parseInt(
+      (new Date(`${props.startTime} UTC`) - new Date()) / 1000
+    );
+    if (startTime >= 0) {
+      this.state = this.formatTimer(startTime);
+      this.countDown(startTime);
+    } else props.onFinish?.();
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.interval);
+  }
+
+  countDown = time => {
+    this.interval = setInterval(() => {
+      if (time >= 0) this.setState(this.formatTimer(time--));
+      else {
+        this.props.onFinish?.();
+        clearImmediate(this.interval);
+      }
+    }, 1000);
+  };
+
+  formatTimer = seconds => {
+    const hours = parseInt(seconds / 3600);
+    const minutes = parseInt((seconds -= hours * 3600) / 60);
+    seconds -= minutes * 60;
+    return {
+      hours: `${hours < 10 ? 0 : ''}${hours}`,
+      minutes: `${minutes < 10 ? 0 : ''}${minutes}`,
+      seconds: `${seconds < 10 ? 0 : ''}${seconds}`
+    };
+  };
+
+  render() {
+    let { hours, minutes, seconds } = this.state;
+    return (
+      <View
+        style={{
+          height: '100%',
+          aspectRatio: 16 / 9,
+          position: 'absolute',
+          alignItems: 'center',
+          flexDirection: 'row',
+          marginHorizontal: 15,
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,.5)'
+        }}
+      >
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 40,
+            textAlign: 'center',
+            fontFamily: 'RobotoCondensed-Bold'
+          }}
+        >
+          {hours}
+          {`\n`}
+          <Text style={{ fontSize: 10 }}>
+            {hours === '01' ? 'HOUR' : 'HOURS'}
+          </Text>
+        </Text>
+        <Text
+          style={{
+            fontSize: 40,
+            color: 'white',
+            textAlign: 'center',
+            fontFamily: 'RobotoCondensed-Bold'
+          }}
+        >
+          :{`  `}
+          {`\n`}
+          <Text style={{ fontSize: 10 }}>{` `}</Text>
+        </Text>
+        <Text
+          style={{
+            fontSize: 40,
+            color: 'white',
+            textAlign: 'center',
+            fontFamily: 'RobotoCondensed-Bold'
+          }}
+        >
+          {minutes}
+          {`\n`}
+          <Text style={{ fontSize: 10 }}>
+            {hours === '00' && minutes === '01' ? 'MINUTE' : 'MINUTES'}
+          </Text>
+        </Text>
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 40,
+            textAlign: 'center',
+            fontFamily: 'RobotoCondensed-Bold'
+          }}
+        >
+          :{`  `}
+          {`\n`}
+          <Text style={{ fontSize: 10 }}>{` `}</Text>
+        </Text>
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 40,
+            textAlign: 'center',
+            fontFamily: 'RobotoCondensed-Bold'
+          }}
+        >
+          {seconds}
+          {`\n`}
+          <Text style={{ fontSize: 10 }}>SECONDS</Text>
+        </Text>
+      </View>
+    );
+  }
+}
+
 const styles = StyleSheet.create({
   videoBackgorund: {
     width: '100%',

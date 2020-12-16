@@ -684,7 +684,7 @@ export default class Video extends React.Component {
         cTime || lastWatchedPosInSec || 0
       );
     }
-    if (youtubeId && !this.props.live)
+    if (youtubeId && (!this.props.live || !this.props.content.isLive))
       this.setState({ paused: false }, () => this.setState({ paused: true }));
     if (gCasting) GoogleCast.seek(cTime || lastWatchedPosInSec);
     this.bufferingOpacity?.setValue(0);
@@ -1015,7 +1015,10 @@ export default class Video extends React.Component {
             {live && !!startTime ? (
               <LiveTimer
                 startTime={startTime}
-                onFinish={() => this.togglePaused()}
+                onFinish={() => {
+                  this.togglePaused();
+                  this.props.onStartLive?.();
+                }}
               />
             ) : (
               <>

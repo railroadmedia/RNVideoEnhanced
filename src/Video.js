@@ -23,7 +23,8 @@ import {
 import { SafeAreaView } from 'react-navigation';
 
 import RNFetchBlob from 'rn-fetch-blob';
-import YouTube from 'react-native-youtube';
+// import YouTube from 'react-native-youtube';
+import WebView from 'react-native-webview';
 import DeviceInfo from 'react-native-device-info';
 import Orientation from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
@@ -673,6 +674,15 @@ export default class Video extends React.Component {
     this.props.onBack();
   };
 
+  handleYtBack = () => {
+    this.webview.injectJavaScript(`(function() {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        key: 'back',
+        currentTime: window.video?.getCurrentTime() || ${cTime}
+      }));
+    })()`);
+  };
+
   onLoad = () => {
     let { youtubeId, lastWatchedPosInSec } = this.props.content;
     if (this.videoRef) {
@@ -793,6 +803,53 @@ export default class Video extends React.Component {
     }
   };
 
+  injectJsInWebView = () => `(function() {
+    document.addEventListener('DOMNodeInserted', () => {
+      if(!window.video) window.video = document.querySelector('video');
+        if(window.video && !window.eventsAdded) {
+          window.eventsAdded = true;
+          window.video.addEventListener('play', () => {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              key: 'play',
+              currentTime: window.video.getCurrentTime()
+            }));
+          });
+          window.video.addEventListener('pause', () => {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              key: 'pause',
+              currentTime: window.video.getCurrentTime()
+            }));
+          });
+          window.video.addEventListener('ended', () => {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              key: 'ended'
+            }));
+          });
+        }
+    });
+  })()`;
+
+  onWebViewMessage = ({ nativeEvent: { data } }) => {
+    let { key, currentTime } = JSON.parse(data);
+    switch (key) {
+      case 'ended':
+        this.onEnd();
+        this.webview.injectJavaScript(`(function() {
+          window.video.play().then(() => window.video.pause());
+        })()`);
+        break;
+      case 'play':
+      case 'pause':
+        cTime = currentTime;
+        this.togglePaused();
+        break;
+      case 'back':
+        cTime = currentTime;
+        this.handleBack();
+        break;
+    }
+  };
+
   render() {
     let {
       state: {
@@ -837,7 +894,8 @@ export default class Video extends React.Component {
           thumbnailUrl,
           nextLessonUrl,
           previousLessonId,
-          previousLessonUrl
+          previousLessonUrl,
+          lastWatchedPosInSec
         }
       }
     } = this;
@@ -854,7 +912,7 @@ export default class Video extends React.Component {
             zIndex: 1,
             overflow: 'hidden',
             alignItems: 'center',
-            marginBottom: live ? 0 : -11
+            marginBottom: youtubeId ? 0 : -11
           },
           fullscreen
             ? {
@@ -879,12 +937,24 @@ export default class Video extends React.Component {
             }}
           />
         )}
+        {!!youtubeId && !fullscreen && (
+          <TouchableOpacity
+            style={{ padding: 10, alignSelf: 'flex-start' }}
+            onPress={this.handleYtBack}
+          >
+            {svgs.arrowLeft({
+              width: 18,
+              height: 18,
+              fill: 'white'
+            })}
+          </TouchableOpacity>
+        )}
         <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
           {!videoRefreshing && (
             <>
               {!!youtubeId ? (
                 <>
-                  <YouTube
+                  {/* <YouTube
                     rel={false}
                     controls={0}
                     play={!paused}
@@ -908,7 +978,40 @@ export default class Video extends React.Component {
                         position: 'absolute'
                       }}
                     />
-                  )}
+                  )} */}
+                  <WebView
+                    scalesPageToFit={true}
+                    javaScriptEnabled={true}
+                    domStorageEnabled={false}
+                    mixedContentMode='always'
+                    startInLoadingState={false}
+                    allowsFullscreenVideo={true}
+                    ref={r => (this.webview = r)}
+                    allowsInlineMediaPlayback={true}
+                    onMessage={this.onWebViewMessage}
+                    mediaPlaybackRequiresUserAction={false}
+                    automaticallyAdjustContentInsets={false}
+                    injectedJavaScript={this.injectJsInWebView()}
+                    style={{
+                      aspectRatio: 16 / 9,
+                      alignSelf: 'stretch',
+                      backgroundColor: 'black'
+                    }}
+                    source={{
+                      uri: `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=${
+                        lastWatchedPosInSec || 0
+                      }`,
+                      headers: { referer: 'https://www.drumeo.com/' }
+                    }}
+                    onNavigationStateChange={({ url }) => {
+                      if (
+                        !url.includes(
+                          `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=`
+                        )
+                      )
+                        this.webview.stopLoading();
+                    }}
+                  />
                 </>
               ) : (
                 <RNVideo
@@ -970,177 +1073,201 @@ export default class Video extends React.Component {
               )}
             </>
           )}
-          <TouchableOpacity
-            onPress={this.toggleControls}
-            style={{
-              width: '100%',
-              height: '100%',
-              ...styles.controlsContainer
-            }}
-          >
-            {type === 'audio' && (
-              <Image
-                source={{ uri: thumbnailUrl }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute'
-                }}
-              />
-            )}
-            <Animated.View
+          {!youtubeId && (
+            <TouchableOpacity
+              onPress={this.toggleControls}
               style={{
-                ...styles.constrolsBackground,
-                opacity:
-                  type === 'video'
-                    ? this.translateControls.interpolate({
-                        outputRange: [0, 0.5],
-                        inputRange: [-videoW, 0]
-                      })
-                    : 0.5
+                width: '100%',
+                height: '100%',
+                ...styles.controlsContainer
               }}
-            />
-            {!!this.bufferingOpacity && (
+            >
+              {type === 'audio' && (
+                <Image
+                  source={{ uri: thumbnailUrl }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute'
+                  }}
+                />
+              )}
               <Animated.View
                 style={{
-                  position: 'absolute',
-                  alignSelf: 'center',
-                  opacity: this.bufferingOpacity
-                }}
-              >
-                <ActivityIndicator
-                  color='white'
-                  size={'large'}
-                  animating={buffering}
-                />
-              </Animated.View>
-            )}
-            {live && (
-              <LiveTimer
-                endTime={endTime}
-                startTime={startTime}
-                visible={live && !isLive}
-                onEnd={() => {
-                  this.togglePaused();
-                  this.props.onEndLive?.();
-                }}
-                onStart={() => {
-                  this.togglePaused();
-                  this.props.onStartLive?.();
+                  ...styles.constrolsBackground,
+                  opacity:
+                    type === 'video'
+                      ? this.translateControls.interpolate({
+                          outputRange: [0, 0.5],
+                          inputRange: [-videoW, 0]
+                        })
+                      : 0.5
                 }}
               />
-            )}
-            {showControls && (!live || isLive) && (
-              <>
+              {!!this.bufferingOpacity && (
                 <Animated.View
                   style={{
-                    flexDirection: 'row',
-                    transform: [
-                      {
-                        translateX:
-                          type === 'video' ? this.translateControls : 0
-                      }
-                    ]
+                    position: 'absolute',
+                    alignSelf: 'center',
+                    opacity: this.bufferingOpacity
                   }}
                 >
-                  <TouchableOpacity
-                    onPress={this.props.goToPreviousLesson}
-                    style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
-                    }}
-                    disabled={!(previousLessonId || previousLessonUrl)}
-                  >
-                    {svgs.prevLesson({
-                      ...iconStyle,
-                      ...largePlayerControls
-                    })}
-                  </TouchableOpacity>
-                  {!live && (
-                    <TouchableOpacity
-                      style={{ flex: 1, alignItems: 'center' }}
-                      onPress={() => this.onSeek((cTime -= 10))}
-                    >
-                      {svgs.back10({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={this.togglePaused}
-                    style={{ flex: 1, alignItems: 'center' }}
-                  >
-                    {svgs[paused ? 'playSvg' : 'pause']({
-                      ...iconStyle,
-                      ...largePlayerControls
-                    })}
-                  </TouchableOpacity>
-                  {!live && (
-                    <TouchableOpacity
-                      style={{ flex: 1, alignItems: 'center' }}
-                      onPress={() => this.onSeek((cTime += 10))}
-                    >
-                      {svgs.forward10({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={this.props.goToNextLesson}
-                    style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
-                    }}
-                    disabled={!(nextLessonUrl || nextLessonId)}
-                  >
-                    {svgs.prevLesson({
-                      ...{ ...iconStyle, ...largePlayerControls },
-                      style: { transform: [{ rotate: '180deg' }] }
-                    })}
-                  </TouchableOpacity>
-                </Animated.View>
-                <Animated.View
-                  style={{
-                    bottom: fullscreen
-                      ? windowHeight > videoH
-                        ? 29
-                        : 29 + 25
-                      : 11,
-                    ...styles.bottomControlsContainer,
-                    transform: [
-                      {
-                        translateX:
-                          type === 'video' ? this.translateControls : 0
-                      }
-                    ]
-                  }}
-                >
-                  <VideoTimer
-                    live={live}
-                    styles={timerText}
-                    formatTime={formatTime}
-                    lengthInSec={lengthInSec}
-                    ref={r => (this.videoTimer = r)}
-                    maxFontMultiplier={this.props.maxFontMultiplier}
+                  <ActivityIndicator
+                    color='white'
+                    size={'large'}
+                    animating={buffering}
                   />
-                  {!youtubeId &&
-                    settingsMode !== 'bottom' &&
-                    connection &&
-                    type !== 'audio' && (
+                </Animated.View>
+              )}
+              {live && (
+                <LiveTimer
+                  endTime={endTime}
+                  startTime={startTime}
+                  visible={live && !isLive}
+                  onEnd={() => {
+                    this.togglePaused();
+                    this.props.onEndLive?.();
+                  }}
+                  onStart={() => {
+                    this.togglePaused();
+                    this.props.onStartLive?.();
+                  }}
+                />
+              )}
+              {showControls && (!live || isLive) && (
+                <>
+                  <Animated.View
+                    style={{
+                      flexDirection: 'row',
+                      transform: [
+                        {
+                          translateX:
+                            type === 'video' ? this.translateControls : 0
+                        }
+                      ]
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={this.props.goToPreviousLesson}
+                      style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
+                      }}
+                      disabled={!(previousLessonId || previousLessonUrl)}
+                    >
+                      {svgs.prevLesson({
+                        ...iconStyle,
+                        ...largePlayerControls
+                      })}
+                    </TouchableOpacity>
+                    {!live && (
                       <TouchableOpacity
-                        style={{
-                          padding: 10
-                        }}
-                        underlayColor={'transparent'}
-                        onPress={() => {
-                          this.videoSettings.toggle();
-                        }}
+                        style={{ flex: 1, alignItems: 'center' }}
+                        onPress={() => this.onSeek((cTime -= 10))}
                       >
-                        {svgs.videoQuality({
+                        {svgs.back10({
+                          ...iconStyle,
+                          ...largePlayerControls
+                        })}
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      onPress={this.togglePaused}
+                      style={{ flex: 1, alignItems: 'center' }}
+                    >
+                      {svgs[paused ? 'playSvg' : 'pause']({
+                        ...iconStyle,
+                        ...largePlayerControls
+                      })}
+                    </TouchableOpacity>
+                    {!live && (
+                      <TouchableOpacity
+                        style={{ flex: 1, alignItems: 'center' }}
+                        onPress={() => this.onSeek((cTime += 10))}
+                      >
+                        {svgs.forward10({
+                          ...iconStyle,
+                          ...largePlayerControls
+                        })}
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      onPress={this.props.goToNextLesson}
+                      style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
+                      }}
+                      disabled={!(nextLessonUrl || nextLessonId)}
+                    >
+                      {svgs.prevLesson({
+                        ...{ ...iconStyle, ...largePlayerControls },
+                        style: { transform: [{ rotate: '180deg' }] }
+                      })}
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <Animated.View
+                    style={{
+                      bottom: fullscreen
+                        ? windowHeight > videoH
+                          ? 29
+                          : 29 + 25
+                        : 11,
+                      ...styles.bottomControlsContainer,
+                      transform: [
+                        {
+                          translateX:
+                            type === 'video' ? this.translateControls : 0
+                        }
+                      ]
+                    }}
+                  >
+                    <VideoTimer
+                      live={live}
+                      styles={timerText}
+                      formatTime={formatTime}
+                      lengthInSec={lengthInSec}
+                      ref={r => (this.videoTimer = r)}
+                      maxFontMultiplier={this.props.maxFontMultiplier}
+                    />
+                    {!youtubeId &&
+                      settingsMode !== 'bottom' &&
+                      connection &&
+                      type !== 'audio' && (
+                        <TouchableOpacity
+                          style={{
+                            padding: 10
+                          }}
+                          underlayColor={'transparent'}
+                          onPress={() => {
+                            this.videoSettings.toggle();
+                          }}
+                        >
+                          {svgs.videoQuality({
+                            width: 20,
+                            height: 20,
+                            fill: 'white',
+                            ...smallPlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                    {type !== 'audio' && (
+                      <TouchableOpacity
+                        style={{ padding: 10 }}
+                        underlayColor={'transparent'}
+                        onPress={() =>
+                          this.orientationListener(
+                            isTablet
+                              ? tabOrientation
+                              : fullscreen
+                              ? 'PORT'
+                              : 'LANDLEFT',
+                            true
+                          )
+                        }
+                      >
+                        {svgs.fullScreen({
                           width: 20,
                           height: 20,
                           fill: 'white',
@@ -1148,74 +1275,53 @@ export default class Video extends React.Component {
                         })}
                       </TouchableOpacity>
                     )}
-                  {type !== 'audio' && (
-                    <TouchableOpacity
-                      style={{ padding: 10 }}
-                      underlayColor={'transparent'}
-                      onPress={() =>
-                        this.orientationListener(
-                          isTablet
-                            ? tabOrientation
-                            : fullscreen
-                            ? 'PORT'
-                            : 'LANDLEFT',
-                          true
-                        )
-                      }
-                    >
-                      {svgs.fullScreen({
-                        width: 20,
-                        height: 20,
-                        fill: 'white',
-                        ...smallPlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                  {type === 'audio' && (
-                    <TouchableOpacity
-                      style={styles.mp3TogglerContainer}
-                      onPress={() => this.mp3ActionModal.toggleModal()}
-                    >
-                      <Text
-                        maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                        style={{
-                          ...styles.mp3TogglerText,
-                          color: mp3TogglerTextColor || 'white'
-                        }}
+                    {type === 'audio' && (
+                      <TouchableOpacity
+                        style={styles.mp3TogglerContainer}
+                        onPress={() => this.mp3ActionModal.toggleModal()}
                       >
-                        {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
-                      </Text>
-                      {svgs.arrowDown({
-                        height: 20,
-                        width: 20,
-                        fill: '#ffffff',
-                        ...smallPlayerControls
-                      })}
-                    </TouchableOpacity>
-                  )}
-                </Animated.View>
-              </>
-            )}
-
-            <TouchableOpacity
-              style={{
-                ...styles.backContainer,
-                transform: [
-                  {
-                    translateX: type === 'video' ? this.translateControls : 0
-                  }
-                ]
-              }}
-              onPress={this.handleBack}
-            >
-              {svgs[fullscreen ? 'x' : 'arrowLeft']({
-                width: 18,
-                height: 18,
-                fill: '#ffffff',
-                ...smallPlayerControls
-              })}
+                        <Text
+                          maxFontSizeMultiplier={this.props.maxFontMultiplier}
+                          style={{
+                            ...styles.mp3TogglerText,
+                            color: mp3TogglerTextColor || 'white'
+                          }}
+                        >
+                          {this.formatMP3Name(
+                            mp3s.find(mp3 => mp3.selected).key
+                          )}
+                        </Text>
+                        {svgs.arrowDown({
+                          height: 20,
+                          width: 20,
+                          fill: '#ffffff',
+                          ...smallPlayerControls
+                        })}
+                      </TouchableOpacity>
+                    )}
+                  </Animated.View>
+                </>
+              )}
+              <TouchableOpacity
+                style={{
+                  ...styles.backContainer,
+                  transform: [
+                    {
+                      translateX: type === 'video' ? this.translateControls : 0
+                    }
+                  ]
+                }}
+                onPress={this.handleBack}
+              >
+                {svgs[fullscreen ? 'x' : 'arrowLeft']({
+                  width: 18,
+                  height: 18,
+                  fill: '#ffffff',
+                  ...smallPlayerControls
+                })}
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
+          )}
           {!youtubeId && (
             <>
               {isiOS && (
@@ -1263,36 +1369,39 @@ export default class Video extends React.Component {
               </Animated.View>
             </>
           )}
-          {settingsMode === 'bottom' && connection && type !== 'audio' && (
-            <Animated.View
-              style={{
-                top: 7,
-                right: 10,
-                position: 'absolute',
-                transform: [
-                  {
-                    translateX: type === 'video' ? this.translateControls : 0
-                  }
-                ]
-              }}
-            >
-              <TouchableOpacity
-                underlayColor={'transparent'}
-                onPress={() => {
-                  this.videoSettings.toggle();
+          {!youtubeId &&
+            settingsMode === 'bottom' &&
+            connection &&
+            type !== 'audio' && (
+              <Animated.View
+                style={{
+                  top: 7,
+                  right: 10,
+                  position: 'absolute',
+                  transform: [
+                    {
+                      translateX: type === 'video' ? this.translateControls : 0
+                    }
+                  ]
                 }}
               >
-                {svgs.menu({
-                  width: 29,
-                  height: 29,
-                  fill: 'white',
-                  ...smallPlayerControls
-                })}
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+                <TouchableOpacity
+                  underlayColor={'transparent'}
+                  onPress={() => {
+                    this.videoSettings.toggle();
+                  }}
+                >
+                  {svgs.menu({
+                    width: 29,
+                    height: 29,
+                    fill: 'white',
+                    ...smallPlayerControls
+                  })}
+                </TouchableOpacity>
+              </Animated.View>
+            )}
         </View>
-        {!live && showControls && (
+        {!youtubeId && !live && showControls && (
           <Animated.View
             {...this.pResponder()}
             style={{

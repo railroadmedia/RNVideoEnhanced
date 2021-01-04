@@ -678,7 +678,7 @@ export default class Video extends React.Component {
     this.webview.injectJavaScript(`(function() {
       window.ReactNativeWebView.postMessage(JSON.stringify({
         key: 'back',
-        currentTime: window.video?.getCurrentTime() || ${cTime}
+        currentTime: window.video ? window.video.getCurrentTime() : ${cTime}
       }));
     })()`);
   };

@@ -10,12 +10,12 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "react-native-airplay-ios": "git+https://github.com/gazedash/react-native-airplay-ios.git#1.0.9",
+    "react-native-airplay-ios": "https://github.com/gazedash/react-native-airplay-ios.git#1.0.9",
     "react-native-device-info": "^7.3.1",
     "react-native-google-cast": "^4.0.0",
     "react-native-home-indicator": "^0.2.6",
     "react-native-orientation-locker": "^1.2.0",
-    "react-native-svg": "^12.1.0",
+    "react-native-svg": "https://github.com/railroadmedia/react-native-remote-svg#bogdan-vol-drumeo-mobile-patches",
     "react-native-video": "https://github.com/bogdan-vol/react-native-video.git",
     "react-native-webview": "^11.0.2",
     "react-native-youtube": "^2.0.1",

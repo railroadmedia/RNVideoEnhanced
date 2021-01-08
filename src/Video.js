@@ -1077,6 +1077,22 @@ export default class Video extends React.Component {
               )}
             </>
           )}
+          {live && (
+            <LiveTimer
+              endTime={endTime}
+              startTime={startTime}
+              visible={live && !isLive}
+              thumbnailUrl={thumbnailUrl}
+              onEnd={() => {
+                this.togglePaused();
+                this.props.onEndLive?.();
+              }}
+              onStart={() => {
+                this.togglePaused();
+                this.props.onStartLive?.();
+              }}
+            />
+          )}
           {!youtubeId && (
             <TouchableOpacity
               onPress={this.toggleControls}
@@ -1122,21 +1138,6 @@ export default class Video extends React.Component {
                     animating={buffering}
                   />
                 </Animated.View>
-              )}
-              {live && (
-                <LiveTimer
-                  endTime={endTime}
-                  startTime={startTime}
-                  visible={live && !isLive}
-                  onEnd={() => {
-                    this.togglePaused();
-                    this.props.onEndLive?.();
-                  }}
-                  onStart={() => {
-                    this.togglePaused();
-                    this.props.onStartLive?.();
-                  }}
-                />
               )}
               {showControls && (!live || isLive) && (
                 <>
@@ -1581,12 +1582,8 @@ class LiveTimer extends React.Component {
 
   constructor(props) {
     super(props);
-    let startTime = parseInt(
-        (new Date(`${props.startTime} UTC`) - new Date()) / 1000
-      ),
-      endTime = parseInt(
-        (new Date(`${props.endTime} UTC`) - new Date()) / 1000
-      );
+    let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000),
+      endTime = parseInt((new Date(props.endTime) - new Date()) / 1000);
     if (startTime >= 0) {
       this.state = this.formatTimer(startTime);
       this.countDown(startTime, 'onStart');
@@ -1631,76 +1628,96 @@ class LiveTimer extends React.Component {
           aspectRatio: 16 / 9,
           position: 'absolute',
           alignItems: 'center',
-          flexDirection: 'row',
-          marginHorizontal: 15,
           justifyContent: 'center',
           backgroundColor: 'rgba(0,0,0,.5)'
         }}
       >
-        <Text
+        <Image
+          source={{ uri: this.props.thumbnailUrl }}
           style={{
-            color: 'white',
-            fontSize: 40,
-            textAlign: 'center',
-            fontFamily: 'RobotoCondensed-Bold'
+            width: '100%',
+            height: '100%',
+            position: 'absolute'
           }}
-        >
-          {hours}
-          {`\n`}
-          <Text style={{ fontSize: 10 }}>
-            {hours === '01' ? 'HOUR' : 'HOURS'}
+        />
+        <View>
+          <Text
+            style={{
+              marginBottom: 20,
+              color: 'white',
+              textAlign: 'center',
+              fontFamily: 'RobotoCondensed-Bold'
+            }}
+          >
+            UPCOMING EVENT
           </Text>
-        </Text>
-        <Text
-          style={{
-            fontSize: 40,
-            color: 'white',
-            textAlign: 'center',
-            fontFamily: 'RobotoCondensed-Bold'
-          }}
-        >
-          :{`  `}
-          {`\n`}
-          <Text style={{ fontSize: 10 }}>{` `}</Text>
-        </Text>
-        <Text
-          style={{
-            fontSize: 40,
-            color: 'white',
-            textAlign: 'center',
-            fontFamily: 'RobotoCondensed-Bold'
-          }}
-        >
-          {minutes}
-          {`\n`}
-          <Text style={{ fontSize: 10 }}>
-            {hours === '00' && minutes === '01' ? 'MINUTE' : 'MINUTES'}
-          </Text>
-        </Text>
-        <Text
-          style={{
-            color: 'white',
-            fontSize: 40,
-            textAlign: 'center',
-            fontFamily: 'RobotoCondensed-Bold'
-          }}
-        >
-          :{`  `}
-          {`\n`}
-          <Text style={{ fontSize: 10 }}>{` `}</Text>
-        </Text>
-        <Text
-          style={{
-            color: 'white',
-            fontSize: 40,
-            textAlign: 'center',
-            fontFamily: 'RobotoCondensed-Bold'
-          }}
-        >
-          {seconds}
-          {`\n`}
-          <Text style={{ fontSize: 10 }}>SECONDS</Text>
-        </Text>
+          <View style={{ flexDirection: 'row' }}>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 40,
+                textAlign: 'center',
+                fontFamily: 'RobotoCondensed-Bold'
+              }}
+            >
+              {hours}
+              {`\n`}
+              <Text style={{ fontSize: 10 }}>
+                {hours === '01' ? 'HOUR' : 'HOURS'}
+              </Text>
+            </Text>
+            <Text
+              style={{
+                fontSize: 40,
+                color: 'white',
+                textAlign: 'center',
+                fontFamily: 'RobotoCondensed-Bold'
+              }}
+            >
+              :{`  `}
+              {`\n`}
+              <Text style={{ fontSize: 10 }}>{` `}</Text>
+            </Text>
+            <Text
+              style={{
+                fontSize: 40,
+                color: 'white',
+                textAlign: 'center',
+                fontFamily: 'RobotoCondensed-Bold'
+              }}
+            >
+              {minutes}
+              {`\n`}
+              <Text style={{ fontSize: 10 }}>
+                {hours === '00' && minutes === '01' ? 'MINUTE' : 'MINUTES'}
+              </Text>
+            </Text>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 40,
+                textAlign: 'center',
+                fontFamily: 'RobotoCondensed-Bold'
+              }}
+            >
+              :{`  `}
+              {`\n`}
+              <Text style={{ fontSize: 10 }}>{` `}</Text>
+            </Text>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 40,
+                textAlign: 'center',
+                fontFamily: 'RobotoCondensed-Bold'
+              }}
+            >
+              {seconds}
+              {`\n`}
+              <Text style={{ fontSize: 10 }}>SECONDS</Text>
+            </Text>
+          </View>
+        </View>
       </View>
     ) : (
       <></>

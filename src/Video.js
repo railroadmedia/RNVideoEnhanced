@@ -697,9 +697,6 @@ export default class Video extends React.Component {
         cTime || lastWatchedPosInSec || 0
       );
     }
-    if (youtubeId && (!this.props.live || !this.props.content.isLive))
-      this.setState({ paused: false }, () => this.setState({ paused: true }));
-    else if (youtubeId && this.props.content.isLive) this.togglePaused(false);
     if (gCasting) GoogleCast.seek(cTime || lastWatchedPosInSec);
     this.bufferingOpacity?.setValue(0);
   };
@@ -1081,8 +1078,8 @@ export default class Video extends React.Component {
             <LiveTimer
               endTime={endTime}
               startTime={startTime}
-              visible={live && !isLive}
               thumbnailUrl={thumbnailUrl}
+              visible={!isLive || new Date(endTime) < new Date()}
               onEnd={() => {
                 this.togglePaused();
                 this.props.onEndLive?.();
@@ -1139,7 +1136,7 @@ export default class Video extends React.Component {
                   />
                 </Animated.View>
               )}
-              {showControls && (!live || isLive) && (
+              {showControls && (
                 <>
                   <Animated.View
                     style={{
@@ -1166,17 +1163,15 @@ export default class Video extends React.Component {
                         ...largePlayerControls
                       })}
                     </TouchableOpacity>
-                    {!live && (
-                      <TouchableOpacity
-                        style={{ flex: 1, alignItems: 'center' }}
-                        onPress={() => this.onSeek((cTime -= 10))}
-                      >
-                        {svgs.back10({
-                          ...iconStyle,
-                          ...largePlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                      style={{ flex: 1, alignItems: 'center' }}
+                      onPress={() => this.onSeek((cTime -= 10))}
+                    >
+                      {svgs.back10({
+                        ...iconStyle,
+                        ...largePlayerControls
+                      })}
+                    </TouchableOpacity>
                     <TouchableOpacity
                       onPress={this.togglePaused}
                       style={{ flex: 1, alignItems: 'center' }}
@@ -1186,17 +1181,15 @@ export default class Video extends React.Component {
                         ...largePlayerControls
                       })}
                     </TouchableOpacity>
-                    {!live && (
-                      <TouchableOpacity
-                        style={{ flex: 1, alignItems: 'center' }}
-                        onPress={() => this.onSeek((cTime += 10))}
-                      >
-                        {svgs.forward10({
-                          ...iconStyle,
-                          ...largePlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                      style={{ flex: 1, alignItems: 'center' }}
+                      onPress={() => this.onSeek((cTime += 10))}
+                    >
+                      {svgs.forward10({
+                        ...iconStyle,
+                        ...largePlayerControls
+                      })}
+                    </TouchableOpacity>
                     <TouchableOpacity
                       onPress={this.props.goToNextLesson}
                       style={{
@@ -1406,7 +1399,7 @@ export default class Video extends React.Component {
               </Animated.View>
             )}
         </View>
-        {!youtubeId && !live && showControls && (
+        {!youtubeId && showControls && (
           <Animated.View
             {...this.pResponder()}
             style={{
@@ -1600,6 +1593,12 @@ class LiveTimer extends React.Component {
     this[`${event}Interval`] = setInterval(() => {
       if (time >= 0) {
         if (event === 'onStart') this.setState(this.formatTimer(time));
+        if (event === 'onEnd' && !time)
+          this.setState({
+            hours: '--',
+            minutes: '--',
+            seconds: '--'
+          });
         time--;
       } else {
         this.props[event]?.();
@@ -1656,7 +1655,7 @@ class LiveTimer extends React.Component {
               fontFamily: 'RobotoCondensed-Bold'
             }}
           >
-            UPCOMING EVENT
+            {hours === '--' ? 'EVENT ENDED' : 'UPCOMING EVENT'}
           </Text>
           <View style={{ flexDirection: 'row' }}>
             <Text

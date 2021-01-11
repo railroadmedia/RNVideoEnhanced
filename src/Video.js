@@ -1603,7 +1603,7 @@ class LiveTimer extends React.Component {
         time--;
       } else {
         this.props[event]?.();
-        clearImmediate(this[`${event}Interval`]);
+        clearInterval(this[`${event}Interval`]);
       }
     }, 1000);
   };

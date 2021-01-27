@@ -234,12 +234,11 @@ export const pause = props => (
       strokeLinejoin: 'round',
       width: props.width,
       height: props.height,
-      fill: props.fill
     }}
   >
     <Path
       id='pause'
-      fill='#ffffff'
+      fill={props.fill}
       d='M26.19,2c1.38,0 2.5,1.12 2.5,2.5l0,23c0,1.38 -1.12,2.5 -2.5,2.5l-5,0c-1.38,0 -2.5,-1.12 -2.5,-2.5l0,-23c0,-1.38 1.12,-2.5 2.5,-2.5l5,0Zm-15.38,0c1.38,0 2.5,1.12 2.5,2.5l0,23c0,1.38 -1.12,2.5 -2.5,2.5l-5,0c-1.38,0 -2.5,-1.12 -2.5,-2.5l0,-23c0,-1.38 1.12,-2.5 2.5,-2.5l5,0Z'
     />
   </Svg>

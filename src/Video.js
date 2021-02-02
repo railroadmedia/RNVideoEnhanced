@@ -1081,11 +1081,12 @@ export default class Video extends React.Component {
               thumbnailUrl={thumbnailUrl}
               visible={!isLive || new Date(endTime) < new Date()}
               onEnd={() => {
-                this.togglePaused();
+                this.webview?.injectJavaScript(`(function() {
+                  window.video.pause();
+                })()`);
                 this.props.onEndLive?.();
               }}
               onStart={() => {
-                this.togglePaused();
                 this.props.onStartLive?.();
               }}
             />

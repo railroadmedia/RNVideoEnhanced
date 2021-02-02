@@ -175,10 +175,11 @@ export const x = props => (
   <Svg
     viewBox='0 0 32 32'
     version='1.1'
-    style={{ height: props.height, width: props.width, fill: props.fill }}
+    style={{ height: props.height, width: props.width }}
   >
     <Path
       id='X'
+      fill={props.fill}
       d='M16,14.586l8.485,-8.485c0.391,-0.391 1.024,-0.391 1.414,0c0.391,0.39 0.391,1.023 0,1.414l-8.485,8.485l8.485,8.485c0.391,0.391 0.391,1.024 0,1.414c-0.39,0.391 -1.023,0.391 -1.414,0l-8.485,-8.485l-8.485,8.485c-0.391,0.391 -1.024,0.391 -1.414,0c-0.391,-0.39 -0.391,-1.023 0,-1.414l8.485,-8.485l-8.485,-8.485c-0.391,-0.391 -0.391,-1.024 0,-1.414c0.39,-0.391 1.023,-0.391 1.414,0l8.485,8.485Z'
     />
   </Svg>
@@ -233,12 +234,12 @@ export const pause = props => (
       clipRule: 'evenodd',
       strokeLinejoin: 'round',
       width: props.width,
-      height: props.height,
+      height: props.height
     }}
   >
     <Path
-      id='pause'
       fill={props.fill}
+      id='pause'
       d='M26.19,2c1.38,0 2.5,1.12 2.5,2.5l0,23c0,1.38 -1.12,2.5 -2.5,2.5l-5,0c-1.38,0 -2.5,-1.12 -2.5,-2.5l0,-23c0,-1.38 1.12,-2.5 2.5,-2.5l5,0Zm-15.38,0c1.38,0 2.5,1.12 2.5,2.5l0,23c0,1.38 -1.12,2.5 -2.5,2.5l-5,0c-1.38,0 -2.5,-1.12 -2.5,-2.5l0,-23c0,-1.38 1.12,-2.5 2.5,-2.5l5,0Z'
     />
   </Svg>

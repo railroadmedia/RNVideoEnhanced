@@ -12,7 +12,7 @@
   "peerDependencies": {
     "react-native-airplay-ios": "https://github.com/gazedash/react-native-airplay-ios.git#1.0.9",
     "react-native-device-info": "^7.3.1",
-    "react-native-google-cast": "^3.4.0",
+    "react-native-google-cast": "^4.0.1",
     "react-native-home-indicator": "^0.2.6",
     "react-native-orientation-locker": "^1.2.0",
     "react-native-svg": "^12.1.0",

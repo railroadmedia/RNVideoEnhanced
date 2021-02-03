@@ -23,7 +23,6 @@ import {
 import { SafeAreaView } from 'react-navigation';
 
 import RNFetchBlob from 'rn-fetch-blob';
-// import YouTube from 'react-native-youtube';
 import WebView from 'react-native-webview';
 import DeviceInfo from 'react-native-device-info';
 import Orientation from 'react-native-orientation-locker';
@@ -67,6 +66,7 @@ let cTime,
   greaterWidthHeight;
 
 export default class Video extends React.Component {
+  googleCastSession = GoogleCast.getSessionManager();
   state = {
     rate: '1.0',
     paused: true,
@@ -78,14 +78,6 @@ export default class Video extends React.Component {
 
   constructor(props) {
     super(props);
-
-    if (gCasting) {
-      if (props.youtubeId) {
-        gCasting = false;
-        GoogleCast.endSession();
-      }
-      GoogleCast.pause();
-    }
     connection = !!props.connection;
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
@@ -123,6 +115,17 @@ export default class Video extends React.Component {
 
   componentDidMount() {
     if (!this.props.content.youtubeId) {
+      this.googleCastSession.getCurrentCastSession().then(client => {
+        client = client?.client;
+        if (!client) return (gCasting = false);
+        client.pause();
+        if (this.props.youtubeId) {
+          this.googleCastSession?.endCurrentSession();
+          return (gCasting = false);
+        }
+        this.googleCastClient = client;
+        this.gCastProgressListener();
+      });
       this.appleCastingListeners();
       this.googleCastingListeners();
       this.selectQuality(quality || 'Auto');
@@ -141,6 +144,10 @@ export default class Video extends React.Component {
       gListenerMP?.remove();
       gListenerSE?.remove();
       gListenerSS?.remove();
+      aListener = undefined;
+      gListenerMP = undefined;
+      gListenerSE = undefined;
+      gListenerSS = undefined;
     }
     AppState.removeEventListener('change', this.handleAppStateChange);
     Orientation.removeDeviceOrientationListener(this.orientationListener);
@@ -232,49 +239,53 @@ export default class Video extends React.Component {
   }
 
   googleCastingListeners = async () => {
-    gCasting = (await GoogleCast.getCastState()) === 'Connected';
     this.props.onGCastingChange?.(gCasting);
     if (gCasting) this.gCastMedia();
 
-    gListenerSE = GoogleCast.EventEmitter.addListener(
-      GoogleCast.SESSION_ENDING,
-      () => {
-        gCasting = false;
-        this.props.onGCastingChange?.(false);
-        this.setState({
-          videoRefreshing: false,
-          vpe: this.filterVideosByResolution()
-        });
-      }
-    );
+    gListenerSE?.remove();
+    gListenerSE = undefined;
+    gListenerSE = this.googleCastSession.onSessionEnding(() => {
+      delete this.googleCastClient;
+      gCasting = false;
+      this.props.onGCastingChange?.(false);
+      this.setState({
+        videoRefreshing: false,
+        vpe: this.filterVideosByResolution()
+      });
+      gListenerMP?.remove();
+      gListenerMP = undefined;
+    });
 
-    gListenerMP = GoogleCast.EventEmitter.addListener(
-      GoogleCast.MEDIA_PROGRESS_UPDATED,
-      ({ mediaProgress: { progress } }) => {
-        progress = Math.round(progress);
-        let { lengthInSec } = this.props.content;
-        if (progress === parseInt(lengthInSec) - 1) {
-          GoogleCast.pause();
-          return this.onEnd();
-        }
-        this.onProgress({ currentTime: progress });
-      }
-    );
+    gListenerSS?.remove();
+    gListenerSS = undefined;
+    gListenerSS = this.googleCastSession.onSessionStarted(({ client }) => {
+      this.googleCastClient = client;
+      this.animateControls(0);
+      gCasting = true;
+      this.props.onGCastingChange?.(true);
+      this.gCastMedia();
+      this.gCastProgressListener();
+    });
+  };
 
-    gListenerSS = GoogleCast.EventEmitter.addListener(
-      GoogleCast.SESSION_STARTED,
-      () => {
-        this.animateControls(0);
-        gCasting = true;
-        this.props.onGCastingChange?.(true);
-        this.gCastMedia();
+  gCastProgressListener = () => {
+    gListenerMP?.remove();
+    gListenerMP = undefined;
+    this.googleCastClient?.seek({ position: cTime });
+    gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
+      progress = Math.round(progress);
+      let { lengthInSec } = this.props.content;
+      if (progress === parseInt(lengthInSec) - 1) {
+        this.googleCastClient.pause();
+        return this.onEnd();
       }
-    );
+      this.onProgress({ currentTime: progress });
+    });
   };
 
   gCastMedia = async () => {
     let {
-      state: { vpe, mp3s, captionsHidden },
+      state: { vpe, mp3s, rate, captionsHidden },
       props: {
         type,
         content: {
@@ -288,7 +299,6 @@ export default class Video extends React.Component {
     } = this;
     let svpe = vpe.find(v => v.selected);
     try {
-      if (!captionsHidden) GoogleCast.toggleSubtitles(true);
       let networkSpeed = await networkSpeedService.getNetworkSpeed(
         vpe[0].file,
         offlinePath,
@@ -317,24 +327,61 @@ export default class Video extends React.Component {
         },
         async () => {
           let castOptions = {
-            studio: 'Drumeo',
-            title: title || '',
-            playPosition: cTime || 0,
-            subtitle: description || '',
-            imageUrl: thumbnailUrl || '',
-            mediaUrl:
-              (type === 'video'
-                ? this.state.vpe.find(v => v.selected).file
-                : mp3s.find(mp3 => mp3.selected).value) || ''
+            mediaInfo: {
+              contentUrl:
+                (type === 'video'
+                  ? this.state.vpe.find(v => v.selected).file
+                  : mp3s.find(mp3 => mp3.selected).value) || '',
+              mediaTracks: [
+                {
+                  id: 1, // assign a unique numeric ID
+                  type: 'text',
+                  subtype: 'subtitles',
+                  name: 'English Subtitle',
+                  contentId: this.props.content.captions,
+                  language: 'en-US'
+                }
+              ],
+              metadata: {
+                type: 'movie',
+                studio: 'Drumeo',
+                title: title || '',
+                subtitle: description || '',
+                images: [{ url: thumbnailUrl || '' }]
+              },
+              streamDuration: this.props.content.lengthInSec
+            },
+            playbackRate: parseFloat(rate),
+            startTime: cTime
           };
-          await GoogleCast.castMedia(castOptions);
-          GoogleCast.seek(cTime);
+          this.googleCastClient.loadMedia(castOptions);
+          if (!captionsHidden) {
+            let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
+              s => {
+                if (s.playerState === 'playing') {
+                  this.googleCastClient.setActiveTrackIds([1]);
+                  gCastStartedListener.remove();
+                  gCastStartedListener = undefined;
+                }
+              }
+            );
+          } else {
+            let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
+              s => {
+                if (s.playerState === 'playing') {
+                  this.googleCastClient.setActiveTrackIds([]);
+                  gCastStartedListener.remove();
+                  gCastStartedListener = undefined;
+                }
+              }
+            );
+          }
         }
       );
     } catch (e) {
       gCasting = false;
       this.props.onGCastingChange?.(false);
-      await GoogleCast.endSession();
+      this.googleCastSession?.endCurrentSession();
     }
   };
 
@@ -568,13 +615,12 @@ export default class Video extends React.Component {
             (locationX / videoW) * this.props.content.lengthInSec
           );
         }
-        if (gCasting)
-          GoogleCast.seek(
-            (locationX / videoW) * this.props.content.lengthInSec
-          );
+        this.googleCastClient?.seek({
+          position: (locationX / videoW) * this.props.content.lengthInSec
+        });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
-      onPanResponderMove: (e, { moveX }) => {
+      onPanResponderMove: (_, { moveX }) => {
         this.seeking = true;
         moveX = moveX - (windowWidth - videoW) / 2;
         this.translateBlueX.setValue(moveX - videoW);
@@ -587,8 +633,9 @@ export default class Video extends React.Component {
             (moveX / videoW) * this.props.content.lengthInSec
           );
         }
-        if (gCasting)
-          GoogleCast.seek((moveX / videoW) * this.props.content.lengthInSec);
+        this.googleCastClient?.seek({
+          position: (moveX / videoW) * this.props.content.lengthInSec
+        });
         this.videoTimer.setProgress(
           (moveX / videoW) * this.props.content.lengthInSec
         );
@@ -641,8 +688,8 @@ export default class Video extends React.Component {
     this.setState(({ paused }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
       if (gCasting && !skipActionOnCasting)
-        if (paused) GoogleCast.pause();
-        else GoogleCast.play();
+        if (paused) this.googleCastClient?.pause();
+        else this.googleCastClient?.play();
       this.animateControls(paused ? 0 : -greaterWidthHeight);
       clearTimeout(this.bufferingTO);
       clearTimeout(this.bufferingTooLongTO);
@@ -697,7 +744,9 @@ export default class Video extends React.Component {
         cTime || lastWatchedPosInSec || 0
       );
     }
-    if (gCasting) GoogleCast.seek(cTime || lastWatchedPosInSec);
+    this.googleCastClient?.seek({
+      position: cTime || lastWatchedPosInSec
+    });
     this.bufferingOpacity?.setValue(0);
   };
 
@@ -753,7 +802,7 @@ export default class Video extends React.Component {
         if (!isiOS) this.onProgress({ currentTime: 0 });
         this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](0);
       }
-      if (gCasting) GoogleCast.seek(0);
+      this.googleCastClient?.seek({ position: 0 });
       this.animateControls(0);
       this.translateBlueX.setValue(-videoW);
       this.videoTimer?.setProgress(0);
@@ -774,7 +823,7 @@ export default class Video extends React.Component {
     if (this.videoRef)
       this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](time);
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
-    if (gCasting) GoogleCast.seek(time);
+    this.googleCastClient?.seek({ position: time });
   };
 
   onError = ({ error: { code } }) => {
@@ -953,67 +1002,40 @@ export default class Video extends React.Component {
           {!videoRefreshing && (
             <>
               {!!youtubeId ? (
-                <>
-                  {/* <YouTube
-                    rel={false}
-                    controls={0}
-                    play={!paused}
-                    fullscreen={false}
-                    videoId={youtubeId}
-                    onReady={this.onLoad}
-                    onError={this.onError}
-                    onProgress={this.onProgress}
-                    showFullscreenButton={false}
-                    ref={r => (this.videoRef = r)}
-                    style={{ alignSelf: 'stretch', aspectRatio: 16 / 9 }}
-                  />
-                  {paused && live && (
-                    <Image
-                      source={{
-                        uri: `https://i2.ytimg.com/vi/${youtubeId}/mqdefault.jpg`
-                      }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        position: 'absolute'
-                      }}
-                    />
-                  )} */}
-                  <WebView
-                    scalesPageToFit={true}
-                    javaScriptEnabled={true}
-                    domStorageEnabled={false}
-                    mixedContentMode='always'
-                    startInLoadingState={false}
-                    allowsFullscreenVideo={true}
-                    userAgent={'Mozilla (iPad)'}
-                    ref={r => (this.webview = r)}
-                    allowsInlineMediaPlayback={true}
-                    onMessage={this.onWebViewMessage}
-                    mediaPlaybackRequiresUserAction={false}
-                    automaticallyAdjustContentInsets={false}
-                    injectedJavaScript={this.injectJsInWebView()}
-                    style={{
-                      aspectRatio: 16 / 9,
-                      alignSelf: 'stretch',
-                      backgroundColor: 'black'
-                    }}
-                    source={{
-                      uri: `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=${
-                        lastWatchedPosInSec || 0
-                      }`,
-                      headers: { referer: 'https://www.drumeo.com/' }
-                    }}
-                    onNavigationStateChange={({ url }) => {
-                      if (
-                        !url.includes(
-                          `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=`
-                        )
+                <WebView
+                  scalesPageToFit={true}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={false}
+                  mixedContentMode='always'
+                  startInLoadingState={false}
+                  allowsFullscreenVideo={true}
+                  userAgent={'Mozilla (iPad)'}
+                  ref={r => (this.webview = r)}
+                  allowsInlineMediaPlayback={true}
+                  onMessage={this.onWebViewMessage}
+                  mediaPlaybackRequiresUserAction={false}
+                  automaticallyAdjustContentInsets={false}
+                  injectedJavaScript={this.injectJsInWebView()}
+                  style={{
+                    aspectRatio: 16 / 9,
+                    alignSelf: 'stretch',
+                    backgroundColor: 'black'
+                  }}
+                  source={{
+                    uri: `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=${
+                      lastWatchedPosInSec || 0
+                    }`,
+                    headers: { referer: 'https://www.drumeo.com/' }
+                  }}
+                  onNavigationStateChange={({ url }) => {
+                    if (
+                      !url.includes(
+                        `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=`
                       )
-                        this.webview.stopLoading();
-                    }}
-                  />
-                </>
+                    )
+                      this.webview.stopLoading();
+                  }}
+                />
               ) : (
                 <RNVideo
                   paused={paused}
@@ -1462,11 +1484,11 @@ export default class Video extends React.Component {
             )}
             styles={settings}
             settingsMode={settingsMode}
-            showRate={!gCasting && !aCasting}
+            showRate={!aCasting}
             ref={r => (this.videoSettings = r)}
             onSaveSettings={this.onSaveSettings}
             maxFontMultiplier={this.props.maxFontMultiplier}
-            showCaptions={!!captions && !gCasting && !aCasting}
+            showCaptions={!!captions && !aCasting}
           />
         )}
         {type === 'audio' && (

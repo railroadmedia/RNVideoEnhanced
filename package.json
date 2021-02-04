@@ -18,7 +18,6 @@
     "react-native-svg": "^12.1.0",
     "react-native-video": "https://github.com/bogdan-vol/react-native-video.git",
     "react-native-webview": "^11.0.2",
-    "react-native-youtube": "^2.0.1",
     "rn-fetch-blob": "^0.12.0"
   },
   "devDependencies": {

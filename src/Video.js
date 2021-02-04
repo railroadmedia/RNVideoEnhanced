@@ -273,6 +273,7 @@ export default class Video extends React.Component {
     gListenerMP = undefined;
     this.googleCastClient?.seek({ position: cTime });
     gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
+      if (!progress) return;
       progress = Math.round(progress);
       let { lengthInSec } = this.props.content;
       if (progress === parseInt(lengthInSec) - 1) {
@@ -291,6 +292,7 @@ export default class Video extends React.Component {
         content: {
           title,
           signal,
+          captions,
           description,
           thumbnailUrl,
           video_playback_endpoints
@@ -325,23 +327,13 @@ export default class Video extends React.Component {
             }
           ]
         },
-        async () => {
+        () => {
           let castOptions = {
             mediaInfo: {
               contentUrl:
                 (type === 'video'
                   ? this.state.vpe.find(v => v.selected).file
                   : mp3s.find(mp3 => mp3.selected).value) || '',
-              mediaTracks: [
-                {
-                  id: 1, // assign a unique numeric ID
-                  type: 'text',
-                  subtype: 'subtitles',
-                  name: 'English Subtitle',
-                  contentId: this.props.content.captions,
-                  language: 'en-US'
-                }
-              ],
               metadata: {
                 type: 'movie',
                 studio: 'Drumeo',
@@ -352,30 +344,42 @@ export default class Video extends React.Component {
               streamDuration: this.props.content.lengthInSec
             },
             playbackRate: parseFloat(rate),
-            startTime: cTime
+            startTime: Math.round(cTime)
           };
+          if (captions)
+            castOptions.mediaInfo.mediaTracks = [
+              {
+                id: 1, // assign a unique numeric ID
+                type: 'text',
+                subtype: 'subtitles',
+                name: 'English Subtitle',
+                contentId: captions,
+                language: 'en-US'
+              }
+            ];
           this.googleCastClient.loadMedia(castOptions);
-          if (!captionsHidden) {
-            let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
-              s => {
-                if (s.playerState === 'playing') {
-                  this.googleCastClient.setActiveTrackIds([1]);
-                  gCastStartedListener.remove();
-                  gCastStartedListener = undefined;
+          if (captions)
+            if (!captionsHidden) {
+              let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
+                s => {
+                  if (s.playerState === 'playing') {
+                    this.googleCastClient.setActiveTrackIds([1]);
+                    gCastStartedListener.remove();
+                    gCastStartedListener = undefined;
+                  }
                 }
-              }
-            );
-          } else {
-            let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
-              s => {
-                if (s.playerState === 'playing') {
-                  this.googleCastClient.setActiveTrackIds([]);
-                  gCastStartedListener.remove();
-                  gCastStartedListener = undefined;
+              );
+            } else {
+              let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
+                s => {
+                  if (s.playerState === 'playing') {
+                    this.googleCastClient.setActiveTrackIds([]);
+                    gCastStartedListener.remove();
+                    gCastStartedListener = undefined;
+                  }
                 }
-              }
-            );
-          }
+              );
+            }
         }
       );
     } catch (e) {

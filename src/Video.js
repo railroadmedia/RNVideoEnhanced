@@ -364,6 +364,12 @@ export default class Video extends React.Component {
                 s => {
                   if (s.playerState === 'playing') {
                     this.googleCastClient.setActiveTrackIds([1]);
+                    this.googleCastClient.setTextTrackStyle({
+                      backgroundColor: '#00000000',
+                      edgeType: 'outline',
+                      edgeColor: '#000000FF',
+                      fontFamily: 'OpenSans'
+                    });
                     gCastStartedListener.remove();
                     gCastStartedListener = undefined;
                   }

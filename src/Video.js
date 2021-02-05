@@ -1358,9 +1358,11 @@ export default class Video extends React.Component {
               {isiOS && (
                 <Animated.View
                   style={{
-                    top: 7,
+                    top: 4.5,
+                    width: 66,
+                    height: 34,
                     position: 'absolute',
-                    right: settingsMode === 'bottom' ? 39 : 10,
+                    right: settingsMode === 'bottom' ? 98 : 49,
                     transform: [
                       {
                         translateX:
@@ -1381,7 +1383,7 @@ export default class Video extends React.Component {
                 style={{
                   top: 7,
                   position: 'absolute',
-                  right: settingsMode === 'bottom' ? 68 : 39,
+                  right: settingsMode === 'bottom' ? 49 : 10,
                   transform: [
                     {
                       translateX: type === 'video' ? this.translateControls : 0

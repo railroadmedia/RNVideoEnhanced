@@ -733,9 +733,11 @@ export default class Video extends React.Component {
 
   handleYtBack = () => {
     this.webview.injectJavaScript(`(function() {
-      let currentTime = ${cTime};
+      let currentTime = ${cTime || 0};
       try {
-        if(window.video) currentTime = window.video.getCurrentTime();
+        if(window.video)
+          if(window.video.getCurrentTime) currentTime = window.video.getCurrentTime();
+          else currentTime = window.video.currentTime || 0;
         window.ReactNativeWebView.postMessage(JSON.stringify({
           key: 'back',
           currentTime
@@ -874,16 +876,28 @@ export default class Video extends React.Component {
         if(window.video && !window.eventsAdded) {
           window.eventsAdded = true;
           window.video.addEventListener('play', () => {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              key: 'play',
-              currentTime: window.video.getCurrentTime()
-            }));
+            if(window.video.getCurrentTime) 
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                key: 'play',
+                currentTime: window.video.getCurrentTime()
+              }));
+            else
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                key: 'play',
+                currentTime: window.video.currentTime || 0
+              }));
           });
           window.video.addEventListener('pause', () => {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              key: 'pause',
-              currentTime: window.video.getCurrentTime()
-            }));
+            if(window.video.getCurrentTime) 
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                key: 'pause',
+                currentTime: window.video.getCurrentTime()
+              }));
+            else
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                key: 'pause',
+                currentTime: window.video.currentTime || 0
+              }));
           });
           window.video.addEventListener('ended', () => {
             window.ReactNativeWebView.postMessage(JSON.stringify({

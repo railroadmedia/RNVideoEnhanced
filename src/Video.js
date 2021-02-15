@@ -733,13 +733,19 @@ export default class Video extends React.Component {
 
   handleYtBack = () => {
     this.webview.injectJavaScript(`(function() {
-      let currentTime;
-      if(window.video) currentTime = window.video.getCurrentTime();
-      else currentTime = ${cTime};
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        key: 'back',
-        currentTime
-      }));
+      let currentTime = ${cTime};
+      try {
+        if(window.video) currentTime = window.video.getCurrentTime();
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          key: 'back',
+          currentTime
+        }));
+      } catch(e) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          key: 'back',
+          currentTime
+        }));
+      }
     })()`);
   };
 

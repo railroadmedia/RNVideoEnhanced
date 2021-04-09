@@ -94,13 +94,12 @@ export default class Video extends React.Component {
         : RNFetchBlob.fs.dirs.DocumentDir;
     this.getVideoDimensions();
 
-    if (!props.content.youtubeId) this.bufferingOpacity = new Animated.Value(1);
+    if (!props.youtubeId) this.bufferingOpacity = new Animated.Value(1);
     this.translateControls = new Animated.Value(0);
     this.translateBlueX = new Animated.Value(-videoW);
 
     this.state.mp3s = props.content.mp3s;
-    if (!props.content.youtubeId)
-      this.state.vpe = this.filterVideosByResolution();
+    if (!props.youtubeId) this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
@@ -114,7 +113,7 @@ export default class Video extends React.Component {
   }
 
   componentDidMount() {
-    if (!this.props.content.youtubeId) {
+    if (!this.props.youtubeId) {
       this.googleCastSession.getCurrentCastSession().then(client => {
         client = client?.client;
         if (!client) return (gCasting = false);
@@ -139,7 +138,7 @@ export default class Video extends React.Component {
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
-    if (!this.props.content.youtubeId) {
+    if (!this.props.youtubeId) {
       aListener?.remove();
       gListenerMP?.remove();
       gListenerSE?.remove();
@@ -397,7 +396,8 @@ export default class Video extends React.Component {
 
   updateVideoProgress = async () => {
     let {
-      content: { videoId, id, lengthInSec, youtubeId }
+      youtubeId,
+      content: { videoId, id, lengthInSec }
     } = this.props;
     this.props.onUpdateVideoProgress?.(
       videoId,
@@ -555,7 +555,7 @@ export default class Video extends React.Component {
       props: { maxWidth },
       state: { fullscreen }
     } = this;
-    if (this.props.content.youtubeId) {
+    if (this.props.youtubeId) {
       width = windowWidth;
       height = (9 / 16) * width;
     } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
@@ -621,7 +621,7 @@ export default class Video extends React.Component {
             this.onProgress({
               currentTime: (locationX / videoW) * this.props.content.lengthInSec
             });
-          this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](
+          this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](
             (locationX / videoW) * this.props.content.lengthInSec
           );
         }
@@ -639,7 +639,7 @@ export default class Video extends React.Component {
             this.onProgress({
               currentTime: (moveX / videoW) * this.props.content.lengthInSec
             });
-          this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](
+          this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](
             (moveX / videoW) * this.props.content.lengthInSec
           );
         }
@@ -655,7 +655,10 @@ export default class Video extends React.Component {
 
   onProgress = ({ currentTime }) => {
     cTime = currentTime;
-    let { lengthInSec, youtubeId } = this.props.content;
+    let {
+      content: { lengthInSec },
+      youtubeId
+    } = this.props;
     if (this.seeking) return;
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
@@ -752,7 +755,10 @@ export default class Video extends React.Component {
   };
 
   onLoad = () => {
-    let { youtubeId, lastWatchedPosInSec } = this.props.content;
+    let {
+      youtubeId,
+      content: { lastWatchedPosInSec }
+    } = this.props;
     if (this.videoRef) {
       if (!isiOS || youtubeId)
         this.onProgress({
@@ -818,7 +824,7 @@ export default class Video extends React.Component {
       StatusBar.setHidden(false);
       if (this.videoRef) {
         if (!isiOS) this.onProgress({ currentTime: 0 });
-        this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](0);
+        this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](0);
       }
       this.googleCastClient?.seek({ position: 0 });
       this.animateControls(0);
@@ -839,7 +845,7 @@ export default class Video extends React.Component {
 
     this.updateVideoProgress();
     if (this.videoRef)
-      this.videoRef[this.props.content.youtubeId ? 'seekTo' : 'seek'](time);
+      this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](time);
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     this.googleCastClient?.seek({ position: time });
   };

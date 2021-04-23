@@ -20,7 +20,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 
-import { SafeAreaView } from 'react-navigation';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import RNFetchBlob from 'rn-fetch-blob';
 import WebView from 'react-native-webview';
@@ -986,12 +986,7 @@ export default class Video extends React.Component {
     } = this;
     return (
       <SafeAreaView
-        forceInset={{
-          left: 'never',
-          right: 'never',
-          bottom: 'never',
-          top: fullscreen ? 'never' : 'always'
-        }}
+        edges={fullscreen ? [] : ['top']}
         style={[
           {
             zIndex: 1,

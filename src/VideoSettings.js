@@ -6,12 +6,11 @@ import {
   View,
   Text,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity
 } from 'react-native';
-import { SafeAreaView } from 'react-navigation';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ExpandableView from './ExpandableView';
 
@@ -204,15 +203,7 @@ export default class VideoSettings extends React.PureComponent {
         onRequestClose={this.onRequestClose}
         supportedOrientations={['portrait', 'landscape']}
       >
-        <SafeAreaView
-          style={{ flex: 1 }}
-          forceInset={{
-            top: 'always',
-            left: 'always',
-            right: 'always',
-            bottom: 'never'
-          }}
-        >
+        <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
           <TouchableOpacity
             activeOpacity={1}
             onPress={this.onCancel}
@@ -223,12 +214,7 @@ export default class VideoSettings extends React.PureComponent {
             }
           >
             <SafeAreaView
-              forceInset={{
-                top: 'never',
-                left: 'never',
-                right: 'never',
-                bottom: 'always'
-              }}
+              edges={['bottom']}
               style={[
                 settingsMode === 'bottom'
                   ? styles.scrollContainerBottom

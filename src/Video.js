@@ -270,7 +270,7 @@ export default class Video extends React.Component {
   gCastProgressListener = () => {
     gListenerMP?.remove();
     gListenerMP = undefined;
-    this.googleCastClient?.seek({ position: cTime });
+    this.googleCastClient?.seek({ position: parseFloat(cTime) });
     gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
@@ -294,7 +294,8 @@ export default class Video extends React.Component {
           captions,
           description,
           thumbnailUrl,
-          video_playback_endpoints
+          video_playback_endpoints,
+          lengthInSec
         }
       }
     } = this;
@@ -340,7 +341,7 @@ export default class Video extends React.Component {
                 subtitle: description || '',
                 images: [{ url: thumbnailUrl || '' }]
               },
-              streamDuration: this.props.content.lengthInSec
+              streamDuration: parseFloat(lengthInSec)
             },
             playbackRate: parseFloat(rate),
             startTime: Math.round(cTime)
@@ -626,7 +627,7 @@ export default class Video extends React.Component {
           );
         }
         this.googleCastClient?.seek({
-          position: (locationX / videoW) * this.props.content.lengthInSec
+          position: parseFloat((locationX / videoW) * this.props.content.lengthInSec)
         });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
@@ -644,7 +645,7 @@ export default class Video extends React.Component {
           );
         }
         this.googleCastClient?.seek({
-          position: (moveX / videoW) * this.props.content.lengthInSec
+          position: parseFloat((moveX / videoW) * this.props.content.lengthInSec)
         });
         this.videoTimer.setProgress(
           (moveX / videoW) * this.props.content.lengthInSec
@@ -768,8 +769,9 @@ export default class Video extends React.Component {
         cTime || lastWatchedPosInSec || 0
       );
     }
+    let position = cTime || lastWatchedPosInSec;
     this.googleCastClient?.seek({
-      position: cTime || lastWatchedPosInSec
+      position: parseFloat(position)
     });
     this.bufferingOpacity?.setValue(0);
   };
@@ -847,7 +849,7 @@ export default class Video extends React.Component {
     if (this.videoRef)
       this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](time);
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
-    this.googleCastClient?.seek({ position: time });
+    this.googleCastClient?.seek({ position: parseFloat(time) });
   };
 
   onError = ({ error: { code } }) => {
@@ -984,6 +986,7 @@ export default class Video extends React.Component {
         }
       }
     } = this;
+
     return (
       <SafeAreaView
         edges={fullscreen ? [] : ['top']}

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { StyleProp, TextStyle } from 'react-native';
 
 declare module "RNVideoEnhanced" {
 	interface VideoProps {
@@ -49,7 +49,7 @@ declare module "RNVideoEnhanced" {
 		  };
 		};
 	}
-	declare class Video extends React.Component<Record<VideoProps>, any> {}
-
+	class Video extends React.Component<VideoProps, {}> {}
+	
     export default Video;
 }

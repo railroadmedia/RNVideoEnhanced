@@ -9,7 +9,7 @@ declare module "RNVideoEnhanced" {
 		showControls: boolean;
 		youtubeId: number;
 		live: boolean;
-		connection: boolean;
+		connection: boolean | null;
 		maxWidth: number | undefined;
 		content: any;
 		onRefresh: () => void;

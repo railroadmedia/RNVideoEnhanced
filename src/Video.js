@@ -957,6 +957,9 @@ export default class Video extends React.Component {
         maxWidth,
         youtubeId,
         settingsMode,
+        onFullscreen,
+        goToPreviousLesson,
+        goToNextLesson,
         styles: {
           alert,
           settings,
@@ -1206,20 +1209,22 @@ export default class Video extends React.Component {
                       ]
                     }}
                   >
-                    <TouchableOpacity
-                      onPress={this.props.goToPreviousLesson}
-                      style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
-                      }}
-                      disabled={!(previousLessonId || previousLessonUrl)}
-                    >
-                      {svgs.prevLesson({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
+                    {goToPreviousLesson && (
+                      <TouchableOpacity
+                        onPress={goToPreviousLesson}
+                        style={{
+                          flex: 1,
+                          alignItems: 'center',
+                          opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
+                        }}
+                        disabled={!(previousLessonId || previousLessonUrl)}
+                      >
+                        {svgs.prevLesson({
+                          ...iconStyle,
+                          ...largePlayerControls
+                        })}
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       style={{ flex: 1, alignItems: 'center' }}
                       onPress={() => this.onSeek((cTime -= 10))}
@@ -1247,20 +1252,22 @@ export default class Video extends React.Component {
                         ...largePlayerControls
                       })}
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={this.props.goToNextLesson}
-                      style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
-                      }}
-                      disabled={!(nextLessonUrl || nextLessonId)}
-                    >
-                      {svgs.prevLesson({
-                        ...{ ...iconStyle, ...largePlayerControls },
-                        style: { transform: [{ rotate: '180deg' }] }
-                      })}
-                    </TouchableOpacity>
+                    {goToNextLesson && (
+                      <TouchableOpacity
+                        onPress={goToNextLesson}
+                        style={{
+                          flex: 1,
+                          alignItems: 'center',
+                          opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
+                        }}
+                        disabled={!(nextLessonUrl || nextLessonId)}
+                      >
+                        {svgs.prevLesson({
+                          ...{ ...iconStyle, ...largePlayerControls },
+                          style: { transform: [{ rotate: '180deg' }] }
+                        })}
+                      </TouchableOpacity>
+                    )}
                   </Animated.View>
                   <Animated.View
                     style={{
@@ -1307,7 +1314,7 @@ export default class Video extends React.Component {
                           })}
                         </TouchableOpacity>
                       )}
-                    {type !== 'audio' && (
+                    {type !== 'audio' && onFullscreen && (
                       <TouchableOpacity
                         style={{ padding: 10 }}
                         underlayColor={'transparent'}

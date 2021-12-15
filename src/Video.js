@@ -1040,7 +1040,7 @@ export default class Video extends React.Component {
             <>
               {!!youtubeId ? (
                 <WebView
-                  androidHardwareAccelerationDisabled={true}
+                  androidLayerType={"hardware"}
                   scalesPageToFit={true}
                   javaScriptEnabled={true}
                   domStorageEnabled={false}

@@ -634,7 +634,9 @@ export default class Video extends React.Component {
       onPanResponderMove: (_, { moveX }) => {
         this.seeking = true;
         moveX = moveX - (windowWidth - videoW) / 2;
-        this.translateBlueX.setValue(moveX - videoW);
+        translate = moveX - videoW;
+        if (moveX < 0 || translate > 0) return;
+        this.translateBlueX.setValue(translate);
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({

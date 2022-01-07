@@ -96,7 +96,8 @@ export default class Video extends React.Component {
 
     if (!props.youtubeId) this.bufferingOpacity = new Animated.Value(1);
     this.translateControls = new Animated.Value(0);
-    this.translateBlueX = new Animated.Value(-videoW);
+    this.translateBlueX = new Animated.Value(-videoW + 11);
+    this.translateBlueX.setOffset(11); // Offsets half the timer dot width so its centered.
 
     this.state.mp3s = props.content.mp3s;
     if (!props.youtubeId) this.state.vpe = this.filterVideosByResolution();
@@ -832,7 +833,7 @@ export default class Video extends React.Component {
       }
       this.googleCastClient?.seek({ position: 0 });
       this.animateControls(0);
-      this.translateBlueX.setValue(-videoW);
+      this.translateBlueX.setValue(-videoW + 11);
       this.videoTimer?.setProgress(0);
     });
   };

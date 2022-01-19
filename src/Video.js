@@ -663,7 +663,18 @@ export default class Video extends React.Component {
       content: { lengthInSec },
       youtubeId
     } = this.props;
-    if (this.seeking) return;
+    if (this.seeking) {
+      if (!this.state.paused) {
+        this.videoPlayStatus = true;
+        this.togglePaused();
+      }
+      return
+    } else {
+      if(this.videoPlayStatus){
+        delete this.videoPlayStatus
+        this.togglePaused();
+      } 
+    } 
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;

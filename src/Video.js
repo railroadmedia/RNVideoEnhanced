@@ -673,6 +673,7 @@ export default class Video extends React.Component {
       content: { lengthInSec },
       youtubeId
     } = this.props;
+    if (this.seeking) return;
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;

@@ -977,7 +977,6 @@ export default class Video extends React.Component {
         },
         content: {
           isLive,
-          endTime,
           captions,
           buffering,
           startTime,
@@ -1139,16 +1138,9 @@ export default class Video extends React.Component {
           )}
           {live && (
             <LiveTimer
-              endTime={endTime}
               startTime={startTime}
               thumbnailUrl={thumbnailUrl}
-              visible={!isLive || new Date(endTime) < new Date()}
-              onEnd={() => {
-                this.webview?.injectJavaScript(`(function() {
-                  window.video.pause();
-                })()`);
-                this.props.onEndLive?.();
-              }}
+              visible={!isLive}
               onStart={() => {
                 this.props.onStartLive?.();
               }}
@@ -1645,17 +1637,14 @@ class LiveTimer extends React.Component {
 
   constructor(props) {
     super(props);
-    let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000),
-      endTime = parseInt((new Date(props.endTime) - new Date()) / 1000);
+    let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000)
     if (startTime >= 0) {
       this.state = this.formatTimer(startTime);
       this.countDown(startTime, 'onStart');
     } else props.onStart?.();
-    if (endTime >= 0) this.countDown(endTime, 'onEnd');
   }
 
   componentWillUnmount() {
-    clearTimeout(this.onEndInterval);
     clearTimeout(this.onStartInterval);
   }
 
@@ -1663,12 +1652,6 @@ class LiveTimer extends React.Component {
     this[`${event}Interval`] = setInterval(() => {
       if (time >= 0) {
         if (event === 'onStart') this.setState(this.formatTimer(time));
-        if (event === 'onEnd' && !time)
-          this.setState({
-            hours: '--',
-            minutes: '--',
-            seconds: '--'
-          });
         time--;
       } else {
         this.props[event]?.();
@@ -1725,7 +1708,7 @@ class LiveTimer extends React.Component {
               fontFamily: 'RobotoCondensed-Bold'
             }}
           >
-            {hours === '--' ? 'EVENT ENDED' : 'UPCOMING EVENT'}
+            {'UPCOMING EVENT'}
           </Text>
           <View style={{ flexDirection: 'row' }}>
             <Text

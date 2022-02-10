@@ -597,6 +597,11 @@ export default class Video extends React.Component {
       onStartShouldSetPanResponderCapture: () => false,
       onPanResponderRelease: () => {
         delete this.seeking;
+        if (this.videoPlayStatus) {
+          this.togglePaused();
+        }
+        delete this.videoPlayStatus
+        this.onSeek(this.seekTime);
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(
@@ -607,6 +612,11 @@ export default class Video extends React.Component {
       },
       onPanResponderTerminate: () => {
         delete this.seeking;
+        if (this.videoPlayStatus) {
+          this.togglePaused();
+        }
+        delete this.videoPlayStatus
+        this.onSeek(this.seekTime);
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(
@@ -623,9 +633,7 @@ export default class Video extends React.Component {
             this.onProgress({
               currentTime: (locationX / videoW) * this.props.content.lengthInSec
             });
-          this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](
-            (locationX / videoW) * this.props.content.lengthInSec
-          );
+          this.seekTime = (locationX / videoW) * this.props.content.lengthInSec;
         }
         this.googleCastClient?.seek({
           position: parseFloat((locationX / videoW) * this.props.content.lengthInSec)
@@ -634,6 +642,10 @@ export default class Video extends React.Component {
       },
       onPanResponderMove: (_, { moveX }) => {
         this.seeking = true;
+        if (!this.state.paused) {
+          this.videoPlayStatus = true;
+          this.togglePaused();
+        }
         moveX = moveX - (windowWidth - videoW) / 2;
         translate = moveX - videoW;
         if (moveX < 0 || translate > 0) return;
@@ -643,9 +655,7 @@ export default class Video extends React.Component {
             this.onProgress({
               currentTime: (moveX / videoW) * this.props.content.lengthInSec
             });
-          this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](
-            (moveX / videoW) * this.props.content.lengthInSec
-          );
+          this.seekTime = (moveX / videoW) * this.props.content.lengthInSec;
         }
         this.googleCastClient?.seek({
           position: parseFloat((moveX / videoW) * this.props.content.lengthInSec)

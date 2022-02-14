@@ -73,7 +73,8 @@ export default class Video extends React.Component {
     captionsHidden: true,
     videoRefreshing: false,
     showControls: true,
-    repeat: false
+    repeat: false,
+    liveEnded: false,
   };
 
   constructor(props) {
@@ -105,7 +106,6 @@ export default class Video extends React.Component {
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
     this.state.showControls = props.showControls;
-    this.liveEnded = false;
     if (isTablet)
       this.state.tabOrientation =
         orientation || (windowWidth > windowHeight ? 'LANDSCAPE' : 'PORTRAIT');
@@ -1143,12 +1143,14 @@ export default class Video extends React.Component {
               endTime={endTime}
               startTime={startTime}
               thumbnailUrl={thumbnailUrl}
-              visible={!isLive || this.liveEnded}
+              visible={!isLive || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
                   window.video.pause();
                 })()`);
-                this.liveEnded = true
+                this.setState({
+                  liveEnded: true
+                })
                 this.props.onEndLive?.();
               }}
               onStart={() => {
@@ -1655,7 +1657,7 @@ class LiveTimer extends React.Component {
     } else props.onStart?.();
     if (endTime >= 0) {
       this.countDown(endTime, 'onEnd');
-    } else this.liveEnded = true
+    } else this.props.onEnd?.();
   }
 
   componentWillUnmount() {

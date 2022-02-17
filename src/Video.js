@@ -73,7 +73,8 @@ export default class Video extends React.Component {
     captionsHidden: true,
     videoRefreshing: false,
     showControls: true,
-    repeat: false
+    repeat: false,
+    liveEnded: false,
   };
 
   constructor(props) {
@@ -1152,11 +1153,14 @@ export default class Video extends React.Component {
               endTime={endTime}
               startTime={startTime}
               thumbnailUrl={thumbnailUrl}
-              visible={!isLive || new Date(endTime) < new Date()}
+              visible={!isLive || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
                   window.video.pause();
                 })()`);
+                this.setState({
+                  liveEnded: true
+                })
                 this.props.onEndLive?.();
               }}
               onStart={() => {
@@ -1656,12 +1660,14 @@ class LiveTimer extends React.Component {
   constructor(props) {
     super(props);
     let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000),
-      endTime = parseInt((new Date(props.endTime) - new Date()) / 1000);
+      endTime = parseInt((new Date(props.endTime) - new Date()) / 1000) + 15 * 60;
     if (startTime >= 0) {
       this.state = this.formatTimer(startTime);
       this.countDown(startTime, 'onStart');
     } else props.onStart?.();
-    if (endTime >= 0) this.countDown(endTime, 'onEnd');
+    if (endTime >= 0) {
+      this.countDown(endTime, 'onEnd');
+    } else this.props.onEnd?.();
   }
 
   componentWillUnmount() {

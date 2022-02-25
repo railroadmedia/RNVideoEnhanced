@@ -16,7 +16,7 @@
     "react-native-home-indicator": "^0.2.6",
     "react-native-orientation-locker": "^1.2.0",
     "react-native-svg": "^12.1.0",
-    "react-native-video": "https://github.com/bogdan-vol/react-native-video.git",
+    "react-native-video": "https://github.com/railroadmedia/react-native-video.git",
     "react-native-webview": "https://github.com/railroadmedia/react-native-webview.git",
     "rn-fetch-blob": "^0.12.0"
   },

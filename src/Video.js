@@ -175,7 +175,9 @@ export default class Video extends React.Component {
 
   handleAppStateChange = () => {
     this.toggleControls(0);
-    this.updateVideoProgress();
+    if(AppState.currentState !== 'active') {
+      this.togglePaused(true);
+    }
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);

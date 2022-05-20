@@ -1,13 +1,7 @@
 import React from 'react';
 import Svg, {
   G,
-  Use,
-  Rect,
-  Defs,
-  Path,
-  Text,
-  Image,
-  Circle
+  Path
 } from 'react-native-svg';
 
 export const back10 = props => (

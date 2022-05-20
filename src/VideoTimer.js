@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 
 export default class VideoTimer_V2 extends React.PureComponent {
   state = {};

@@ -83,7 +83,7 @@ export default class Video extends React.Component {
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
-    cTime = props.content.lastWatchedPosInSec;
+    cTime = props.content.last_watch_position_in_seconds;
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
@@ -772,18 +772,18 @@ export default class Video extends React.Component {
   onLoad = () => {
     let {
       youtubeId,
-      content: { lastWatchedPosInSec }
+      content: { last_watch_position_in_seconds }
     } = this.props;
     if (this.videoRef) {
       if (!isiOS || youtubeId)
         this.onProgress({
-          currentTime: cTime || lastWatchedPosInSec
+          currentTime: cTime || last_watch_position_in_seconds
         });
       this.videoRef[youtubeId ? 'seekTo' : 'seek'](
-        cTime || lastWatchedPosInSec || 0
+        cTime || last_watch_position_in_seconds || 0
       );
     }
-    let position = cTime || lastWatchedPosInSec;
+    let position = cTime || last_watch_position_in_seconds;
     this.googleCastClient?.seek({
       position: parseFloat(position)
     });
@@ -999,7 +999,7 @@ export default class Video extends React.Component {
           nextLessonUrl,
           previousLessonId,
           previousLessonUrl,
-          lastWatchedPosInSec
+          last_watch_position_in_seconds
         }
       }
     } = this;
@@ -1075,7 +1075,7 @@ export default class Video extends React.Component {
                   }}
                   source={{
                     uri: `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=${
-                      lastWatchedPosInSec || 0
+                      last_watch_position_in_seconds || 0
                     }`,
                     headers: { referer: 'https://www.drumeo.com/' }
                   }}

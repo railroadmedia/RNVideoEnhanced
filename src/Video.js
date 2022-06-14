@@ -276,8 +276,8 @@ export default class Video extends React.Component {
     gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
-      let { lengthInSec } = this.props.content;
-      if (progress === parseInt(lengthInSec) - 1) {
+      let { length_in_sec } = this.props.content;
+      if (progress === parseInt(length_in_sec) - 1) {
         this.googleCastClient.pause();
         return this.onEnd();
       }
@@ -297,7 +297,7 @@ export default class Video extends React.Component {
           description,
           thumbnailUrl,
           video_playback_endpoints,
-          lengthInSec
+          length_in_sec
         }
       }
     } = this;
@@ -343,7 +343,7 @@ export default class Video extends React.Component {
                 subtitle: description || '',
                 images: [{ url: thumbnailUrl || '' }]
               },
-              streamDuration: parseFloat(lengthInSec)
+              streamDuration: parseFloat(length_in_sec)
             },
             playbackRate: parseFloat(rate),
             startTime: Math.round(cTime)
@@ -400,12 +400,12 @@ export default class Video extends React.Component {
   updateVideoProgress = async () => {
     let {
       youtubeId,
-      content: { videoId, id, lengthInSec }
+      content: { videoId, id, length_in_sec }
     } = this.props;
     this.props.onUpdateVideoProgress?.(
       videoId,
       id,
-      lengthInSec,
+      length_in_sec,
       cTime,
       youtubeId ? 'youtube' : 'vimeo'
     );
@@ -632,12 +632,12 @@ export default class Video extends React.Component {
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime: (locationX / videoW) * this.props.content.lengthInSec
+              currentTime: (locationX / videoW) * this.props.content.length_in_sec
             });
-          this.seekTime = (locationX / videoW) * this.props.content.lengthInSec;
+          this.seekTime = (locationX / videoW) * this.props.content.length_in_sec;
         }
         this.googleCastClient?.seek({
-          position: parseFloat((locationX / videoW) * this.props.content.lengthInSec)
+          position: parseFloat((locationX / videoW) * this.props.content.length_in_sec)
         });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
@@ -654,15 +654,15 @@ export default class Video extends React.Component {
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime: (moveX / videoW) * this.props.content.lengthInSec
+              currentTime: (moveX / videoW) * this.props.content.length_in_sec
             });
-          this.seekTime = (moveX / videoW) * this.props.content.lengthInSec;
+          this.seekTime = (moveX / videoW) * this.props.content.length_in_sec;
         }
         this.googleCastClient?.seek({
-          position: parseFloat((moveX / videoW) * this.props.content.lengthInSec)
+          position: parseFloat((moveX / videoW) * this.props.content.length_in_sec)
         });
         this.videoTimer.setProgress(
-          (moveX / videoW) * this.props.content.lengthInSec
+          (moveX / videoW) * this.props.content.length_in_sec
         );
       }
     }).panHandlers;
@@ -671,7 +671,7 @@ export default class Video extends React.Component {
   onProgress = ({ currentTime }) => {
     cTime = currentTime;
     let {
-      content: { lengthInSec },
+      content: { length_in_sec },
       youtubeId
     } = this.props;
     if (this.seeking) return;
@@ -679,7 +679,7 @@ export default class Video extends React.Component {
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;
     this.bufferingOpacity?.setValue(0);
-    this.translateBlueX.setValue((currentTime * videoW) / lengthInSec - videoW);
+    this.translateBlueX.setValue((currentTime * videoW) / length_in_sec - videoW);
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
     if (!aCasting && !youtubeId) {
       this.bufferingTO = setTimeout(
@@ -694,7 +694,7 @@ export default class Video extends React.Component {
         10000
       );
     }
-    if (lengthInSec && lengthInSec === parseInt(currentTime)) this.onEnd();
+    if (length_in_sec && length_in_sec === parseInt(currentTime)) this.onEnd();
   };
 
   toggleControls = controlsOverwrite => {
@@ -855,7 +855,7 @@ export default class Video extends React.Component {
 
   onSeek = time => {
     time = parseFloat(time);
-    let fullLength = parseFloat(this.props.content.lengthInSec);
+    let fullLength = parseFloat(this.props.content.length_in_sec);
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
 
@@ -993,7 +993,7 @@ export default class Video extends React.Component {
           buffering,
           startTime,
           formatTime,
-          lengthInSec,
+          length_in_sec,
           nextLessonId,
           thumbnailUrl,
           nextLessonUrl,
@@ -1307,7 +1307,7 @@ export default class Video extends React.Component {
                       live={live}
                       styles={timerText}
                       formatTime={formatTime}
-                      lengthInSec={lengthInSec}
+                      length_in_sec={length_in_sec}
                       ref={r => (this.videoTimer = r)}
                       maxFontMultiplier={this.props.maxFontMultiplier}
                     />

@@ -30,7 +30,7 @@ export default class VideoTimer_V2 extends React.PureComponent {
   render() {
     let {
       state: { progress },
-      props: { live, length_in_sec, styles: propStyle }
+      props: { live, length_in_seconds, styles: propStyle }
     } = this;
     return (
       <React.Fragment>
@@ -50,7 +50,7 @@ export default class VideoTimer_V2 extends React.PureComponent {
             ...propStyle?.right
           }}
         >
-          {live ? 'live' : this.formatTime(length_in_sec)}
+          {live ? 'live' : this.formatTime(length_in_seconds)}
         </Text>
       </React.Fragment>
     );

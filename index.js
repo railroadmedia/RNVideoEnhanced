@@ -81,7 +81,7 @@ export const videoMock = {
   difficulty: 'ADVANCED all',
   releaseDate: 'JUL 25, 2020',
   parentTitle: '',
-  length_in_sec: '109',
+  length_in_seconds: '109',
   instructors: [
     {
       id: 220967,
@@ -114,7 +114,7 @@ export const videoMock = {
       artist: '',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/263379-card-thumbnail-1595685452.png',
-      length_in_sec: '201'
+      length_in_seconds: '201'
     },
     {
       id: 263380,
@@ -129,7 +129,7 @@ export const videoMock = {
       artist: '',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/263380-card-thumbnail-1595685571.png',
-      length_in_sec: '179'
+      length_in_seconds: '179'
     },
     {
       id: 263381,
@@ -144,7 +144,7 @@ export const videoMock = {
       artist: '',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/263381-card-thumbnail-1595685676.png',
-      length_in_sec: '443'
+      length_in_seconds: '443'
     },
     {
       id: 263382,
@@ -159,7 +159,7 @@ export const videoMock = {
       artist: '',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/263382-card-thumbnail-1595685733.png',
-      length_in_sec: '241'
+      length_in_seconds: '241'
     },
     {
       id: 263383,
@@ -174,7 +174,7 @@ export const videoMock = {
       artist: '',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/263383-card-thumbnail-1595685793.png',
-      length_in_sec: '614'
+      length_in_seconds: '614'
     }
   ],
   isAdded: false,
@@ -284,7 +284,7 @@ export const mp3VideoMock = {
   difficulty: 'BEGINNER 4',
   releaseDate: 'FEB 28, 2020',
   parentTitle: '',
-  length_in_sec: '331',
+  length_in_seconds: '331',
   instructors: [
     {
       id: 220967,
@@ -369,7 +369,7 @@ export const mp3VideoMock = {
       artist: '',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/261676-card-thumbnail-1594994038.png',
-      length_in_sec: '199'
+      length_in_seconds: '199'
     },
     {
       id: 262303,
@@ -383,7 +383,7 @@ export const mp3VideoMock = {
       title: 'Seven Gateways Of Time',
       artist: '',
       thumbnailUrl: '',
-      length_in_sec: '238'
+      length_in_seconds: '238'
     },
     {
       id: 260251,
@@ -398,7 +398,7 @@ export const mp3VideoMock = {
       artist: 'Buddy Rich Big Band',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/260251-card-thumbnail-1593035689.png',
-      length_in_sec: '173'
+      length_in_seconds: '173'
     },
     {
       id: 254192,
@@ -413,7 +413,7 @@ export const mp3VideoMock = {
       artist: 'Steely Dan',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/254192-card-thumbnail-1593035708.png',
-      length_in_sec: '294'
+      length_in_seconds: '294'
     },
     {
       id: 254179,
@@ -428,7 +428,7 @@ export const mp3VideoMock = {
       artist: 'Rashid Williams',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/254179-card-thumbnail-1593035722.png',
-      length_in_sec: '249'
+      length_in_seconds: '249'
     },
     {
       id: 254163,
@@ -443,7 +443,7 @@ export const mp3VideoMock = {
       artist: 'Mathieu Fiset & The RoboJazz Band',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/254163-card-thumbnail-1593035733.png',
-      length_in_sec: '247'
+      length_in_seconds: '247'
     },
     {
       id: 253432,
@@ -458,7 +458,7 @@ export const mp3VideoMock = {
       artist: 'Mathieu Fiset & The RoboJazz Band',
       thumbnailUrl:
         'https://d1923uyy6spedc.cloudfront.net/253432-card-thumbnail-1593035744.png',
-      length_in_sec: '203'
+      length_in_seconds: '203'
     },
     {
       id: 248523,
@@ -473,7 +473,7 @@ export const mp3VideoMock = {
       artist: 'Jody Fisher, Baba Elefante, Tilden Webb & Mike Michalkow',
       thumbnailUrl:
         'https://dzryyo1we6bm3.cloudfront.net/thumbnails/30368_thumbnail_360p.jpg',
-      length_in_sec: '131'
+      length_in_seconds: '131'
     },
     {
       id: 247399,
@@ -488,7 +488,7 @@ export const mp3VideoMock = {
       artist: 'Tim Proznick',
       thumbnailUrl:
         'https://dzryyo1we6bm3.cloudfront.net/thumbnails/22911_thumbnail_360p.jpg',
-      length_in_sec: '215'
+      length_in_seconds: '215'
     },
     {
       id: 246167,
@@ -503,7 +503,7 @@ export const mp3VideoMock = {
       artist: 'Tim Proznick',
       thumbnailUrl:
         'https://dzryyo1we6bm3.cloudfront.net/thumbnails/22911_thumbnail_360p.jpg',
-      length_in_sec: '244'
+      length_in_seconds: '244'
     }
   ],
   isAdded: false,

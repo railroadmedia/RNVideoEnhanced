@@ -43,6 +43,7 @@ import AnimatedCustomAlert from './AnimatedCustomAlert';
 import networkSpeedService from './services/networkSpeed.service';
 
 import { svgs } from './img/svgs';
+import { getMP3Array, formatTime } from './helper';
 
 const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
@@ -100,7 +101,7 @@ export default class Video extends React.Component {
     this.translateBlueX = new Animated.Value(-videoW + 11);
     this.translateBlueX.setOffset(-11); // Offsets half the timer dot width so its centered.
 
-    this.state.mp3s = props.content.mp3s;
+    this.state.mp3s = getMP3Array(props.content);
     if (!props.youtubeId) this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     this.state.paused = props.paused;
@@ -295,7 +296,7 @@ export default class Video extends React.Component {
           signal,
           captions,
           description,
-          thumbnailUrl,
+          thumbnail_url,
           video_playback_endpoints,
           length_in_seconds
         }
@@ -341,7 +342,7 @@ export default class Video extends React.Component {
                 studio: 'Drumeo',
                 title: title || '',
                 subtitle: description || '',
-                images: [{ url: thumbnailUrl || '' }]
+                images: [{ url: thumbnail_url || '' }]
               },
               streamDuration: parseFloat(length_in_seconds)
             },
@@ -400,10 +401,10 @@ export default class Video extends React.Component {
   updateVideoProgress = async () => {
     let {
       youtubeId,
-      content: { videoId, id, length_in_seconds }
+      content: { vimeo_video_id, id, length_in_seconds }
     } = this.props;
     this.props.onUpdateVideoProgress?.(
-      videoId,
+      vimeo_video_id,
       id,
       length_in_seconds,
       cTime,
@@ -988,21 +989,23 @@ export default class Video extends React.Component {
         },
         content: {
           isLive,
-          endTime,
+          live_event_end_time,
           captions,
           buffering,
-          startTime,
-          formatTime,
+          live_event_start_time,
           length_in_seconds,
-          nextLessonId,
-          thumbnailUrl,
-          nextLessonUrl,
-          previousLessonId,
-          previousLessonUrl,
-          last_watch_position_in_seconds
+          thumbnail_url,
+          last_watch_position_in_seconds,
+          next_lesson,
+          previous_lesson
         }
       }
     } = this;
+
+    const hasPrevious =
+      previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
+    const hasNext =
+      next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
 
     return (
       <SafeAreaView
@@ -1150,9 +1153,9 @@ export default class Video extends React.Component {
           )}
           {live && (
             <LiveTimer
-              endTime={endTime}
-              startTime={startTime}
-              thumbnailUrl={thumbnailUrl}
+              endTime={`${live_event_end_time} UTC`}
+              startTime={`${live_event_start_time} UTC`}
+              thumbnailUrl={thumbnail_url}
               visible={!isLive || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
@@ -1160,7 +1163,7 @@ export default class Video extends React.Component {
                 })()`);
                 this.setState({
                   liveEnded: true
-                })
+                });
                 this.props.onEndLive?.();
               }}
               onStart={() => {
@@ -1179,7 +1182,7 @@ export default class Video extends React.Component {
             >
               {type === 'audio' && (
                 <Image
-                  source={{ uri: thumbnailUrl }}
+                  source={{ uri: thumbnail_url }}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -1233,9 +1236,9 @@ export default class Video extends React.Component {
                         style={{
                           flex: 1,
                           alignItems: 'center',
-                          opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
+                          opacity: hasPrevious ? 1 : 0.5
                         }}
-                        disabled={!(previousLessonId || previousLessonUrl)}
+                        disabled={!hasPrevious}
                       >
                         {svgs.prevLesson({
                           ...iconStyle,
@@ -1276,9 +1279,9 @@ export default class Video extends React.Component {
                         style={{
                           flex: 1,
                           alignItems: 'center',
-                          opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
+                          opacity: hasNext ? 1 : 0.5
                         }}
-                        disabled={!(nextLessonUrl || nextLessonId)}
+                        disabled={!hasNext}
                       >
                         {svgs.prevLesson({
                           ...{ ...iconStyle, ...largePlayerControls },
@@ -1647,172 +1650,6 @@ export default class Video extends React.Component {
           }
         />
       </SafeAreaView>
-    );
-  }
-}
-class LiveTimer extends React.Component {
-  state = {
-    hours: '--',
-    minutes: '--',
-    seconds: '--'
-  };
-
-  constructor(props) {
-    super(props);
-    let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000),
-      endTime = parseInt((new Date(props.endTime) - new Date()) / 1000) + 15 * 60;
-    if (startTime >= 0) {
-      this.state = this.formatTimer(startTime);
-      this.countDown(startTime, 'onStart');
-    } else props.onStart?.();
-    if (endTime >= 0) {
-      this.countDown(endTime, 'onEnd');
-    } else this.props.onEnd?.();
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.onEndInterval);
-    clearTimeout(this.onStartInterval);
-  }
-
-  countDown = (time, event) => {
-    this[`${event}Interval`] = setInterval(() => {
-      if (time >= 0) {
-        if (event === 'onStart') this.setState(this.formatTimer(time));
-        if (event === 'onEnd' && !time)
-          this.setState({
-            hours: '--',
-            minutes: '--',
-            seconds: '--'
-          });
-        time--;
-      } else {
-        this.props[event]?.();
-        clearInterval(this[`${event}Interval`]);
-      }
-    }, 1000);
-  };
-
-  formatTimer = seconds => {
-    const hours = parseInt(seconds / 3600);
-    const minutes = parseInt((seconds -= hours * 3600) / 60);
-    seconds -= minutes * 60;
-    return {
-      hours: `${hours < 10 ? 0 : ''}${hours}`,
-      minutes: `${minutes < 10 ? 0 : ''}${minutes}`,
-      seconds: `${seconds < 10 ? 0 : ''}${seconds}`
-    };
-  };
-
-  render() {
-    let { hours, minutes, seconds } = this.state;
-    return this.props.visible ? (
-      <View
-        style={{
-          height: '100%',
-          aspectRatio: 16 / 9,
-          position: 'absolute',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        <Image
-          source={{ uri: this.props.thumbnailUrl }}
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'absolute'
-          }}
-        />
-        <View
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'absolute',
-            backgroundColor: 'rgba(0,0,0,.5)'
-          }}
-        />
-        <View>
-          <Text
-            style={{
-              marginBottom: 20,
-              color: 'white',
-              textAlign: 'center',
-              fontFamily: 'RobotoCondensed-Bold'
-            }}
-          >
-            {hours === '--' ? 'EVENT ENDED' : 'UPCOMING EVENT'}
-          </Text>
-          <View style={{ flexDirection: 'row' }}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              {hours}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>
-                {hours === '01' ? 'HOUR' : 'HOURS'}
-              </Text>
-            </Text>
-            <Text
-              style={{
-                fontSize: 40,
-                color: 'white',
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              :{`  `}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>{` `}</Text>
-            </Text>
-            <Text
-              style={{
-                fontSize: 40,
-                color: 'white',
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              {minutes}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>
-                {hours === '00' && minutes === '01' ? 'MINUTE' : 'MINUTES'}
-              </Text>
-            </Text>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              :{`  `}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>{` `}</Text>
-            </Text>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              {seconds}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>SECONDS</Text>
-            </Text>
-          </View>
-        </View>
-      </View>
-    ) : (
-      <></>
     );
   }
 }

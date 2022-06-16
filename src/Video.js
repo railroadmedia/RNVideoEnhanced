@@ -899,7 +899,7 @@ export default class Video extends React.Component {
         if(window.video && !window.eventsAdded) {
           window.eventsAdded = true;
           window.video.addEventListener('play', () => {
-            if(window.video.getCurrentTime) 
+            if(window.video.getCurrentTime)
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 key: 'play',
                 currentTime: window.video.getCurrentTime()
@@ -911,7 +911,7 @@ export default class Video extends React.Component {
               }));
           });
           window.video.addEventListener('pause', () => {
-            if(window.video.getCurrentTime) 
+            if(window.video.getCurrentTime)
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 key: 'pause',
                 currentTime: window.video.getCurrentTime()

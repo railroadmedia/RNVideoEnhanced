@@ -10,7 +10,7 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "react-native-airplay-ios": "https://github.com/gazedash/react-native-airplay-ios.git#1.0.9",
+    "react-native-airplay-ios": "github:DidierF/react-native-airplay-ios#musora-app",
     "react-native-device-info": "^7.3.1",
     "react-native-google-cast": "^4.0.1",
     "react-native-home-indicator": "^0.2.6",

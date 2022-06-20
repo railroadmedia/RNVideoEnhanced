@@ -6190,10 +6190,10 @@
     "jscodeshift" "^0.11.0"
     "nullthrows" "^1.1.1"
 
-"react-native-device-info@^7.3.1":
-  "integrity" "sha512-n5mrUuwUcPXAspLZcAOE+Q087yq+Gfvo8+soZIg1l7rUZUrLNWlFxFgOo/DMPNZA5vcBSv1TSGFFdiAZVHalLw=="
-  "resolved" "https://registry.npmjs.org/react-native-device-info/-/react-native-device-info-7.4.0.tgz"
-  "version" "7.4.0"
+"react-native-device-info@^8.7.1":
+  "integrity" "sha512-cVMZztFa2Qn6qpQa601W61CtUwZQ1KXfqCOeltejAWEXmgIWivC692WGSdtGudj4upSi1UgMSaGcvKjfcpdGjg=="
+  "resolved" "https://registry.npmjs.org/react-native-device-info/-/react-native-device-info-8.7.1.tgz"
+  "version" "8.7.1"
 
 "react-native-google-cast@^4.0.1":
   "integrity" "sha512-GAP5kX6Fl5aktkr8FrU2qCxes5INKh+siKgWcBZxxVCzw6jNbN6SToqR1M0Y7ny9iMOC0ykK4KKXXJo05dWVIQ=="

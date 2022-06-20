@@ -11,7 +11,7 @@
   },
   "peerDependencies": {
     "react-native-airplay-ios": "github:DidierF/react-native-airplay-ios#musora-app",
-    "react-native-device-info": "^7.3.1",
+    "react-native-device-info": "^8.7.1",
     "react-native-google-cast": "^4.0.1",
     "react-native-home-indicator": "github:DidierF/react-native-home-indicator#musora-app",
     "react-native-orientation-locker": "github:DidierF/react-native-orientation-locker#musora-app",

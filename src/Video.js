@@ -1014,8 +1014,7 @@ export default class Video extends React.Component {
           {
             zIndex: 1,
             overflow: 'hidden',
-            alignItems: 'center',
-            marginBottom: youtubeId ? 0 : -11
+            alignItems: 'center'
           },
           fullscreen
             ? {

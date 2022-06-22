@@ -64,105 +64,60 @@ class LiveTimer extends React.Component {
     let { hours, minutes, seconds } = this.state;
     return this.props.visible ? (
       <View
-        style={{
-          height: '100%',
-          aspectRatio: 16 / 9,
-          position: 'absolute',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
+        style={styles.container}
       >
         <Image
           source={{ uri: this.props.thumbnailUrl }}
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'absolute'
-          }}
+          style={styles.image}
         />
         <View
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'absolute',
-            backgroundColor: 'rgba(0,0,0,.5)'
-          }}
+          style={styles.blur}
         />
         <View>
           <Text
-            style={{
-              marginBottom: 20,
-              color: 'white',
-              textAlign: 'center',
-              fontFamily: 'RobotoCondensed-Bold'
-            }}
+            style={styles.title}
           >
             {hours === '--' ? 'EVENT ENDED' : 'UPCOMING EVENT'}
           </Text>
-          <View style={{ flexDirection: 'row' }}>
+          <View style={styles.row}>
             <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
+              style={styles.time}
             >
               {hours}
               {`\n`}
-              <Text style={{ fontSize: 10 }}>
+              <Text style={styles.font10}>
                 {hours === '01' ? 'HOUR' : 'HOURS'}
               </Text>
             </Text>
             <Text
-              style={{
-                fontSize: 40,
-                color: 'white',
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
+              style={styles.time}
             >
               :{`  `}
               {`\n`}
-              <Text style={{ fontSize: 10 }}>{` `}</Text>
+              <Text style={styles.font10}>{` `}</Text>
             </Text>
             <Text
-              style={{
-                fontSize: 40,
-                color: 'white',
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
+              style={styles.time}
             >
               {minutes}
               {`\n`}
-              <Text style={{ fontSize: 10 }}>
+              <Text style={styles.font10}>
                 {hours === '00' && minutes === '01' ? 'MINUTE' : 'MINUTES'}
               </Text>
             </Text>
             <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
+              style={styles.time}
             >
               :{`  `}
               {`\n`}
-              <Text style={{ fontSize: 10 }}>{` `}</Text>
+              <Text style={styles.font10}>{` `}</Text>
             </Text>
             <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
+              style={styles.time}
             >
               {seconds}
               {`\n`}
-              <Text style={{ fontSize: 10 }}>SECONDS</Text>
+              <Text style={styles.font10}>SECONDS</Text>
             </Text>
           </View>
         </View>
@@ -172,5 +127,44 @@ class LiveTimer extends React.Component {
     );
   }
 }
+
+const styles = StyleSheet.create({
+  container: {
+    height: '100%',
+    aspectRatio: 16 / 9,
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  time: {
+    color: 'white',
+    fontSize: 40,
+    textAlign: 'center',
+    fontFamily: 'RobotoCondensed-Bold'
+  },
+  font10: {
+    fontSize: 10
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute'
+  },
+  title: {
+    marginBottom: 20,
+    color: 'white',
+    textAlign: 'center',
+    fontFamily: 'RobotoCondensed-Bold'
+  },
+  blur: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    backgroundColor: 'rgba(0,0,0,.5)'
+  },
+  row: {
+    flexDirection: 'row'
+  },
+});
 
 export default LiveTimer;

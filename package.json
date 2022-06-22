@@ -10,11 +10,11 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "react-native-airplay-ios": "github:DidierF/react-native-airplay-ios#musora-app",
+    "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#musora-app",
     "react-native-device-info": "^8.7.1",
     "react-native-google-cast": "^4.0.1",
-    "react-native-home-indicator": "github:DidierF/react-native-home-indicator#musora-app",
-    "react-native-orientation-locker": "github:DidierF/react-native-orientation-locker#musora-app",
+    "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#musora-app",
+    "react-native-orientation-locker": "github:railroadmedia/react-native-orientation-locker#musora-app",
     "react-native-svg": "^12.1.0",
     "react-native-video": "https://github.com/railroadmedia/react-native-video.git",
     "react-native-webview": "https://github.com/railroadmedia/react-native-webview.git",

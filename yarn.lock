@@ -6177,8 +6177,8 @@
   "resolved" "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   "version" "17.0.2"
 
-"react-native-airplay-ios@github:DidierF/react-native-airplay-ios#musora-app":
-  "resolved" "git+ssh://git@github.com/DidierF/react-native-airplay-ios.git#c19c7998147249b43dd96f235e183e9d87b1b509"
+"react-native-airplay-ios@github:railroadmedia/react-native-airplay-ios#musora-app":
+  "resolved" "git+ssh://git@github.com/railroadmedia/react-native-airplay-ios.git#c19c7998147249b43dd96f235e183e9d87b1b509"
   "version" "1.0.9"
 
 "react-native-codegen@^0.0.8":
@@ -6200,12 +6200,12 @@
   "resolved" "https://registry.npmjs.org/react-native-google-cast/-/react-native-google-cast-4.2.4.tgz"
   "version" "4.2.4"
 
-"react-native-home-indicator@github:DidierF/react-native-home-indicator#musora-app":
-  "resolved" "git+ssh://git@github.com/DidierF/react-native-home-indicator.git#8e9b7efee5096a2067dd7ca6fc05520fc75709ce"
+"react-native-home-indicator@github:railroadmedia/react-native-home-indicator#musora-app":
+  "resolved" "git+ssh://git@github.com/railroadmedia/react-native-home-indicator.git#8e9b7efee5096a2067dd7ca6fc05520fc75709ce"
   "version" "0.2.9"
 
-"react-native-orientation-locker@github:DidierF/react-native-orientation-locker#musora-app":
-  "resolved" "git+ssh://git@github.com/DidierF/react-native-orientation-locker.git#120346a6aa41f409312d0d39e7d3dcba8cc3961b"
+"react-native-orientation-locker@github:railroadmedia/react-native-orientation-locker#musora-app":
+  "resolved" "git+ssh://git@github.com/railroadmedia/react-native-orientation-locker.git#120346a6aa41f409312d0d39e7d3dcba8cc3961b"
   "version" "1.5.0"
 
 "react-native-svg@^12.1.0":

@@ -602,7 +602,7 @@ export default class Video extends React.Component {
         if (this.videoPlayStatus) {
           this.togglePaused();
         }
-        delete this.videoPlayStatus
+        delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
@@ -617,7 +617,7 @@ export default class Video extends React.Component {
         if (this.videoPlayStatus) {
           this.togglePaused();
         }
-        delete this.videoPlayStatus
+        delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
@@ -728,7 +728,7 @@ export default class Video extends React.Component {
   };
 
   animateControls = (toValue, speed) => {
-    if (this.props.type === 'audio' || aCasting || gCasting) return;
+    if (this.props.content.type === 'play-along' || aCasting || gCasting) return;
     Animated.spring(this.translateControls, {
       toValue,
       speed: speed || 100,
@@ -997,7 +997,8 @@ export default class Video extends React.Component {
           thumbnail_url,
           last_watch_position_in_seconds,
           next_lesson,
-          previous_lesson
+          previous_lesson,
+          type: contentType
         }
       }
     } = this;
@@ -1102,7 +1103,7 @@ export default class Video extends React.Component {
                   rate={parseFloat(rate)}
                   playInBackground={true}
                   playWhenInactive={true}
-                  audioOnly={type === 'audio'}
+                  audioOnly={contentType === 'play-along'}
                   onProgress={this.onProgress}
                   ignoreSilentSwitch={'ignore'}
                   progressUpdateInterval={1000}
@@ -1113,7 +1114,7 @@ export default class Video extends React.Component {
                   onAudioBecomingNoisy={this.onAudioBecomingNoisy}
                   source={{
                     uri:
-                      type === 'audio'
+                      contentType === 'play-along'
                         ? mp3s.find(mp3 => mp3.selected).value
                         : vpe.find(v => v.selected).file
                   }}
@@ -1179,7 +1180,7 @@ export default class Video extends React.Component {
                 ...styles.controlsContainer
               }}
             >
-              {type === 'audio' && (
+              {contentType === 'play-along' && (
                 <Image
                   source={{ uri: thumbnail_url }}
                   style={{
@@ -1316,7 +1317,7 @@ export default class Video extends React.Component {
                     {!youtubeId &&
                       settingsMode !== 'bottom' &&
                       connection &&
-                      type !== 'audio' && (
+                      contentType !== 'play-along' && (
                         <TouchableOpacity
                           style={{
                             padding: 10
@@ -1334,7 +1335,7 @@ export default class Video extends React.Component {
                           })}
                         </TouchableOpacity>
                       )}
-                    {type !== 'audio' && onFullscreen && (
+                    {contentType !== 'play-along' && onFullscreen && (
                       <TouchableOpacity
                         style={{ padding: 10 }}
                         underlayColor={'transparent'}
@@ -1357,7 +1358,7 @@ export default class Video extends React.Component {
                         })}
                       </TouchableOpacity>
                     )}
-                    {type === 'audio' && (
+                    {contentType === 'play-along' && (
                       <TouchableOpacity
                         style={styles.mp3TogglerContainer}
                         onPress={() => this.mp3ActionModal.toggleModal()}
@@ -1456,7 +1457,7 @@ export default class Video extends React.Component {
           {!youtubeId &&
             settingsMode === 'bottom' &&
             connection &&
-            type !== 'audio' && (
+            contentType !== 'play-along' && (
               <Animated.View
                 style={{
                   top: 7,
@@ -1554,7 +1555,7 @@ export default class Video extends React.Component {
             showCaptions={!!captions && !aCasting}
           />
         )}
-        {type === 'audio' && (
+        {contentType === 'play-along' && (
           <ActionModal
             modalStyle={{ width: '80%' }}
             ref={r => (this.mp3ActionModal = r)}

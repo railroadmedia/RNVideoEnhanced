@@ -10,7 +10,7 @@ declare module "RNVideoEnhanced" {
 		youtubeId: number;
 		live: boolean;
 		connection: boolean | null;
-		maxWidth: number | undefined;
+		maxWidth?: number | undefined;
 		content: any;
 		onRefresh: () => void;
 		toSupport: () => void;
@@ -50,6 +50,6 @@ declare module "RNVideoEnhanced" {
 		};
 	}
 	class Video extends React.Component<VideoProps, {}> {}
-	
+
     export default Video;
 }

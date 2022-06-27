@@ -132,7 +132,7 @@ export default class Video extends React.Component {
       this.googleCastingListeners();
       this.selectQuality(quality || 'Auto');
     }
-    AppState.addEventListener('change', this.handleAppStateChange);
+    this.stateListener = AppState.addEventListener('change', this.handleAppStateChange);
     Orientation.addDeviceOrientationListener(this.orientationListener);
   }
 
@@ -151,7 +151,9 @@ export default class Video extends React.Component {
       gListenerSE = undefined;
       gListenerSS = undefined;
     }
-    AppState.removeEventListener('change', this.handleAppStateChange);
+    if (!!this.stateListener) {
+      this.stateListener.remove();
+    }
     Orientation.removeDeviceOrientationListener(this.orientationListener);
   }
 

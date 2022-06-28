@@ -25,7 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import RNFetchBlob from 'rn-fetch-blob';
 import WebView from 'react-native-webview';
 import DeviceInfo from 'react-native-device-info';
-import Orientation from 'react-native-orientation-locker';
+import Orientation, { LANDSCAPE_LEFT, PORTRAIT } from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
 import GoogleCast, { CastButton } from 'react-native-google-cast';
 import PrefersHomeIndicatorAutoHidden from 'react-native-home-indicator';
@@ -155,6 +155,7 @@ export default class Video extends React.Component {
       this.stateListener.remove();
     }
     Orientation.removeDeviceOrientationListener(this.orientationListener);
+    Orientation.unlockAllOrientations();
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -415,24 +416,21 @@ export default class Video extends React.Component {
   };
 
   orientationListener = (o, force) => {
-    if (o === 'UNKNOWN') return;
+    if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) return;
+
     orientation = o;
-    if (isTablet) Orientation.unlockAllOrientations();
-    let { paused } = this.state;
+
+    Orientation.unlockAllOrientations();
     let isLandscape = o.includes('LAND');
 
-    if (
-      !force &&
-      ((!isTablet && (paused || o.includes('FACE') || o.includes('UPSIDE'))) ||
-        (isTablet && o.includes('UNKNOWN')))
-    )
-      return;
-    if (o.includes('LEFT')) {
-      Orientation.lockToLandscapeLeft();
-    } else if (o.includes('RIGHT')) {
-      Orientation.lockToLandscapeRight();
-    } else {
-      if (!isTablet) Orientation.lockToPortrait();
+    if (force) {
+      if (o.includes('LEFT')) {
+        Orientation.lockToLandscapeLeft();
+      } else if (o.includes('RIGHT')) {
+        Orientation.lockToLandscapeRight();
+      } else {
+        Orientation.lockToPortrait();
+      }
     }
 
     let dimsShouldChange =
@@ -446,11 +444,10 @@ export default class Video extends React.Component {
         windowWidth < windowHeight ? windowHeight : windowWidth;
     }
 
-    if (isTablet)
       return this.setState(
         {
           tabOrientation: o,
-          fullscreen: force ? !this.state.fullscreen : this.state.fullscreen
+          fullscreen: force ? isLandscape : isLandscape ? true : false
         },
         () => {
           this.props.onOrientationChange?.(o);
@@ -459,11 +456,6 @@ export default class Video extends React.Component {
           this.props.onFullscreen?.(this.state.fullscreen);
         }
       );
-    this.setState({ fullscreen: isLandscape }, () => {
-      StatusBar.setHidden(isLandscape);
-      this.onProgress({ currentTime: cTime });
-      this.props.onFullscreen?.(this.state.fullscreen);
-    });
   };
 
   filterVideosByResolution = () => {
@@ -964,7 +956,6 @@ export default class Video extends React.Component {
         repeat,
         fullscreen,
         showControls,
-        tabOrientation,
         captionsHidden,
         videoRefreshing
       },
@@ -1347,16 +1338,12 @@ export default class Video extends React.Component {
                       <TouchableOpacity
                         style={{ padding: 10 }}
                         underlayColor={'transparent'}
-                        onPress={() =>
-                          this.orientationListener(
-                            isTablet
-                              ? tabOrientation
-                              : fullscreen
-                              ? 'PORT'
-                              : 'LANDLEFT',
-                            true
-                          )
-                        }
+                        onPress={() => this.orientationListener(
+                          this.state.fullscreen
+                            ? PORTRAIT
+                            : LANDSCAPE_LEFT,
+                          true
+                        )}
                       >
                         {svgs.fullScreen({
                           width: 20,
@@ -1504,7 +1491,7 @@ export default class Video extends React.Component {
               bottom: fullscreen
                 ? windowHeight > videoH
                   ? (windowHeight - videoH) / 2
-                  : 25
+                  : 18
                 : 0,
               transform: [
                 {

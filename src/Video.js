@@ -651,7 +651,7 @@ export default class Video extends React.Component {
           this.togglePaused();
         }
         moveX = moveX - (windowWidth - videoW) / 2;
-        translate = moveX - videoW;
+        let translate = moveX - videoW;
         if (moveX < 0 || translate > 0) return;
         this.translateBlueX.setValue(translate);
         if (this.videoRef) {

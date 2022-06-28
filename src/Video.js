@@ -444,16 +444,17 @@ export default class Video extends React.Component {
         windowWidth < windowHeight ? windowHeight : windowWidth;
     }
 
+    const fs = isTablet && force || !isTablet ? isLandscape : false;
+
+    this.props.onOrientationChange?.(o);
+    this.onProgress({ currentTime: cTime });
+    if (force) StatusBar.setHidden(fs);
+    this.props.onFullscreen?.(fs);
+
       return this.setState(
         {
           tabOrientation: o,
-          fullscreen: force ? isLandscape : isLandscape ? true : false
-        },
-        () => {
-          this.props.onOrientationChange?.(o);
-          this.onProgress({ currentTime: cTime });
-          if (force) StatusBar.setHidden(this.state.fullscreen);
-          this.props.onFullscreen?.(this.state.fullscreen);
+          fullscreen: fs
         }
       );
   };

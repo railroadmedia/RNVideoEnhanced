@@ -1035,8 +1035,9 @@ export default class Video extends React.Component {
           <View
             style={{
               top: 0,
-              bottom: 11,
-              width: '100%',
+              bottom: 0,
+              left: 0,
+              right: 0,
               position: 'absolute',
               backgroundColor: 'black'
             }}
@@ -1054,7 +1055,12 @@ export default class Video extends React.Component {
             })}
           </TouchableOpacity>
         )}
-        <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
+        <View
+          style={[
+            this.getVideoDimensions(),
+            fullscreen ? { marginTop: 42, backgroundColor: 'black' } : { backgroundColor: 'black' },
+          ]}
+        >
           {!videoRefreshing && (
             <>
               {!!youtubeId ? (

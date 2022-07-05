@@ -161,8 +161,12 @@ export default class Video extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.type !== nextProps.type) return true;
-    if (this.props.content.isLive !== nextProps.content.isLive) return true;
+    if (
+      this.props.type !== nextProps.type ||
+      this.props.content.isLive !== nextProps.content.isLive ||
+      nextProps.theme !== this.props.theme ||
+      nextProps.content.id !== this.props.id
+    ) return true;
     for (let key in this.state) {
       if (typeof this.state[key] === 'object')
         for (let oKey in this.state[key]) {
@@ -175,7 +179,6 @@ export default class Video extends React.Component {
         }
       else if (this.state[key] !== nextState[key]) return true;
     }
-    if (nextProps.theme !== this.props.theme) return true;
     return false;
   }
 

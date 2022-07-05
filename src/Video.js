@@ -133,6 +133,8 @@ export default class Video extends React.Component {
       this.selectQuality(quality || 'Auto');
     }
     this.stateListener = AppState.addEventListener('change', this.handleAppStateChange);
+
+    Orientation.getOrientation(this.orientationListener);
     Orientation.addDeviceOrientationListener(this.orientationListener);
   }
 

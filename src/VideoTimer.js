@@ -9,11 +9,11 @@ export default class VideoTimer_V2 extends React.PureComponent {
 
   constructor(props) {
     super(props);
-    this.state.progress = '0:00';
+    this.state.progress = '00:00';
   }
 
   formatTime(seconds) {
-    if (seconds < 1) return '0:00';
+    if (seconds < 1) return '00:00';
     let h = parseInt(seconds / 3600);
     let m = parseInt((seconds - h * 3600) / 60);
     let s = parseInt(seconds - m * 60 - h * 3600);

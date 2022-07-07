@@ -43,7 +43,7 @@ import AnimatedCustomAlert from './AnimatedCustomAlert';
 import networkSpeedService from './services/networkSpeed.service';
 
 import { svgs } from './img/svgs';
-import { getMP3Array, formatTime } from './helper';
+import { getMP3Array } from './helper';
 
 const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
@@ -1316,7 +1316,6 @@ export default class Video extends React.Component {
                     <VideoTimer
                       live={live}
                       styles={timerText}
-                      formatTime={formatTime}
                       length_in_seconds={length_in_seconds}
                       ref={r => (this.videoTimer = r)}
                       maxFontMultiplier={this.props.maxFontMultiplier}

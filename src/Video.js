@@ -452,7 +452,7 @@ export default class Video extends React.Component {
     const fs = isTablet && force || !isTablet ? isLandscape : false;
 
     this.props.onOrientationChange?.(o);
-    this.onProgress({ currentTime: cTime });
+    if (!!cTime) this.onProgress({ currentTime: cTime });
     if (force) StatusBar.setHidden(fs);
     this.props.onFullscreen?.(fs);
 

@@ -728,7 +728,7 @@ export default class Video extends React.Component {
   };
 
   animateControls = (toValue, speed) => {
-    if (this.props.content.type === 'play-along' || aCasting || gCasting) return;
+    if ((this.props.content.type === 'play-along' && this.props.listening) || aCasting || gCasting) return;
     Animated.spring(this.translateControls, {
       toValue,
       speed: speed || 100,
@@ -998,7 +998,8 @@ export default class Video extends React.Component {
           next_lesson,
           previous_lesson,
           type: contentType
-        }
+        },
+        listening,
       }
     } = this;
 
@@ -1006,6 +1007,7 @@ export default class Video extends React.Component {
       previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
     const hasNext =
       next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
+    const audioOnly = contentType === 'play-along' && listening;
 
     return (
       <SafeAreaView
@@ -1108,7 +1110,7 @@ export default class Video extends React.Component {
                   rate={parseFloat(rate)}
                   playInBackground={true}
                   playWhenInactive={true}
-                  audioOnly={contentType === 'play-along'}
+                  audioOnly={audioOnly}
                   onProgress={this.onProgress}
                   ignoreSilentSwitch={'ignore'}
                   progressUpdateInterval={1000}
@@ -1119,7 +1121,7 @@ export default class Video extends React.Component {
                   onAudioBecomingNoisy={this.onAudioBecomingNoisy}
                   source={{
                     uri:
-                      contentType === 'play-along'
+                      audioOnly
                         ? mp3s.find(mp3 => mp3.selected).value
                         : vpe.find(v => v.selected).file
                   }}
@@ -1185,7 +1187,7 @@ export default class Video extends React.Component {
                 ...styles.controlsContainer
               }}
             >
-              {contentType === 'play-along' && (
+              {audioOnly && (
                 <Image
                   source={{ uri: thumbnail_url }}
                   style={{
@@ -1322,7 +1324,7 @@ export default class Video extends React.Component {
                     {!youtubeId &&
                       settingsMode !== 'bottom' &&
                       connection &&
-                      contentType !== 'play-along' && (
+                      !audioOnly && (
                         <TouchableOpacity
                           style={{
                             padding: 10
@@ -1340,7 +1342,7 @@ export default class Video extends React.Component {
                           })}
                         </TouchableOpacity>
                       )}
-                    {contentType !== 'play-along' && onFullscreen && (
+                    {!audioOnly && onFullscreen && (
                       <TouchableOpacity
                         style={{ padding: 10 }}
                         underlayColor={'transparent'}
@@ -1458,7 +1460,7 @@ export default class Video extends React.Component {
           {!youtubeId &&
             settingsMode === 'bottom' &&
             connection &&
-            contentType !== 'play-along' && (
+            !audioOnly && (
               <Animated.View
                 style={{
                   top: 7,

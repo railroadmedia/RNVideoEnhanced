@@ -12,6 +12,7 @@ declare module "RNVideoEnhanced" {
 		connection: boolean | null;
 		maxWidth?: number | undefined;
 		content: any;
+		listening?: boolean,
 		onRefresh: () => void;
 		toSupport: () => void;
 		onBack: () => void;

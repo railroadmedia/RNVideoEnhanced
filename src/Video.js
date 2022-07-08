@@ -670,6 +670,7 @@ export default class Video extends React.Component {
   };
 
   onProgress = ({ currentTime }) => {
+    if (!currentTime) return;
     cTime = currentTime;
     let {
       content: { length_in_seconds },

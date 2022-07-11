@@ -1300,11 +1300,7 @@ export default class Video extends React.Component {
                   </Animated.View>
                   <Animated.View
                     style={{
-                      bottom: fullscreen
-                        ? windowHeight > videoH
-                          ? 29
-                          : 29 + 25
-                        : 11,
+                      bottom: fullscreen ? 29 + 25 : 11,
                       ...styles.bottomControlsContainer,
                       transform: [
                         {

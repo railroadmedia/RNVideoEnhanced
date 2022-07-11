@@ -449,19 +449,23 @@ export default class Video extends React.Component {
         windowWidth < windowHeight ? windowHeight : windowWidth;
     }
 
-    const fs = isTablet && force || !isTablet ? isLandscape : false;
+    let fs = isLandscape;
+
+    if (isTablet && !force) {
+      fs = this.state.fullscreen && isLandscape;
+    }
 
     this.props.onOrientationChange?.(o);
     if (!!cTime) this.onProgress({ currentTime: cTime });
     if (force) StatusBar.setHidden(fs);
     this.props.onFullscreen?.(fs);
 
-      return this.setState(
-        {
-          tabOrientation: o,
-          fullscreen: fs
-        }
-      );
+    return this.setState(
+      {
+        tabOrientation: o,
+        fullscreen: fs
+      }
+    );
   };
 
   filterVideosByResolution = () => {

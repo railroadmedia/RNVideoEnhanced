@@ -685,7 +685,8 @@ export default class Video extends React.Component {
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;
     this.bufferingOpacity?.setValue(0);
-    this.translateBlueX.setValue((currentTime * videoW) / length_in_seconds - videoW);
+    const translate = (currentTime * videoW) / length_in_seconds - videoW;
+    if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
     if (!aCasting && !youtubeId) {
       this.bufferingTO = setTimeout(

@@ -1146,7 +1146,7 @@ export default class Video extends React.Component {
                   onExternalPlaybackChange={() => {
                     if (isiOS) AirPlay.startScan();
                   }}
-                  {...(aCasting || !captions
+                  {...(aCasting || !captions || typeof captions !== 'string'
                     ? {}
                     : {
                         selectedTextTrack: {

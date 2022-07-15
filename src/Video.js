@@ -182,6 +182,18 @@ export default class Video extends React.Component {
     return false;
   }
 
+  componentDidUpdate(prevProps) {
+    const { props: { content, youtubeId } } = this;
+    if (prevProps.content.id !== content.id) {
+      cTime = content.last_watch_position_in_seconds;
+      this.setState({
+        mp3s: getMP3Array(content),
+      });
+
+      if (!youtubeId) this.setState({ vpe: this.filterVideosByResolution() });
+    }
+  }
+
   handleAppStateChange = () => {
     this.toggleControls(0);
     this.updateVideoProgress();

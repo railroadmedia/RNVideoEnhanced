@@ -10,11 +10,11 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "react-native-airplay-ios": "https://github.com/gazedash/react-native-airplay-ios.git#1.0.9",
-    "react-native-device-info": "^7.3.1",
+    "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#musora-app",
+    "react-native-device-info": "^8.7.1",
     "react-native-google-cast": "^4.0.1",
-    "react-native-home-indicator": "^0.2.6",
-    "react-native-orientation-locker": "^1.2.0",
+    "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#musora-app",
+    "react-native-orientation-locker": "github:railroadmedia/react-native-orientation-locker#musora-app",
     "react-native-svg": "^12.1.0",
     "react-native-video": "https://github.com/railroadmedia/react-native-video.git",
     "react-native-webview": "https://github.com/railroadmedia/react-native-webview.git",
@@ -30,7 +30,7 @@
     "eslint": "^6.5.1",
     "jest": "^25.1.0",
     "metro-react-native-babel-preset": "^0.59.0",
-    "react-test-renderer": "16.13.1"
+    "react-test-renderer": "^17.0.0"
   },
   "jest": {
     "preset": "react-native"

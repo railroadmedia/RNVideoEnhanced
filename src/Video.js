@@ -25,7 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import RNFetchBlob from 'rn-fetch-blob';
 import WebView from 'react-native-webview';
 import DeviceInfo from 'react-native-device-info';
-import Orientation from 'react-native-orientation-locker';
+import Orientation, { LANDSCAPE_LEFT, PORTRAIT } from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
 import GoogleCast, { CastButton } from 'react-native-google-cast';
 import PrefersHomeIndicatorAutoHidden from 'react-native-home-indicator';
@@ -43,6 +43,7 @@ import AnimatedCustomAlert from './AnimatedCustomAlert';
 import networkSpeedService from './services/networkSpeed.service';
 
 import { svgs } from './img/svgs';
+import { getMP3Array } from './helper';
 
 const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
@@ -83,7 +84,7 @@ export default class Video extends React.Component {
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
-    cTime = props.content.lastWatchedPosInSec;
+    cTime = props.content.last_watch_position_in_seconds;
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
@@ -100,7 +101,7 @@ export default class Video extends React.Component {
     this.translateBlueX = new Animated.Value(-videoW + 11);
     this.translateBlueX.setOffset(-11); // Offsets half the timer dot width so its centered.
 
-    this.state.mp3s = props.content.mp3s;
+    this.state.mp3s = getMP3Array(props.content);
     if (!props.youtubeId) this.state.vpe = this.filterVideosByResolution();
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     this.state.paused = props.paused;
@@ -131,7 +132,9 @@ export default class Video extends React.Component {
       this.googleCastingListeners();
       this.selectQuality(quality || 'Auto');
     }
-    AppState.addEventListener('change', this.handleAppStateChange);
+    this.stateListener = AppState.addEventListener('change', this.handleAppStateChange);
+
+    Orientation.getOrientation(this.orientationListener);
     Orientation.addDeviceOrientationListener(this.orientationListener);
   }
 
@@ -150,13 +153,20 @@ export default class Video extends React.Component {
       gListenerSE = undefined;
       gListenerSS = undefined;
     }
-    AppState.removeEventListener('change', this.handleAppStateChange);
+    if (!!this.stateListener) {
+      this.stateListener.remove();
+    }
     Orientation.removeDeviceOrientationListener(this.orientationListener);
+    Orientation.unlockAllOrientations();
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.type !== nextProps.type) return true;
-    if (this.props.content.isLive !== nextProps.content.isLive) return true;
+    if (
+      this.props.type !== nextProps.type ||
+      this.props.content.isLive !== nextProps.content.isLive ||
+      nextProps.theme !== this.props.theme ||
+      nextProps.content.id !== this.props.id
+    ) return true;
     for (let key in this.state) {
       if (typeof this.state[key] === 'object')
         for (let oKey in this.state[key]) {
@@ -169,8 +179,19 @@ export default class Video extends React.Component {
         }
       else if (this.state[key] !== nextState[key]) return true;
     }
-    if (nextProps.theme !== this.props.theme) return true;
     return false;
+  }
+
+  componentDidUpdate(prevProps) {
+    const { props: { content, youtubeId } } = this;
+    if (prevProps.content.id !== content.id) {
+      cTime = content.last_watch_position_in_seconds;
+      this.setState({
+        mp3s: getMP3Array(content),
+      });
+
+      if (!youtubeId) this.setState({ vpe: this.filterVideosByResolution() });
+    }
   }
 
   handleAppStateChange = () => {
@@ -276,8 +297,8 @@ export default class Video extends React.Component {
     gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
-      let { lengthInSec } = this.props.content;
-      if (progress === parseInt(lengthInSec) - 1) {
+      let { length_in_seconds } = this.props.content;
+      if (progress === parseInt(length_in_seconds) - 1) {
         this.googleCastClient.pause();
         return this.onEnd();
       }
@@ -295,9 +316,9 @@ export default class Video extends React.Component {
           signal,
           captions,
           description,
-          thumbnailUrl,
+          thumbnail_url,
           video_playback_endpoints,
-          lengthInSec
+          length_in_seconds
         }
       }
     } = this;
@@ -341,9 +362,9 @@ export default class Video extends React.Component {
                 studio: 'Drumeo',
                 title: title || '',
                 subtitle: description || '',
-                images: [{ url: thumbnailUrl || '' }]
+                images: [{ url: thumbnail_url || '' }]
               },
-              streamDuration: parseFloat(lengthInSec)
+              streamDuration: parseFloat(length_in_seconds)
             },
             playbackRate: parseFloat(rate),
             startTime: Math.round(cTime)
@@ -400,36 +421,33 @@ export default class Video extends React.Component {
   updateVideoProgress = async () => {
     let {
       youtubeId,
-      content: { videoId, id, lengthInSec }
+      content: { vimeo_video_id, id, length_in_seconds }
     } = this.props;
     this.props.onUpdateVideoProgress?.(
-      videoId,
+      vimeo_video_id,
       id,
-      lengthInSec,
+      length_in_seconds,
       cTime,
       youtubeId ? 'youtube' : 'vimeo'
     );
   };
 
   orientationListener = (o, force) => {
-    if (o === 'UNKNOWN') return;
+    if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) return;
+
     orientation = o;
-    if (isTablet) Orientation.unlockAllOrientations();
-    let { paused } = this.state;
+
+    Orientation.unlockAllOrientations();
     let isLandscape = o.includes('LAND');
 
-    if (
-      !force &&
-      ((!isTablet && (paused || o.includes('FACE') || o.includes('UPSIDE'))) ||
-        (isTablet && o.includes('UNKNOWN')))
-    )
-      return;
-    if (o.includes('LEFT')) {
-      Orientation.lockToLandscapeLeft();
-    } else if (o.includes('RIGHT')) {
-      Orientation.lockToLandscapeRight();
-    } else {
-      if (!isTablet) Orientation.lockToPortrait();
+    if (force) {
+      if (o.includes('LEFT')) {
+        Orientation.lockToLandscapeLeft();
+      } else if (o.includes('RIGHT')) {
+        Orientation.lockToLandscapeRight();
+      } else {
+        Orientation.lockToPortrait();
+      }
     }
 
     let dimsShouldChange =
@@ -443,24 +461,23 @@ export default class Video extends React.Component {
         windowWidth < windowHeight ? windowHeight : windowWidth;
     }
 
-    if (isTablet)
-      return this.setState(
-        {
-          tabOrientation: o,
-          fullscreen: force ? !this.state.fullscreen : this.state.fullscreen
-        },
-        () => {
-          this.props.onOrientationChange?.(o);
-          this.onProgress({ currentTime: cTime });
-          if (force) StatusBar.setHidden(this.state.fullscreen);
-          this.props.onFullscreen?.(this.state.fullscreen);
-        }
-      );
-    this.setState({ fullscreen: isLandscape }, () => {
-      StatusBar.setHidden(isLandscape);
-      this.onProgress({ currentTime: cTime });
-      this.props.onFullscreen?.(this.state.fullscreen);
-    });
+    let fs = isLandscape;
+
+    if (isTablet && !force) {
+      fs = this.state.fullscreen && isLandscape;
+    }
+
+    this.props.onOrientationChange?.(o);
+    if (!!cTime) this.onProgress({ currentTime: cTime });
+    if (force) StatusBar.setHidden(fs);
+    this.props.onFullscreen?.(fs);
+
+    return this.setState(
+      {
+        tabOrientation: o,
+        fullscreen: fs
+      }
+    );
   };
 
   filterVideosByResolution = () => {
@@ -601,7 +618,7 @@ export default class Video extends React.Component {
         if (this.videoPlayStatus) {
           this.togglePaused();
         }
-        delete this.videoPlayStatus
+        delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
@@ -616,7 +633,7 @@ export default class Video extends React.Component {
         if (this.videoPlayStatus) {
           this.togglePaused();
         }
-        delete this.videoPlayStatus
+        delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
@@ -632,12 +649,12 @@ export default class Video extends React.Component {
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime: (locationX / videoW) * this.props.content.lengthInSec
+              currentTime: (locationX / videoW) * this.props.content.length_in_seconds
             });
-          this.seekTime = (locationX / videoW) * this.props.content.lengthInSec;
+          this.seekTime = (locationX / videoW) * this.props.content.length_in_seconds;
         }
         this.googleCastClient?.seek({
-          position: parseFloat((locationX / videoW) * this.props.content.lengthInSec)
+          position: parseFloat((locationX / videoW) * this.props.content.length_in_seconds)
         });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
@@ -648,30 +665,31 @@ export default class Video extends React.Component {
           this.togglePaused();
         }
         moveX = moveX - (windowWidth - videoW) / 2;
-        translate = moveX - videoW;
+        let translate = moveX - videoW;
         if (moveX < 0 || translate > 0) return;
         this.translateBlueX.setValue(translate);
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime: (moveX / videoW) * this.props.content.lengthInSec
+              currentTime: (moveX / videoW) * this.props.content.length_in_seconds
             });
-          this.seekTime = (moveX / videoW) * this.props.content.lengthInSec;
+          this.seekTime = (moveX / videoW) * this.props.content.length_in_seconds;
         }
         this.googleCastClient?.seek({
-          position: parseFloat((moveX / videoW) * this.props.content.lengthInSec)
+          position: parseFloat((moveX / videoW) * this.props.content.length_in_seconds)
         });
         this.videoTimer.setProgress(
-          (moveX / videoW) * this.props.content.lengthInSec
+          (moveX / videoW) * this.props.content.length_in_seconds
         );
       }
     }).panHandlers;
   };
 
   onProgress = ({ currentTime }) => {
+    if (!currentTime) return;
     cTime = currentTime;
     let {
-      content: { lengthInSec },
+      content: { length_in_seconds },
       youtubeId
     } = this.props;
     if (this.seeking) return;
@@ -679,7 +697,8 @@ export default class Video extends React.Component {
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;
     this.bufferingOpacity?.setValue(0);
-    this.translateBlueX.setValue((currentTime * videoW) / lengthInSec - videoW);
+    const translate = (currentTime * videoW) / length_in_seconds - videoW;
+    if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
     if (!aCasting && !youtubeId) {
       this.bufferingTO = setTimeout(
@@ -694,7 +713,7 @@ export default class Video extends React.Component {
         10000
       );
     }
-    if (lengthInSec && lengthInSec === parseInt(currentTime)) this.onEnd();
+    if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
   };
 
   toggleControls = controlsOverwrite => {
@@ -727,7 +746,7 @@ export default class Video extends React.Component {
   };
 
   animateControls = (toValue, speed) => {
-    if (this.props.type === 'audio' || aCasting || gCasting) return;
+    if ((this.props.content.type === 'play-along' && this.props.listening) || aCasting || gCasting) return;
     Animated.spring(this.translateControls, {
       toValue,
       speed: speed || 100,
@@ -772,18 +791,18 @@ export default class Video extends React.Component {
   onLoad = () => {
     let {
       youtubeId,
-      content: { lastWatchedPosInSec }
+      content: { last_watch_position_in_seconds }
     } = this.props;
     if (this.videoRef) {
       if (!isiOS || youtubeId)
         this.onProgress({
-          currentTime: cTime || lastWatchedPosInSec
+          currentTime: cTime || last_watch_position_in_seconds
         });
       this.videoRef[youtubeId ? 'seekTo' : 'seek'](
-        cTime || lastWatchedPosInSec || 0
+        cTime || last_watch_position_in_seconds || 0
       );
     }
-    let position = cTime || lastWatchedPosInSec;
+    let position = cTime || last_watch_position_in_seconds;
     this.googleCastClient?.seek({
       position: parseFloat(position)
     });
@@ -855,7 +874,7 @@ export default class Video extends React.Component {
 
   onSeek = time => {
     time = parseFloat(time);
-    let fullLength = parseFloat(this.props.content.lengthInSec);
+    let fullLength = parseFloat(this.props.content.length_in_seconds);
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
 
@@ -898,7 +917,7 @@ export default class Video extends React.Component {
         if(window.video && !window.eventsAdded) {
           window.eventsAdded = true;
           window.video.addEventListener('play', () => {
-            if(window.video.getCurrentTime) 
+            if(window.video.getCurrentTime)
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 key: 'play',
                 currentTime: window.video.getCurrentTime()
@@ -910,7 +929,7 @@ export default class Video extends React.Component {
               }));
           });
           window.video.addEventListener('pause', () => {
-            if(window.video.getCurrentTime) 
+            if(window.video.getCurrentTime)
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 key: 'pause',
                 currentTime: window.video.getCurrentTime()
@@ -961,7 +980,6 @@ export default class Video extends React.Component {
         repeat,
         fullscreen,
         showControls,
-        tabOrientation,
         captionsHidden,
         videoRefreshing
       },
@@ -988,21 +1006,26 @@ export default class Video extends React.Component {
         },
         content: {
           isLive,
-          endTime,
+          live_event_end_time,
           captions,
           buffering,
-          startTime,
-          formatTime,
-          lengthInSec,
-          nextLessonId,
-          thumbnailUrl,
-          nextLessonUrl,
-          previousLessonId,
-          previousLessonUrl,
-          lastWatchedPosInSec
-        }
+          live_event_start_time,
+          length_in_seconds,
+          thumbnail_url,
+          last_watch_position_in_seconds,
+          next_lesson,
+          previous_lesson,
+          type: contentType
+        },
+        listening,
       }
     } = this;
+
+    const hasPrevious =
+      previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
+    const hasNext =
+      next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
+    const audioOnly = contentType === 'play-along' && listening;
 
     return (
       <SafeAreaView
@@ -1011,8 +1034,7 @@ export default class Video extends React.Component {
           {
             zIndex: 1,
             overflow: 'hidden',
-            alignItems: 'center',
-            marginBottom: youtubeId ? 0 : -11
+            alignItems: 'center'
           },
           fullscreen
             ? {
@@ -1030,8 +1052,9 @@ export default class Video extends React.Component {
           <View
             style={{
               top: 0,
-              bottom: 11,
-              width: '100%',
+              bottom: 0,
+              left: 0,
+              right: 0,
               position: 'absolute',
               backgroundColor: 'black'
             }}
@@ -1049,7 +1072,12 @@ export default class Video extends React.Component {
             })}
           </TouchableOpacity>
         )}
-        <View style={[this.getVideoDimensions(), { backgroundColor: 'black' }]}>
+        <View
+          style={[
+            this.getVideoDimensions(),
+            fullscreen ? { marginTop: 42, backgroundColor: 'black' } : { backgroundColor: 'black' },
+          ]}
+        >
           {!videoRefreshing && (
             <>
               {!!youtubeId ? (
@@ -1075,7 +1103,7 @@ export default class Video extends React.Component {
                   }}
                   source={{
                     uri: `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=${
-                      lastWatchedPosInSec || 0
+                      last_watch_position_in_seconds || 0
                     }`,
                     headers: { referer: 'https://www.drumeo.com/' }
                   }}
@@ -1100,7 +1128,7 @@ export default class Video extends React.Component {
                   rate={parseFloat(rate)}
                   playInBackground={true}
                   playWhenInactive={true}
-                  audioOnly={type === 'audio'}
+                  audioOnly={audioOnly}
                   onProgress={this.onProgress}
                   ignoreSilentSwitch={'ignore'}
                   progressUpdateInterval={1000}
@@ -1111,14 +1139,14 @@ export default class Video extends React.Component {
                   onAudioBecomingNoisy={this.onAudioBecomingNoisy}
                   source={{
                     uri:
-                      type === 'audio'
+                      audioOnly
                         ? mp3s.find(mp3 => mp3.selected).value
                         : vpe.find(v => v.selected).file
                   }}
                   onExternalPlaybackChange={() => {
                     if (isiOS) AirPlay.startScan();
                   }}
-                  {...(aCasting || !captions
+                  {...(aCasting || !captions || typeof captions !== 'string'
                     ? {}
                     : {
                         selectedTextTrack: {
@@ -1150,9 +1178,9 @@ export default class Video extends React.Component {
           )}
           {live && (
             <LiveTimer
-              endTime={endTime}
-              startTime={startTime}
-              thumbnailUrl={thumbnailUrl}
+              endTime={`${live_event_end_time} UTC`}
+              startTime={`${live_event_start_time} UTC`}
+              thumbnailUrl={thumbnail_url}
               visible={!isLive || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
@@ -1160,7 +1188,7 @@ export default class Video extends React.Component {
                 })()`);
                 this.setState({
                   liveEnded: true
-                })
+                });
                 this.props.onEndLive?.();
               }}
               onStart={() => {
@@ -1177,9 +1205,9 @@ export default class Video extends React.Component {
                 ...styles.controlsContainer
               }}
             >
-              {type === 'audio' && (
+              {audioOnly && (
                 <Image
-                  source={{ uri: thumbnailUrl }}
+                  source={{ uri: thumbnail_url }}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -1233,9 +1261,9 @@ export default class Video extends React.Component {
                         style={{
                           flex: 1,
                           alignItems: 'center',
-                          opacity: previousLessonId || previousLessonUrl ? 1 : 0.5
+                          opacity: hasPrevious ? 1 : 0.5
                         }}
-                        disabled={!(previousLessonId || previousLessonUrl)}
+                        disabled={!hasPrevious}
                       >
                         {svgs.prevLesson({
                           ...iconStyle,
@@ -1276,9 +1304,9 @@ export default class Video extends React.Component {
                         style={{
                           flex: 1,
                           alignItems: 'center',
-                          opacity: nextLessonId || nextLessonUrl ? 1 : 0.5
+                          opacity: hasNext ? 1 : 0.5
                         }}
-                        disabled={!(nextLessonUrl || nextLessonId)}
+                        disabled={!hasNext}
                       >
                         {svgs.prevLesson({
                           ...{ ...iconStyle, ...largePlayerControls },
@@ -1289,11 +1317,7 @@ export default class Video extends React.Component {
                   </Animated.View>
                   <Animated.View
                     style={{
-                      bottom: fullscreen
-                        ? windowHeight > videoH
-                          ? 29
-                          : 29 + 25
-                        : 11,
+                      bottom: fullscreen ? 29 + 25 : 11,
                       ...styles.bottomControlsContainer,
                       transform: [
                         {
@@ -1306,15 +1330,14 @@ export default class Video extends React.Component {
                     <VideoTimer
                       live={live}
                       styles={timerText}
-                      formatTime={formatTime}
-                      lengthInSec={lengthInSec}
+                      length_in_seconds={length_in_seconds}
                       ref={r => (this.videoTimer = r)}
                       maxFontMultiplier={this.props.maxFontMultiplier}
                     />
                     {!youtubeId &&
                       settingsMode !== 'bottom' &&
                       connection &&
-                      type !== 'audio' && (
+                      !audioOnly && (
                         <TouchableOpacity
                           style={{
                             padding: 10
@@ -1332,20 +1355,16 @@ export default class Video extends React.Component {
                           })}
                         </TouchableOpacity>
                       )}
-                    {type !== 'audio' && onFullscreen && (
+                    {!audioOnly && onFullscreen && (
                       <TouchableOpacity
                         style={{ padding: 10 }}
                         underlayColor={'transparent'}
-                        onPress={() =>
-                          this.orientationListener(
-                            isTablet
-                              ? tabOrientation
-                              : fullscreen
-                              ? 'PORT'
-                              : 'LANDLEFT',
-                            true
-                          )
-                        }
+                        onPress={() => this.orientationListener(
+                          this.state.fullscreen
+                            ? PORTRAIT
+                            : LANDSCAPE_LEFT,
+                          true
+                        )}
                       >
                         {svgs.fullScreen({
                           width: 20,
@@ -1355,7 +1374,7 @@ export default class Video extends React.Component {
                         })}
                       </TouchableOpacity>
                     )}
-                    {type === 'audio' && (
+                    {contentType === 'play-along' && (
                       <TouchableOpacity
                         style={styles.mp3TogglerContainer}
                         onPress={() => this.mp3ActionModal.toggleModal()}
@@ -1454,7 +1473,7 @@ export default class Video extends React.Component {
           {!youtubeId &&
             settingsMode === 'bottom' &&
             connection &&
-            type !== 'audio' && (
+            !audioOnly && (
               <Animated.View
                 style={{
                   top: 7,
@@ -1493,7 +1512,7 @@ export default class Video extends React.Component {
               bottom: fullscreen
                 ? windowHeight > videoH
                   ? (windowHeight - videoH) / 2
-                  : 25
+                  : 18
                 : 0,
               transform: [
                 {
@@ -1552,7 +1571,7 @@ export default class Video extends React.Component {
             showCaptions={!!captions && !aCasting}
           />
         )}
-        {type === 'audio' && (
+        {contentType === 'play-along' && (
           <ActionModal
             modalStyle={{ width: '80%' }}
             ref={r => (this.mp3ActionModal = r)}
@@ -1647,172 +1666,6 @@ export default class Video extends React.Component {
           }
         />
       </SafeAreaView>
-    );
-  }
-}
-class LiveTimer extends React.Component {
-  state = {
-    hours: '--',
-    minutes: '--',
-    seconds: '--'
-  };
-
-  constructor(props) {
-    super(props);
-    let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000),
-      endTime = parseInt((new Date(props.endTime) - new Date()) / 1000) + 15 * 60;
-    if (startTime >= 0) {
-      this.state = this.formatTimer(startTime);
-      this.countDown(startTime, 'onStart');
-    } else props.onStart?.();
-    if (endTime >= 0) {
-      this.countDown(endTime, 'onEnd');
-    } else this.props.onEnd?.();
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.onEndInterval);
-    clearTimeout(this.onStartInterval);
-  }
-
-  countDown = (time, event) => {
-    this[`${event}Interval`] = setInterval(() => {
-      if (time >= 0) {
-        if (event === 'onStart') this.setState(this.formatTimer(time));
-        if (event === 'onEnd' && !time)
-          this.setState({
-            hours: '--',
-            minutes: '--',
-            seconds: '--'
-          });
-        time--;
-      } else {
-        this.props[event]?.();
-        clearInterval(this[`${event}Interval`]);
-      }
-    }, 1000);
-  };
-
-  formatTimer = seconds => {
-    const hours = parseInt(seconds / 3600);
-    const minutes = parseInt((seconds -= hours * 3600) / 60);
-    seconds -= minutes * 60;
-    return {
-      hours: `${hours < 10 ? 0 : ''}${hours}`,
-      minutes: `${minutes < 10 ? 0 : ''}${minutes}`,
-      seconds: `${seconds < 10 ? 0 : ''}${seconds}`
-    };
-  };
-
-  render() {
-    let { hours, minutes, seconds } = this.state;
-    return this.props.visible ? (
-      <View
-        style={{
-          height: '100%',
-          aspectRatio: 16 / 9,
-          position: 'absolute',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        <Image
-          source={{ uri: this.props.thumbnailUrl }}
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'absolute'
-          }}
-        />
-        <View
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'absolute',
-            backgroundColor: 'rgba(0,0,0,.5)'
-          }}
-        />
-        <View>
-          <Text
-            style={{
-              marginBottom: 20,
-              color: 'white',
-              textAlign: 'center',
-              fontFamily: 'RobotoCondensed-Bold'
-            }}
-          >
-            {hours === '--' ? 'EVENT ENDED' : 'UPCOMING EVENT'}
-          </Text>
-          <View style={{ flexDirection: 'row' }}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              {hours}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>
-                {hours === '01' ? 'HOUR' : 'HOURS'}
-              </Text>
-            </Text>
-            <Text
-              style={{
-                fontSize: 40,
-                color: 'white',
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              :{`  `}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>{` `}</Text>
-            </Text>
-            <Text
-              style={{
-                fontSize: 40,
-                color: 'white',
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              {minutes}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>
-                {hours === '00' && minutes === '01' ? 'MINUTE' : 'MINUTES'}
-              </Text>
-            </Text>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              :{`  `}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>{` `}</Text>
-            </Text>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 40,
-                textAlign: 'center',
-                fontFamily: 'RobotoCondensed-Bold'
-              }}
-            >
-              {seconds}
-              {`\n`}
-              <Text style={{ fontSize: 10 }}>SECONDS</Text>
-            </Text>
-          </View>
-        </View>
-      </View>
-    ) : (
-      <></>
     );
   }
 }

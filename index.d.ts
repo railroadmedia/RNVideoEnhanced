@@ -7,7 +7,7 @@ declare module "RNVideoEnhanced" {
 		paused: boolean;
 		type: 'audio' | 'video';
 		showControls: boolean;
-		youtubeId: number;
+		youtubeId: number| null;
 		live: boolean;
 		connection: boolean | null;
 		maxWidth?: number | undefined;
@@ -16,12 +16,12 @@ declare module "RNVideoEnhanced" {
 		onRefresh: () => void;
 		toSupport: () => void;
 		onBack: () => void;
-		onEndLive: () => void;
-		onStartLive: () => void;
-		onFullscreen: (isFullscreen: boolean) => void;
-		goToNextLesson: () => void;
-		goToPreviousLesson: () => void;
-		onUpdateVideoProgress: (
+		onEndLive?: () => void;
+		onStartLive?: () => void;
+		onFullscreen?: (isFullscreen: boolean) => void;
+		goToNextLesson?: () => void;
+		goToPreviousLesson?: () => void;
+		onUpdateVideoProgress?: (
 		  videoId: number,
 		  id: number,
 		  lengthInSec: number,

@@ -11,7 +11,6 @@ import {
   AppState,
   Animated,
   Platform,
-  StatusBar,
   Dimensions,
   PixelRatio,
   StyleSheet,
@@ -469,7 +468,6 @@ export default class Video extends React.Component {
 
     this.props.onOrientationChange?.(o);
     if (!!cTime) this.onProgress({ currentTime: cTime });
-    if (force) StatusBar.setHidden(fs);
     this.props.onFullscreen?.(fs);
 
     return this.setState(
@@ -856,7 +854,6 @@ export default class Video extends React.Component {
     this.updateVideoProgress();
     this.setState({ paused: true, fullscreen: false }, () => {
       cTime = 0;
-      StatusBar.setHidden(false);
       if (this.videoRef) {
         if (!isiOS) this.onProgress({ currentTime: 0 });
         this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](0);

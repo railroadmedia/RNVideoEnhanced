@@ -7,7 +7,7 @@ declare module "RNVideoEnhanced" {
 		paused: boolean;
 		type: 'audio' | 'video';
 		showControls: boolean;
-		youtubeId: number| null;
+		youtubeId: string | null;
 		live: boolean;
 		connection: boolean | null;
 		maxWidth?: number | undefined;

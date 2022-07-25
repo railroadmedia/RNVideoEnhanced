@@ -758,7 +758,7 @@ export default class Video extends React.Component {
     let { fullscreen, tabOrientation } = this.state;
     if (fullscreen)
       return this.orientationListener(
-        isTablet ? fullscreen ? 'PORT' : 'LANDLEFT': 'PORT',
+        isTablet ? 'LANDLEFT': 'PORT',
         true
       );
     if (isTablet) Orientation.unlockAllOrientations();

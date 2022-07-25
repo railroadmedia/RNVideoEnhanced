@@ -669,22 +669,23 @@ export default class Video extends React.Component {
           this.videoPlayStatus = true;
           this.togglePaused();
         }
-        moveX = moveX - (windowWidth - videoW) / 2;
-        let translate = moveX - videoW;
-        if (moveX < 0 || translate > 0) return;
+        const screenW = isTablet && orientation.includes('LAND') && !this.state.fullscreen ? (windowWidth * 2/3) - 10 : windowWidth;
+        newX = moveX - (screenW - videoW) / 2;
+        let translate = newX - videoW;
+        if (newX < 0 || translate > 0) return;
         this.translateBlueX.setValue(translate);
         if (this.videoRef) {
           if (!isiOS)
             this.onProgress({
-              currentTime: (moveX / videoW) * this.props.content.length_in_seconds
+              currentTime: (newX / videoW) * this.props.content.length_in_seconds
             });
-          this.seekTime = (moveX / videoW) * this.props.content.length_in_seconds;
+          this.seekTime = (newX / videoW) * this.props.content.length_in_seconds;
         }
         this.googleCastClient?.seek({
-          position: parseFloat((moveX / videoW) * this.props.content.length_in_seconds)
+          position: parseFloat((newX / videoW) * this.props.content.length_in_seconds)
         });
         this.videoTimer.setProgress(
-          (moveX / videoW) * this.props.content.length_in_seconds
+          (newX / videoW) * this.props.content.length_in_seconds
         );
       }
     }).panHandlers;
@@ -1515,7 +1516,7 @@ export default class Video extends React.Component {
               position: fullscreen ? 'absolute' : 'relative',
               bottom: fullscreen
                 ? (windowHeight - videoH) / 2
-                  
+
                 : 0,
               transform: [
                 {

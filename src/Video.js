@@ -467,7 +467,7 @@ export default class Video extends React.Component {
     }
 
     this.props.onOrientationChange?.(o);
-    if (!!cTime) this.onProgress({ currentTime: cTime });
+    this.onProgress({ currentTime: cTime || 0});
     this.props.onFullscreen?.(fs);
 
     return this.setState(
@@ -567,6 +567,13 @@ export default class Video extends React.Component {
     else return this.setState(newVPE);
   };
 
+  updateBlueX = () => {
+    if (!this.translateBlueX) return;
+    const { length_in_seconds } = this.props.content;
+    const translate = cTime !== undefined && !!length_in_seconds ? (cTime * videoW) / length_in_seconds - videoW : 0;
+    if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
+  }
+
   getVideoDimensions = () => {
     let width, height;
     let {
@@ -601,7 +608,7 @@ export default class Video extends React.Component {
       videoH = Math.round(windowHeight / 2);
       videoW = Math.round((videoH * greaterVDim) / lowerVDim);
     }
-
+    this.updateBlueX();
     return { width: videoW, height: videoH };
   };
 
@@ -684,7 +691,8 @@ export default class Video extends React.Component {
   };
 
   onProgress = ({ currentTime }) => {
-    if (!currentTime) return;
+    if (currentTime === undefined) return;
+    this.getVideoDimensions();
     cTime = currentTime;
     let {
       content: { length_in_seconds },
@@ -695,8 +703,7 @@ export default class Video extends React.Component {
     clearTimeout(this.bufferingTooLongTO);
     delete this.bufferingTO;
     this.bufferingOpacity?.setValue(0);
-    const translate = (currentTime * videoW) / length_in_seconds - videoW;
-    if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
+    this.updateBlueX();
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
     if (!aCasting && !youtubeId) {
       this.bufferingTO = setTimeout(
@@ -860,7 +867,7 @@ export default class Video extends React.Component {
       }
       this.googleCastClient?.seek({ position: 0 });
       this.animateControls(0);
-      this.translateBlueX.setValue(-videoW + 11);
+      this.updateBlueX();
       this.videoTimer?.setProgress(0);
     });
   };

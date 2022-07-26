@@ -762,12 +762,9 @@ export default class Video extends React.Component {
   };
 
   handleBack = () => {
-    let { fullscreen, tabOrientation } = this.state;
+    let { fullscreen } = this.state;
     if (fullscreen)
-      return this.orientationListener(
-        isTablet ? 'LANDLEFT': 'PORT',
-        true
-      );
+      return this.orientationListener('PORT', true);
     if (isTablet) Orientation.unlockAllOrientations();
     this.animateControls(greaterWidthHeight, 1);
     this.props.onBack();
@@ -1513,10 +1510,7 @@ export default class Video extends React.Component {
               ...this.getVideoDimensions(),
               ...styles.timerContainer,
               position: fullscreen ? 'absolute' : 'relative',
-              bottom: fullscreen
-                ? (windowHeight - videoH) / 2
-                  
-                : 0,
+              bottom: 0,
               transform: [
                 {
                   translateX: fullscreen

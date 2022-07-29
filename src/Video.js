@@ -1004,7 +1004,8 @@ export default class Video extends React.Component {
           mp3TogglerTextColor,
           timerCursorBackground,
           afterTimerCursorBackground,
-          beforeTimerCursorBackground
+          beforeTimerCursorBackground,
+          containerStyle,
         },
         content: {
           isLive,
@@ -1047,7 +1048,8 @@ export default class Video extends React.Component {
                 justifyContent: 'center',
                 backgroundColor: 'black'
               }
-            : {}
+            : {},
+          containerStyle,
         ]}
       >
         {!maxWidth && (

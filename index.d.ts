@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleProp, TextStyle } from 'react-native';
+import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 declare module "RNVideoEnhanced" {
 	interface VideoProps {
@@ -29,6 +29,7 @@ declare module "RNVideoEnhanced" {
 		  mediaCategory: string
 		) => void;
 		styles: {
+			containerStyle?: ViewStyle;
 		  timerCursorBackground: string;
 		  beforeTimerCursorBackground: string;
 		  settings: {

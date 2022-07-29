@@ -1058,7 +1058,6 @@ export default class Video extends React.Component {
               left: 0,
               right: 0,
               position: 'absolute',
-              backgroundColor: 'black'
             }}
           />
         )}

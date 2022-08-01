@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import RNFetchBlob from 'rn-fetch-blob';
 import WebView from 'react-native-webview';
 import DeviceInfo from 'react-native-device-info';
-import Orientation, { LANDSCAPE_LEFT, PORTRAIT } from 'react-native-orientation-locker';
+import Orientation, { LANDSCAPE_LEFT, LANDSCAPE_RIGHT, PORTRAIT } from 'react-native-orientation-locker';
 import RNVideo, { TextTrackType } from 'react-native-video';
 import GoogleCast, { CastButton } from 'react-native-google-cast';
 import PrefersHomeIndicatorAutoHidden from 'react-native-home-indicator';
@@ -432,9 +432,9 @@ export default class Video extends React.Component {
   };
 
   orientationListener = (o, force) => {
-    if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) return;
+    orientation = o.includes('UPSIDE') ? PORTRAIT: o;
 
-    orientation = o;
+    if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) return;
 
     Orientation.unlockAllOrientations();
     let isLandscape = o.includes('LAND');
@@ -460,22 +460,20 @@ export default class Video extends React.Component {
         windowWidth < windowHeight ? windowHeight : windowWidth;
     }
 
-    let fs = isLandscape;
-
-    if (isTablet && !force) {
-      fs = this.state.fullscreen && isLandscape;
-    }
+    let fs = !isTablet ? isLandscape : force ? !this.state.fullscreen: this.state.fullscreen;
 
     this.props.onOrientationChange?.(o);
     this.onProgress({ currentTime: cTime || 0});
     this.props.onFullscreen?.(fs);
 
-    return this.setState(
-      {
-        tabOrientation: o,
-        fullscreen: fs
-      }
-    );
+    return this.setState({
+      tabOrientation: o.includes('LEFT')
+        ? LANDSCAPE_LEFT
+        : o.includes('RIGHT')
+        ? LANDSCAPE_RIGHT
+        : PORTRAIT,
+      fullscreen: fs,
+    });
   };
 
   filterVideosByResolution = () => {
@@ -763,10 +761,18 @@ export default class Video extends React.Component {
   };
 
   handleBack = () => {
-    let { fullscreen } = this.state;
-    if (fullscreen)
-      return this.orientationListener('PORT', true);
-    if (isTablet) Orientation.unlockAllOrientations();
+    const { fullscreen } = this.state;
+
+    if (fullscreen) {
+      this.setState({ fullscreen: false });
+      return this.orientationListener(
+        isTablet ? (orientation.includes('PORT') ? PORTRAIT : orientation) : PORTRAIT,
+        true
+      );
+    }
+    if (isTablet) {
+      Orientation.unlockAllOrientations();
+    }
     this.animateControls(greaterWidthHeight, 1);
     this.props.onBack();
   };
@@ -983,7 +989,8 @@ export default class Video extends React.Component {
         fullscreen,
         showControls,
         captionsHidden,
-        videoRefreshing
+        videoRefreshing,
+        tabOrientation,
       },
       props: {
         type,
@@ -1318,7 +1325,7 @@ export default class Video extends React.Component {
                   </Animated.View>
                   <Animated.View
                     style={{
-                      bottom: fullscreen ? 29 + 25 : 11,
+                      bottom: fullscreen ? 30 + 25 : 11,
                       ...styles.bottomControlsContainer,
                       transform: [
                         {
@@ -1360,12 +1367,20 @@ export default class Video extends React.Component {
                       <TouchableOpacity
                         style={{ padding: 10 }}
                         underlayColor={'transparent'}
-                        onPress={() => this.orientationListener(
-                          this.state.fullscreen
-                            ? PORTRAIT
-                            : LANDSCAPE_LEFT,
-                          true
-                        )}
+                        onPress={() => {
+                          this.orientationListener(
+                            this.state.fullscreen
+                              ? isTablet
+                                ? orientation.includes('PORT')
+                                  ? PORTRAIT
+                                  : orientation
+                                : PORTRAIT
+                              : isTablet
+                              ? tabOrientation
+                              : LANDSCAPE_LEFT,
+                            true
+                          );
+                        }}
                       >
                         {svgs.fullScreen({
                           width: 20,
@@ -1510,7 +1525,11 @@ export default class Video extends React.Component {
               ...this.getVideoDimensions(),
               ...styles.timerContainer,
               position: fullscreen ? 'absolute' : 'relative',
-              bottom: 0,
+              bottom: fullscreen
+              ? windowHeight > videoH
+                ? (windowHeight - videoH) / 2
+                : 20
+              : 0,
               transform: [
                 {
                   translateX: fullscreen

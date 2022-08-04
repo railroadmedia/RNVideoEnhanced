@@ -1011,7 +1011,8 @@ export default class Video extends React.Component {
           mp3TogglerTextColor,
           timerCursorBackground,
           afterTimerCursorBackground,
-          beforeTimerCursorBackground
+          beforeTimerCursorBackground,
+          iconColor,
         },
         content: {
           isLive,
@@ -1076,7 +1077,7 @@ export default class Video extends React.Component {
             {svgs.arrowLeft({
               width: 18,
               height: 18,
-              fill: 'white'
+              fill: iconColor || 'white'
             })}
           </TouchableOpacity>
         )}

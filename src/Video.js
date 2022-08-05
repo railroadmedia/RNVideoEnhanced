@@ -1016,6 +1016,7 @@ export default class Video extends React.Component {
           timerCursorBackground,
           afterTimerCursorBackground,
           beforeTimerCursorBackground,
+          iconColor,
           containerStyle,
         },
         content: {
@@ -1082,7 +1083,7 @@ export default class Video extends React.Component {
             {svgs.arrowLeft({
               width: 18,
               height: 18,
-              fill: 'white'
+              fill: iconColor || 'white'
             })}
           </TouchableOpacity>
         )}

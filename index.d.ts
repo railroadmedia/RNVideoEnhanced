@@ -30,7 +30,8 @@ declare module "RNVideoEnhanced" {
 		  mediaCategory: string
 		) => void;
 		styles: {
-			containerStyle?: ViewStyle;
+		  iconColor: string;
+		  containerStyle?: ViewStyle;
 		  timerCursorBackground: string;
 		  beforeTimerCursorBackground: string;
 		  settings: {

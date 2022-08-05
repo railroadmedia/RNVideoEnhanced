@@ -575,9 +575,13 @@ export default class Video extends React.Component {
   getVideoDimensions = () => {
     let width, height;
     let {
-      props: { maxWidth },
+      props: { maxWidth, forcedWidth },
       state: { fullscreen }
     } = this;
+    if (!!forcedWidth) {
+      windowWidth = forcedWidth;
+    }
+
     if (this.props.youtubeId) {
       width = windowWidth;
       height = (9 / 16) * width;
@@ -1013,6 +1017,7 @@ export default class Video extends React.Component {
           afterTimerCursorBackground,
           beforeTimerCursorBackground,
           iconColor,
+          containerStyle,
         },
         content: {
           isLive,
@@ -1055,7 +1060,8 @@ export default class Video extends React.Component {
                 justifyContent: 'center',
                 backgroundColor: 'black'
               }
-            : {}
+            : {},
+          containerStyle,
         ]}
       >
         {!maxWidth && (

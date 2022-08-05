@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleProp, TextStyle } from 'react-native';
+import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 declare module "RNVideoEnhanced" {
 	interface VideoProps {
@@ -13,6 +13,7 @@ declare module "RNVideoEnhanced" {
 		maxWidth?: number | undefined;
 		content: any;
 		listening?: boolean,
+		forcedWidth?: number,
 		onRefresh: () => void;
 		toSupport: () => void;
 		onBack: () => void;
@@ -30,6 +31,7 @@ declare module "RNVideoEnhanced" {
 		) => void;
 		styles: {
 		  iconColor: string;
+		  containerStyle?: ViewStyle;
 		  timerCursorBackground: string;
 		  beforeTimerCursorBackground: string;
 		  settings: {

@@ -1061,7 +1061,7 @@ export default class Video extends React.Component {
                 backgroundColor: 'black'
               }
             : {},
-          containerStyle,
+          containerStyle,    
         ]}
       >
         {!maxWidth && (
@@ -1089,7 +1089,7 @@ export default class Video extends React.Component {
         )}
         <View
           style={[
-            this.getVideoDimensions(),
+            youtubeId ? { width:'100%', aspectRatio: 16 / 9 } : this.getVideoDimensions(),
             fullscreen ? { marginTop: 42, backgroundColor: 'black' } : { backgroundColor: 'black' },
           ]}
         >
@@ -1743,7 +1743,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent'
   },
   constrolsBackground: {
-    width: '102%',
+    width: '100%',
     height: '100%',
     position: 'absolute',
     justifyContent: 'center',

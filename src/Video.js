@@ -1061,7 +1061,7 @@ export default class Video extends React.Component {
                 backgroundColor: 'black'
               }
             : {},
-          containerStyle,    
+          containerStyle,
         ]}
       >
         {!maxWidth && (

@@ -583,8 +583,10 @@ export default class Video extends React.Component {
     }
 
     if (this.props.youtubeId) {
-      width = windowWidth;
-      height = (9 / 16) * width;
+      if (fullscreen && !isTablet) {
+        return { width: "100%", height: "100%" };
+      }
+      return { width: "100%", aspectRatio: 16 / 9 };
     } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
@@ -1089,8 +1091,10 @@ export default class Video extends React.Component {
         )}
         <View
           style={[
-            youtubeId ? { width:'100%', aspectRatio: 16 / 9 } : this.getVideoDimensions(),
-            fullscreen ? { marginTop: 42, backgroundColor: 'black' } : { backgroundColor: 'black' },
+            this.getVideoDimensions(),
+            fullscreen && isiOS
+              ? { marginTop: 42, backgroundColor: "black" }
+              : { backgroundColor: "black" },
           ]}
         >
           {!videoRefreshing && (

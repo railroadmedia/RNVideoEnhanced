@@ -1488,14 +1488,16 @@ export default class Video extends React.Component {
                   ]
                 }}
               >
-                <CastButton
-                  style={{
-                    width: 29,
-                    height: 29,
-                    tintColor: 'white',
-                    ...smallPlayerControls
-                  }}
-                />
+                <TouchableOpacity>
+                  <CastButton
+                    style={{
+                      width: 29,
+                      height: 29,
+                      tintColor: 'white',
+                      ...smallPlayerControls
+                    }}
+                  />
+                </TouchableOpacity>
               </Animated.View>
             </>
           )}

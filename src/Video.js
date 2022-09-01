@@ -38,7 +38,7 @@ import ActionModal from './ActionModal';
 import VideoTimer from './VideoTimer';
 import VideoSettings from './VideoSettings';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
-
+import DoubleTapArea from './DoubleTapArea';
 import networkSpeedService from './services/networkSpeed.service';
 
 import { svgs } from './img/svgs';
@@ -1276,6 +1276,10 @@ export default class Video extends React.Component {
                       ]
                     }}
                   >
+                    <DoubleTapArea
+                      styles={{ flex: 1, alignItems: 'center'}}
+                      onDoubleTap={() => this.onSeek((cTime -= 10))}
+                    />
                     {goToPreviousLesson && (
                       <TouchableOpacity
                         onPress={goToPreviousLesson}
@@ -1293,28 +1297,10 @@ export default class Video extends React.Component {
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity
-                      style={{ flex: 1, alignItems: 'center' }}
-                      onPress={() => this.onSeek((cTime -= 10))}
-                    >
-                      {svgs.back10({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
-                    <TouchableOpacity
                       onPress={this.togglePaused}
-                      style={{ flex: 1, alignItems: 'center' }}
+                      style={{ flex: 3, alignItems: 'center' }}
                     >
                       {svgs[paused ? 'playSvg' : 'pause']({
-                        ...iconStyle,
-                        ...largePlayerControls
-                      })}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={{ flex: 1, alignItems: 'center' }}
-                      onPress={() => this.onSeek((cTime += 10))}
-                    >
-                      {svgs.forward10({
                         ...iconStyle,
                         ...largePlayerControls
                       })}
@@ -1335,6 +1321,10 @@ export default class Video extends React.Component {
                         })}
                       </TouchableOpacity>
                     )}
+                    <DoubleTapArea
+                      styles={{ flex: 1, alignItems: 'center'}}
+                      onDoubleTap={() => this.onSeek((cTime += 10))}
+                    />
                   </Animated.View>
                   <Animated.View
                     style={{

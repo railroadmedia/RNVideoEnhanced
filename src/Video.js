@@ -260,7 +260,6 @@ export default class Video extends React.Component {
   }
 
   googleCastingListeners = async () => {
-    this.props.onGCastingChange?.(gCasting);
     if (gCasting) this.gCastMedia();
 
     gListenerSE?.remove();
@@ -292,7 +291,7 @@ export default class Video extends React.Component {
   gCastProgressListener = () => {
     gListenerMP?.remove();
     gListenerMP = undefined;
-    this.googleCastClient?.seek({ position: parseFloat(cTime) });
+    this.googleCastClient?.seek({ position: parseFloat(cTime || 0) });
     gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
@@ -657,16 +656,11 @@ export default class Video extends React.Component {
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(this.controlsTO);
         this.animateControls(0);
-        if (this.videoRef) {
-          if (!isiOS)
-            this.onProgress({
-              currentTime: (locationX / videoW) * this.props.content.length_in_seconds
-            });
-          this.seekTime = (locationX / videoW) * this.props.content.length_in_seconds;
+        this.seekTime = (locationX / videoW) * this.props.content.length_in_seconds;
+        if (!isiOS) {
+          this.onProgress({ currentTime: this.seekTime });
         }
-        this.googleCastClient?.seek({
-          position: parseFloat((locationX / videoW) * this.props.content.length_in_seconds)
-        });
+        this.googleCastClient?.seek({ position: parseFloat(this.seekTime) });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
       onPanResponderMove: (_, { moveX }) => {
@@ -676,23 +670,18 @@ export default class Video extends React.Component {
           this.togglePaused();
         }
         const screenW = isTablet && orientation.includes('LAND') && !this.state.fullscreen ? (windowWidth * 2/3) - 10 : windowWidth;
-        newX = moveX - (screenW - videoW) / 2;
+        let newX = moveX - (screenW - videoW) / 2;
         let translate = newX - videoW;
         if (newX < 0 || translate > 0) return;
         this.translateBlueX.setValue(translate);
-        if (this.videoRef) {
-          if (!isiOS)
-            this.onProgress({
-              currentTime: (newX / videoW) * this.props.content.length_in_seconds
-            });
-          this.seekTime = (newX / videoW) * this.props.content.length_in_seconds;
+        this.seekTime = (newX / videoW) * this.props.content.length_in_seconds;
+        if (!isiOS) {
+          this.onProgress({ currentTime: this.seekTime });
         }
         this.googleCastClient?.seek({
-          position: parseFloat((newX / videoW) * this.props.content.length_in_seconds)
+          position: parseFloat(this.seekTime)
         });
-        this.videoTimer.setProgress(
-          (newX / videoW) * this.props.content.length_in_seconds
-        );
+        this.videoTimer.setProgress(this.seekTime);
       }
     }).panHandlers;
   };
@@ -819,7 +808,7 @@ export default class Video extends React.Component {
         cTime || last_watch_position_in_seconds || 0
       );
     }
-    let position = cTime || last_watch_position_in_seconds;
+    let position = cTime || last_watch_position_in_seconds || 0;
     this.googleCastClient?.seek({
       position: parseFloat(position)
     });
@@ -898,7 +887,7 @@ export default class Video extends React.Component {
     if (this.videoRef)
       this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](time);
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
-    this.googleCastClient?.seek({ position: parseFloat(time) });
+    this.googleCastClient?.seek({ position: parseFloat(time || 0) });
   };
 
   onError = ({ error: { code } }) => {
@@ -1354,7 +1343,7 @@ export default class Video extends React.Component {
                       length_in_seconds={length_in_seconds}
                       ref={r => (this.videoTimer = r)}
                       maxFontMultiplier={this.props.maxFontMultiplier}
-                    />
+                    /> 
                     {!youtubeId &&
                       settingsMode !== 'bottom' &&
                       connection &&
@@ -1475,7 +1464,7 @@ export default class Video extends React.Component {
                     <AirPlayButton />
                   </TouchableOpacity>
                 </Animated.View>
-              )}
+              )} 
               <Animated.View
                 style={{
                   top: 7,
@@ -1586,7 +1575,7 @@ export default class Video extends React.Component {
             </View>
             <View style={styles.timerCover} />
           </Animated.View>
-        )}
+        )} 
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         {!youtubeId && (
           <VideoSettings

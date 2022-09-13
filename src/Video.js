@@ -857,7 +857,7 @@ export default class Video extends React.Component {
   onEnd = () => {
     this.orientationListener(
       isTablet ? this.state.tabOrientation : 'PORT',
-      true
+      !isTablet
     );
     this.updateVideoProgress();
     this.setState({ paused: true, fullscreen: false }, () => {
@@ -1333,7 +1333,7 @@ export default class Video extends React.Component {
                       length_in_seconds={length_in_seconds}
                       ref={r => (this.videoTimer = r)}
                       maxFontMultiplier={this.props.maxFontMultiplier}
-                    /> 
+                    />
                     {!youtubeId &&
                       settingsMode !== 'bottom' &&
                       connection &&
@@ -1454,7 +1454,7 @@ export default class Video extends React.Component {
                     <AirPlayButton />
                   </TouchableOpacity>
                 </Animated.View>
-              )} 
+              )}
               <Animated.View
                 style={{
                   top: 7,
@@ -1565,7 +1565,7 @@ export default class Video extends React.Component {
             </View>
             <View style={styles.timerCover} />
           </Animated.View>
-        )} 
+        )}
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         {!youtubeId && (
           <VideoSettings

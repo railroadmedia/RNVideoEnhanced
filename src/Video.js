@@ -860,7 +860,7 @@ export default class Video extends React.Component {
       !isTablet
     );
     this.updateVideoProgress();
-    this.setState({ paused: true, fullscreen: false }, () => {
+    this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {
         if (!isiOS) this.onProgress({ currentTime: 0 });

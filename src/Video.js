@@ -116,16 +116,28 @@ export default class Video extends React.Component {
 
   componentDidMount() {
     if (!this.props.youtubeId) {
-      this.googleCastSession.getCurrentCastSession().then(client => {
+      if (gCasting) {
+        this.setState({ showControls: false });
+      }
+      this.googleCastSession?.getCurrentCastSession().then(client => {
         client = client?.client;
-        if (!client) return (gCasting = false);
-        client.pause();
-        if (this.props.youtubeId) {
-          this.googleCastSession?.endCurrentSession();
+        if (!client) {
           return (gCasting = false);
+        } else {
+          gCasting = true;
         }
-        this.googleCastClient = client;
-        this.gCastProgressListener();
+        client.getMediaStatus().then(st => {
+          this.setState({ showControls: true, paused: false });
+          this.googleCastClient = client;
+          this.gCastProgressListener();
+          if (gCasting) {
+            this.gCastMedia(
+              st?.mediaInfo?.metadata?.title === this.props.content.title
+                ? st.streamPosition
+                : 0
+            );
+          }
+        });
       });
       this.appleCastingListeners();
       this.googleCastingListeners();
@@ -143,14 +155,7 @@ export default class Video extends React.Component {
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
     if (!this.props.youtubeId) {
-      aListener?.remove();
-      gListenerMP?.remove();
-      gListenerSE?.remove();
-      gListenerSS?.remove();
-      aListener = undefined;
-      gListenerMP = undefined;
-      gListenerSE = undefined;
-      gListenerSS = undefined;
+      this.setState({ paused: true });
     }
     if (!!this.stateListener) {
       this.stateListener.remove();
@@ -260,11 +265,9 @@ export default class Video extends React.Component {
   }
 
   googleCastingListeners = async () => {
-    if (gCasting) this.gCastMedia();
-
     gListenerSE?.remove();
     gListenerSE = undefined;
-    gListenerSE = this.googleCastSession.onSessionEnding(() => {
+    gListenerSE = this.googleCastSession?.onSessionEnding(() => {
       delete this.googleCastClient;
       gCasting = false;
       this.props.onGCastingChange?.(false);
@@ -278,7 +281,7 @@ export default class Video extends React.Component {
 
     gListenerSS?.remove();
     gListenerSS = undefined;
-    gListenerSS = this.googleCastSession.onSessionStarted(({ client }) => {
+    gListenerSS = this.googleCastSession?.onSessionStarted(({ client }) => {
       this.googleCastClient = client;
       this.animateControls(0);
       gCasting = true;
@@ -291,7 +294,6 @@ export default class Video extends React.Component {
   gCastProgressListener = () => {
     gListenerMP?.remove();
     gListenerMP = undefined;
-    this.googleCastClient?.seek({ position: parseFloat(cTime || 0) });
     gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
@@ -304,7 +306,7 @@ export default class Video extends React.Component {
     });
   };
 
-  gCastMedia = async () => {
+  gCastMedia = async (time) => {
     let {
       state: { vpe, mp3s, rate, captionsHidden },
       props: {
@@ -365,7 +367,7 @@ export default class Video extends React.Component {
               streamDuration: parseFloat(length_in_seconds)
             },
             playbackRate: parseFloat(rate),
-            startTime: Math.round(cTime)
+            startTime: Math.round(time || cTime || 0)
           };
           if (captions)
             castOptions.mediaInfo.mediaTracks = [
@@ -378,7 +380,7 @@ export default class Video extends React.Component {
                 language: 'en-US'
               }
             ];
-          this.googleCastClient.loadMedia(castOptions);
+          this.googleCastClient?.loadMedia(castOptions);
           if (captions)
             if (!captionsHidden) {
               let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
@@ -1315,39 +1317,67 @@ export default class Video extends React.Component {
                       onDoubleTap={() => this.onSeek((cTime += 10))}
                     />
                   </Animated.View>
-                  <Animated.View
-                    style={{
-                      bottom: fullscreen ? 30 + 25 : 11,
-                      ...styles.bottomControlsContainer,
-                      transform: [
-                        {
-                          translateX:
-                            type === 'video' ? this.translateControls : 0
-                        }
-                      ]
-                    }}
-                  >
-                    <VideoTimer
-                      live={live}
-                      styles={timerText}
-                      length_in_seconds={length_in_seconds}
-                      ref={r => (this.videoTimer = r)}
-                      maxFontMultiplier={this.props.maxFontMultiplier}
-                    />
-                    {!youtubeId &&
-                      settingsMode !== 'bottom' &&
-                      connection &&
-                      !audioOnly && (
+                  {(!gCasting || (gCasting && this.googleCastClient)) && (
+                    <Animated.View
+                      style={{
+                        bottom: fullscreen ? 30 + 25 : 11,
+                        ...styles.bottomControlsContainer,
+                        transform: [
+                          {
+                            translateX:
+                              type === 'video' ? this.translateControls : 0
+                          }
+                        ]
+                      }}
+                    >
+                      <VideoTimer
+                        live={live}
+                        styles={timerText}
+                        length_in_seconds={length_in_seconds}
+                        ref={r => (this.videoTimer = r)}
+                        maxFontMultiplier={this.props.maxFontMultiplier}
+                      />
+                      {!youtubeId &&
+                        settingsMode !== 'bottom' &&
+                        connection &&
+                        !audioOnly && (
+                          <TouchableOpacity
+                            style={{
+                              padding: 10
+                            }}
+                            underlayColor={'transparent'}
+                            onPress={() => {
+                              this.videoSettings.toggle();
+                            }}
+                          >
+                            {svgs.videoQuality({
+                              width: 20,
+                              height: 20,
+                              fill: 'white',
+                              ...smallPlayerControls
+                            })}
+                          </TouchableOpacity>
+                        )}
+                      {!audioOnly && onFullscreen && (
                         <TouchableOpacity
-                          style={{
-                            padding: 10
-                          }}
+                          style={{ padding: 10 }}
                           underlayColor={'transparent'}
                           onPress={() => {
-                            this.videoSettings.toggle();
+                            this.orientationListener(
+                              this.state.fullscreen
+                                ? isTablet
+                                  ? orientation.includes('PORT')
+                                    ? PORTRAIT
+                                    : orientation
+                                  : PORTRAIT
+                                : isTablet
+                                ? tabOrientation
+                                : LANDSCAPE_LEFT,
+                              true
+                            );
                           }}
                         >
-                          {svgs.videoQuality({
+                          {svgs.fullScreen({
                             width: 20,
                             height: 20,
                             fill: 'white',
@@ -1355,58 +1385,32 @@ export default class Video extends React.Component {
                           })}
                         </TouchableOpacity>
                       )}
-                    {!audioOnly && onFullscreen && (
-                      <TouchableOpacity
-                        style={{ padding: 10 }}
-                        underlayColor={'transparent'}
-                        onPress={() => {
-                          this.orientationListener(
-                            this.state.fullscreen
-                              ? isTablet
-                                ? orientation.includes('PORT')
-                                  ? PORTRAIT
-                                  : orientation
-                                : PORTRAIT
-                              : isTablet
-                              ? tabOrientation
-                              : LANDSCAPE_LEFT,
-                            true
-                          );
-                        }}
-                      >
-                        {svgs.fullScreen({
-                          width: 20,
-                          height: 20,
-                          fill: 'white',
-                          ...smallPlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
-                    {contentType === 'play-along' && (
-                      <TouchableOpacity
-                        style={styles.mp3TogglerContainer}
-                        onPress={() => this.mp3ActionModal.toggleModal()}
-                      >
-                        <Text
-                          maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                          style={{
-                            ...styles.mp3TogglerText,
-                            color: mp3TogglerTextColor || 'white'
-                          }}
+                      {contentType === 'play-along' && (
+                        <TouchableOpacity
+                          style={styles.mp3TogglerContainer}
+                          onPress={() => this.mp3ActionModal.toggleModal()}
                         >
-                          {this.formatMP3Name(
-                            mp3s.find(mp3 => mp3.selected).key
-                          )}
-                        </Text>
-                        {svgs.arrowDown({
-                          height: 20,
-                          width: 20,
-                          fill: '#ffffff',
-                          ...smallPlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
-                  </Animated.View>
+                          <Text
+                            maxFontSizeMultiplier={this.props.maxFontMultiplier}
+                            style={{
+                              ...styles.mp3TogglerText,
+                              color: mp3TogglerTextColor || 'white'
+                            }}
+                          >
+                            {this.formatMP3Name(
+                              mp3s.find(mp3 => mp3.selected).key
+                            )}
+                          </Text>
+                          {svgs.arrowDown({
+                            height: 20,
+                            width: 20,
+                            fill: '#ffffff',
+                            ...smallPlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                    </Animated.View>
+                  )}
                 </>
               )}
               <TouchableOpacity
@@ -1467,16 +1471,14 @@ export default class Video extends React.Component {
                   ]
                 }}
               >
-                <TouchableOpacity>
-                  <CastButton
-                    style={{
-                      width: 29,
-                      height: 29,
-                      tintColor: 'white',
-                      ...smallPlayerControls
-                    }}
-                  />
-                </TouchableOpacity>
+                <CastButton
+                  style={{
+                    width: 29,
+                    height: 29,
+                    tintColor: 'white',
+                    ...smallPlayerControls
+                  }}
+                />
               </Animated.View>
             </>
           )}
@@ -1512,7 +1514,7 @@ export default class Video extends React.Component {
               </Animated.View>
             )}
         </View>
-        {!youtubeId && showControls && (
+        {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
           <Animated.View
             {...this.pResponder()}
             style={{

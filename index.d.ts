@@ -15,7 +15,7 @@ declare module "RNVideoEnhanced" {
 		listening?: boolean;
 		forcedWidth?: number;
 		gCasting?: boolean;
-		onGCastingChange: (casting: boolean) => void;
+		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;
 		toSupport: () => void;
 		onBack: () => void;

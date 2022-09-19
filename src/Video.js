@@ -424,7 +424,7 @@ export default class Video extends React.Component {
       content: { vimeo_video_id, id, length_in_seconds }
     } = this.props;
     this.props.onUpdateVideoProgress?.(
-      vimeo_video_id,
+      youtubeId || vimeo_video_id,
       id,
       length_in_seconds,
       cTime,

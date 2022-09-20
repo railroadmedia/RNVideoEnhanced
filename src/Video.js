@@ -671,12 +671,11 @@ export default class Video extends React.Component {
           this.videoPlayStatus = true;
           this.togglePaused();
         }
-        const screenW = isTablet && orientation.includes('LAND') && !this.state.fullscreen ? (windowWidth * 2/3) - 10 : windowWidth;
-        let newX = moveX - (screenW - videoW) / 2;
-        let translate = newX - videoW;
-        if (newX < 0 || translate > 0) return;
+        moveX = moveX - this.progressBarPositionX;
+        let translate = moveX - videoW;
+        if (moveX < 0 || translate > 0) return;
         this.translateBlueX.setValue(translate);
-        this.seekTime = (newX / videoW) * this.props.content.length_in_seconds;
+        this.seekTime = (moveX / videoW) * this.props.content.length_in_seconds;
         if (!isiOS) {
           this.onProgress({ currentTime: this.seekTime });
         }
@@ -1516,6 +1515,11 @@ export default class Video extends React.Component {
         </View>
         {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
           <Animated.View
+            onLayout={({
+              nativeEvent: {
+                layout: { x },
+              },
+            }) => (this.progressBarPositionX = x)}
             {...this.pResponder()}
             style={{
               ...this.getVideoDimensions(),

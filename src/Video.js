@@ -362,7 +362,6 @@ export default class Video extends React.Component {
                 studio: 'Drumeo',
                 title: title || '',
                 subtitle: description || '',
-                images: [{ url: thumbnail_url || '' }]
               },
               streamDuration: parseFloat(length_in_seconds)
             },

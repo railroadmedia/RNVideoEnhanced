@@ -29,3 +29,14 @@ export const getMP3Array = lesson => {
 
   return mp3s;
 }
+
+export const formatTimer = seconds => {
+  const hours = parseInt(seconds / 3600);
+  const minutes = parseInt((seconds -= hours * 3600) / 60);
+  seconds -= minutes * 60;
+  return {
+    hours: `${hours < 10 ? 0 : ''}${hours}`,
+    minutes: `${minutes < 10 ? 0 : ''}${minutes}`,
+    seconds: `${seconds < 10 ? 0 : ''}${seconds}`
+  };
+};

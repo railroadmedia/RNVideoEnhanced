@@ -577,16 +577,18 @@ export default class Video extends React.Component {
   getVideoDimensions = () => {
     let width, height;
     let {
-      props: { maxWidth, forcedWidth },
+      props: { maxWidth, live },
       state: { fullscreen }
     } = this;
-    if (!!forcedWidth) {
-      windowWidth = forcedWidth;
-    }
 
     if (this.props.youtubeId) {
       if (fullscreen && !isTablet) {
-        return { width: "100%", height: "100%" };
+        return {
+          width: "100%",
+          aspectRatio: 16/9,
+          height: live ? undefined : "100%",
+          backgroundColor: 'green'
+         };
       }
       return { width: "100%", aspectRatio: 16 / 9 };
     } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
@@ -1037,7 +1039,7 @@ export default class Video extends React.Component {
 
     return (
       <SafeAreaView
-        edges={fullscreen ? [] : ['top']}
+        edges={fullscreen && !live ? [] : ['top']}
         style={[
           {
             zIndex: 1,

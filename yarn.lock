@@ -6181,6 +6181,11 @@
   "resolved" "git+ssh://git@github.com/railroadmedia/react-native-airplay-ios.git#c19c7998147249b43dd96f235e183e9d87b1b509"
   "version" "1.0.9"
 
+"react-native-android-keyboard-adjust@^1.2.0":
+  "integrity" "sha512-Q280bmf0zXnzLbHU9DcVoKZSKihd0s3hltz2kIUCJ5Q9EhLVR/pjgZ3Bwd1VgrHxQPnduHXdCp0432msklRMow=="
+  "resolved" "https://registry.npmjs.org/react-native-android-keyboard-adjust/-/react-native-android-keyboard-adjust-1.2.0.tgz"
+  "version" "1.2.0"
+
 "react-native-codegen@^0.0.8":
   "integrity" "sha512-k/944+0XD+8l7zDaiKfYabyEKmAmyZgS1mj+4LcSRPyHnrjgCHKrh/Y6jM6kucQ6xU1+1uyMmF/dSkikxK8i+Q=="
   "resolved" "https://registry.npmjs.org/react-native-codegen/-/react-native-codegen-0.0.8.tgz"

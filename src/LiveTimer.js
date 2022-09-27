@@ -21,11 +21,9 @@ const LiveTimer = props => {
   let onEndInterval = useRef();
 
   useEffect(() => {
-    // console.log('VISIBLE', props.visible)
     let startTime = parseInt((new Date(props.startTime) - new Date()) / 1000);
     let endTime =
       parseInt((new Date(props.endTime) - new Date()) / 1000) + 15 * 60;
-    console.log(startTime, endTime);
     if (!!startTime) {
       if (startTime >= 0) {
         updateStateTime(formatTimer(startTime));
@@ -51,7 +49,6 @@ const LiveTimer = props => {
   }, []);
 
   const countDown = useCallback((time, event) => {
-    console.log('CD', event);
     if (event === 'onStart') {
       onStartInterval.current = setInterval(() => {
         if (time >= 0) {
@@ -65,7 +62,6 @@ const LiveTimer = props => {
     }
     if (event === 'onEnd') {
       onEndInterval.current = setInterval(() => {
-        // console.log('END', !time, time)
         if (time >= 0) {
           if (!time) {
             updateStateTime({
@@ -76,7 +72,6 @@ const LiveTimer = props => {
           }
           time--;
         } else {
-          console.log('PROPS', time)
             props.onEnd?.();
             clearInterval(onEndInterval.current);
         }

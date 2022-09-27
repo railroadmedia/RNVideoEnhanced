@@ -995,6 +995,7 @@ export default class Video extends React.Component {
       props: {
         type,
         live,
+        liveData,
         maxWidth,
         youtubeId,
         settingsMode,
@@ -1016,11 +1017,8 @@ export default class Video extends React.Component {
           containerStyle,
         },
         content: {
-          isLive,
-          live_event_end_time,
           captions,
           buffering,
-          live_event_start_time,
           length_in_seconds,
           thumbnail_url,
           last_watch_position_in_seconds,
@@ -1191,10 +1189,10 @@ export default class Video extends React.Component {
           )}
           {live && (
             <LiveTimer
-              endTime={`${live_event_end_time} UTC`}
-              startTime={`${live_event_start_time} UTC`}
+              endTime={`${liveData?.live_event_end_time} UTC`}
+              startTime={`${liveData?.live_event_start_time} UTC`}
               thumbnailUrl={thumbnail_url}
-              visible={!isLive || this.state.liveEnded}
+              visible={!liveData?.isLive || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
                   window.video.pause();

@@ -1192,7 +1192,7 @@ export default class Video extends React.Component {
               endTime={`${liveData?.live_event_end_time} UTC`}
               startTime={`${liveData?.live_event_start_time} UTC`}
               thumbnailUrl={thumbnail_url}
-              visible={!liveData?.isLive || this.state.liveEnded}
+              visible={(!!liveData && !liveData?.isLive) || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
                   window.video.pause();

@@ -40,6 +40,7 @@ import VideoSettings from './VideoSettings';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
 import DoubleTapArea from './DoubleTapArea';
 import networkSpeedService from './services/networkSpeed.service';
+import LiveTimer from './LiveTimer';
 
 import { svgs } from './img/svgs';
 import { getMP3Array } from './helper';

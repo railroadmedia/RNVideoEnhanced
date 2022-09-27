@@ -2,7 +2,8 @@ import React from 'react';
 import {
   View,
   Text,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 
 class LiveTimer extends React.Component {
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 40,
     textAlign: 'center',
-    fontFamily: 'RobotoCondensed-Bold'
+    fontFamily: 'OpenSans-Bold'
   },
   font10: {
     fontSize: 10
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: 'white',
     textAlign: 'center',
-    fontFamily: 'RobotoCondensed-Bold'
+    fontFamily: 'OpenSans-Bold'
   },
   blur: {
     width: '100%',

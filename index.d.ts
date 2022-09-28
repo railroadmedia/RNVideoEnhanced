@@ -9,11 +9,15 @@ declare module "RNVideoEnhanced" {
 		showControls: boolean;
 		youtubeId: string | null;
 		live: boolean;
+		liveData?: {
+			isLive,
+			live_event_end_time,
+			live_event_start_time,
+		};
 		connection: boolean | null;
 		maxWidth?: number | undefined;
 		content: any;
 		listening?: boolean;
-		forcedWidth?: number;
 		gCasting?: boolean;
 		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;

@@ -11,6 +11,7 @@
   },
   "peerDependencies": {
     "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#musora-app",
+    "react-native-android-keyboard-adjust": "^1.2.0",
     "react-native-device-info": "^8.7.1",
     "react-native-google-cast": "^4.0.1",
     "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#musora-app",
@@ -21,11 +22,13 @@
     "rn-fetch-blob": "^0.12.0"
   },
   "devDependencies": {
+    "react": "17.0.2",
+    "react-native": "0.67.2",
     "@babel/core": "^7.8.4",
     "@babel/runtime": "^7.8.4",
     "@react-native-community/eslint-config": "^1.1.0",
-    "@types/react": "^17.0.24",
-    "@types/react-native": "^0.65.1",
+    "@types/react": "^17.0.0",
+    "@types/react-native": "^0.66.15",
     "babel-jest": "^25.1.0",
     "eslint": "^6.5.1",
     "jest": "^25.1.0",

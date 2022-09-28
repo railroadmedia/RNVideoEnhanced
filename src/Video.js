@@ -40,6 +40,7 @@ import VideoSettings from './VideoSettings';
 import AnimatedCustomAlert from './AnimatedCustomAlert';
 import DoubleTapArea from './DoubleTapArea';
 import networkSpeedService from './services/networkSpeed.service';
+import LiveTimer from './LiveTimer';
 
 import { svgs } from './img/svgs';
 import { getMP3Array } from './helper';
@@ -577,16 +578,18 @@ export default class Video extends React.Component {
   getVideoDimensions = () => {
     let width, height;
     let {
-      props: { maxWidth, forcedWidth },
+      props: { maxWidth, live },
       state: { fullscreen }
     } = this;
-    if (!!forcedWidth) {
-      windowWidth = forcedWidth;
-    }
 
     if (this.props.youtubeId) {
       if (fullscreen && !isTablet) {
-        return { width: "100%", height: "100%" };
+        return {
+          width: "100%",
+          aspectRatio: 16/9,
+          height: live ? undefined : "100%",
+          backgroundColor: 'green'
+         };
       }
       return { width: "100%", aspectRatio: 16 / 9 };
     } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
@@ -992,6 +995,7 @@ export default class Video extends React.Component {
       props: {
         type,
         live,
+        liveData,
         maxWidth,
         youtubeId,
         settingsMode,
@@ -1013,11 +1017,8 @@ export default class Video extends React.Component {
           containerStyle,
         },
         content: {
-          isLive,
-          live_event_end_time,
           captions,
           buffering,
-          live_event_start_time,
           length_in_seconds,
           thumbnail_url,
           last_watch_position_in_seconds,
@@ -1037,7 +1038,7 @@ export default class Video extends React.Component {
 
     return (
       <SafeAreaView
-        edges={fullscreen ? [] : ['top']}
+        edges={fullscreen && !live ? [] : ['top']}
         style={[
           {
             zIndex: 1,
@@ -1188,10 +1189,10 @@ export default class Video extends React.Component {
           )}
           {live && (
             <LiveTimer
-              endTime={`${live_event_end_time} UTC`}
-              startTime={`${live_event_start_time} UTC`}
+              endTime={`${liveData?.live_event_end_time} UTC`}
+              startTime={`${liveData?.live_event_start_time} UTC`}
               thumbnailUrl={thumbnail_url}
-              visible={!isLive || this.state.liveEnded}
+              visible={(!!liveData && !liveData?.isLive) || this.state.liveEnded}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
                   window.video.pause();

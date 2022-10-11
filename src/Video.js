@@ -978,6 +978,8 @@ export default class Video extends React.Component {
     }
   };
 
+  minsToStart = startDate => Math.ceil((Date.parse(startDate) - Date.now())/ (1000 * 60));
+
   render() {
     let {
       state: {
@@ -1035,7 +1037,8 @@ export default class Video extends React.Component {
     const hasNext =
       next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
     const audioOnly = contentType === 'play-along' && listening;
-
+    const minsToStart = this.minsToStart(liveData?.live_event_start_time_in_timezone || 0)
+    const showTimer = (!!liveData && !liveData?.isLive) || this.state.liveEnded || (!!liveData && liveData?.isLive && minsToStart < 15 && minsToStart > 0);
     return (
       <SafeAreaView
         edges={fullscreen && !live ? [] : ['top']}
@@ -1192,7 +1195,7 @@ export default class Video extends React.Component {
               endTime={`${liveData?.live_event_end_time} UTC`}
               startTime={`${liveData?.live_event_start_time} UTC`}
               thumbnailUrl={thumbnail_url}
-              visible={(!!liveData && !liveData?.isLive) || this.state.liveEnded}
+              visible={showTimer}
               onEnd={() => {
                 this.webview?.injectJavaScript(`(function() {
                   window.video.pause();

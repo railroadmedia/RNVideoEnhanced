@@ -10,11 +10,11 @@ declare module "RNVideoEnhanced" {
 		youtubeId: string | null;
 		live: boolean;
 		liveData?: {
-			isLive,
-			live_event_end_time,
-			live_event_start_time,
-			live_event_end_time_in_timezone,
-			live_event_start_time_in_timezone
+			isLive?: boolean;
+			live_event_end_time?: string;
+			live_event_start_time?: string;
+			live_event_end_time_in_timezone?: string;
+			live_event_start_time_in_timezone?: string;
 		};
 		connection: boolean | null;
 		maxWidth?: number | undefined;
@@ -31,37 +31,37 @@ declare module "RNVideoEnhanced" {
 		goToNextLesson?: () => void;
 		goToPreviousLesson?: () => void;
 		onUpdateVideoProgress?: (
-			videoId: number,
-			id: number,
-			lengthInSec: number,
-			currentTime: number,
-			mediaCategory: string
+      videoId: number,
+		  id: number,
+		  lengthInSec: number,
+		  currentTime: number,
+		  mediaCategory: string
 		) => void;
 		styles: {
-			iconColor: string;
-			containerStyle?: ViewStyle;
-			timerCursorBackground: string;
-			beforeTimerCursorBackground: string;
-			settings: {
-				cancel: StyleProp<TextStyle>;
-				selectedOptionTextColor: string;
-				separatorColor?: string;
-				background?: string;
-				optionsBorderColor?: string;
-				unselectedOptionTextColor?: string;
-				save: StyleProp<TextStyle>;
-				downloadIcon: {};
-			};
-			alert: {
-				titleTextColor?: string;
-				subtitleTextColor?: string;
-				background?: string;
-				contactSupport: StyleProp<TextStyle>;
-				reloadLesson: {};
-			};
+		  iconColor: string;
+		  containerStyle?: ViewStyle;
+		  timerCursorBackground: string;
+		  beforeTimerCursorBackground: string;
+		  settings: {
+			cancel: StyleProp<TextStyle>;
+			selectedOptionTextColor: string;
+			separatorColor?: string;
+			background?: string;
+			optionsBorderColor?: string;
+			unselectedOptionTextColor?: string;
+			save: StyleProp<TextStyle>;
+			downloadIcon: {};
+		  };
+		  alert: {
+			titleTextColor?: string;
+			subtitleTextColor?: string;
+			background?: string;
+			contactSupport: StyleProp<TextStyle>;
+			reloadLesson: {};
+		  };
 		};
 	}
-	class Video extends React.Component<VideoProps, {}> { }
+	class Video extends React.Component<VideoProps, {}> {}
 
 	export default Video;
 }

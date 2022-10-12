@@ -1084,14 +1084,7 @@ export default class Video extends React.Component {
             })}
           </TouchableOpacity>
         )}
-        <View
-          style={[
-            this.getVideoDimensions(),
-            fullscreen && isiOS
-              ? { marginTop: 42, backgroundColor: "black" }
-              : { backgroundColor: "black" },
-          ]}
-        >
+        <View style={this.getVideoDimensions()}>
           {!videoRefreshing && (
             <>
               {!!youtubeId ? (

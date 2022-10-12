@@ -461,7 +461,7 @@ export default class Video extends React.Component {
         windowWidth < windowHeight ? windowHeight : windowWidth;
     }
 
-    let fs = !isTablet ? isLandscape : force ? !this.state.fullscreen: this.state.fullscreen;
+    let fs = (!isTablet || this.props.live) ? isLandscape : force ? !this.state.fullscreen: this.state.fullscreen;
 
     this.props.onOrientationChange?.(o);
     if (parseInt(cTime) !== this.props.content.length_in_seconds) {

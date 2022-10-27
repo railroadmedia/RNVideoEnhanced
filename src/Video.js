@@ -960,6 +960,11 @@ export default class Video extends React.Component {
           });
         }
     });
+
+    var scale = document.createElement('meta');
+    scale.name = 'viewport';
+    scale.content = 'initial-scale=1, maximum-scale=1';
+    document.head.appendChild(scale);
   })()`;
 
   onWebViewMessage = ({ nativeEvent: { data } }) => {
@@ -1095,7 +1100,7 @@ export default class Video extends React.Component {
                 height: '100%',
                 position: 'absolute',
                 justifyContent: 'center',
-          
+
               }
             : {},
           ]}>

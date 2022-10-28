@@ -790,12 +790,12 @@ export default class Video extends React.Component {
           if(window.video.getCurrentTime) currentTime = window.video.getCurrentTime();
           else currentTime = window.video.currentTime || 0;
         window.ReactNativeWebView.postMessage(JSON.stringify({
-          key: 'back',
+          eventType: 'back',
           currentTime
         }));
       } catch(e) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
-          key: 'back',
+          eventType: 'back',
           currentTime
         }));
       }
@@ -924,65 +924,20 @@ export default class Video extends React.Component {
     }
   };
 
-  injectJsInWebView = () => `(function() {
-    document.addEventListener('DOMNodeInserted', () => {
-      if(!window.video) window.video = document.querySelector('video');
-        if(window.video && !window.eventsAdded) {
-          window.eventsAdded = true;
-          window.video.addEventListener('play', () => {
-            if(window.video.getCurrentTime)
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                key: 'play',
-                currentTime: window.video.getCurrentTime()
-              }));
-            else
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                key: 'play',
-                currentTime: window.video.currentTime || 0
-              }));
-          });
-          window.video.addEventListener('pause', () => {
-            if(window.video.getCurrentTime)
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                key: 'pause',
-                currentTime: window.video.getCurrentTime()
-              }));
-            else
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                key: 'pause',
-                currentTime: window.video.currentTime || 0
-              }));
-          });
-          window.video.addEventListener('ended', () => {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              key: 'ended'
-            }));
-          });
-        }
-    });
-
-    var scale = document.createElement('meta');
-    scale.name = 'viewport';
-    scale.content = 'initial-scale=1, maximum-scale=1';
-    document.head.appendChild(scale);
-  })()`;
-
   onWebViewMessage = ({ nativeEvent: { data } }) => {
-    let { key, currentTime } = JSON.parse(data);
-    switch (key) {
-      case 'ended':
-        this.onEnd();
-        this.webview.injectJavaScript(`(function() {
-          window.video.play().then(() => window.video.pause());
-        })()`);
+    const parsedData = JSON.parse(data);
+
+    switch (parsedData.eventType) {
+      case 'playerReady':
         break;
-      case 'play':
-      case 'pause':
-        cTime = currentTime;
-        this.togglePaused();
+      case 'playerStateChange':
+        cTime = parsedData.data?.target?.playerInfo?.currentTime;
+        if (parsedData.data?.data === 2 || parsedData.data?.data === 1) { // 2=paused 1=playing
+          this.updateVideoProgress();
+        }
         break;
       case 'back':
-        cTime = currentTime;
+        cTime = parsedData.currentTime;
         this.handleBack();
         break;
     }
@@ -1026,7 +981,6 @@ export default class Video extends React.Component {
           afterTimerCursorBackground,
           beforeTimerCursorBackground,
           iconColor,
-          containerStyle,
         },
         content: {
           captions,
@@ -1049,30 +1003,14 @@ export default class Video extends React.Component {
     const audioOnly = contentType === 'play-along' && listening;
     const minsToStart = this.minsToStart(liveData?.live_event_start_time_in_timezone || 0)
     const showTimer = (!!liveData && !liveData?.isLive) || this.state.liveEnded || (!!liveData && liveData?.isLive && minsToStart < 15 && minsToStart > 0);
+    
     return (
       <SafeAreaView
         edges={fullscreen && !live ? ['top','bottom'] : ['top']}
-        style={
-          fullscreen
-            ? {
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'black',
-                alignItems: 'center',
-              }
-            : {}
-        }
+        style={fullscreen ? styles.fullscreenSafeArea : {}}
       >
         {!maxWidth && (
-          <View
-            style={{
-              top: 0,
-              bottom: 0,
-              left: 0,
-              right: 0,
-              position: 'absolute',
-            }}
-          />
+          <View style={styles.maxWidth} />
         )}
         {!!youtubeId && !fullscreen && (
           <TouchableOpacity
@@ -1086,24 +1024,7 @@ export default class Video extends React.Component {
             })}
           </TouchableOpacity>
         )}
-        <View style={[
-          {
-            zIndex: 1,
-            overflow: 'hidden',
-            backgroundColor: 'black',
-            alignItems: 'stretch',
-          },
-          fullscreen
-            ? {
-                top: 0,
-                width: '100%',
-                height: '100%',
-                position: 'absolute',
-                justifyContent: 'center',
-
-              }
-            : {},
-          ]}>
+        <View style={[styles.videoContainer, fullscreen ? styles.videoContainerFullscreen : {}]}>
           <View style={this.getVideoDimensions()}>
             {!videoRefreshing && (
               <>
@@ -1122,27 +1043,67 @@ export default class Video extends React.Component {
                     onMessage={this.onWebViewMessage}
                     mediaPlaybackRequiresUserAction={false}
                     automaticallyAdjustContentInsets={false}
-                    injectedJavaScript={this.injectJsInWebView()}
-                    style={{
-                      width:'100%',
-                      alignSelf: 'stretch',
-                      backgroundColor: 'black',
-                    }}
-                    source={{
-                      uri: `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=${
-                        last_watch_position_in_seconds || 0
-                      }`,
-                      headers: { referer: 'https://www.drumeo.com/' }
-                    }}
-                    onNavigationStateChange={({ url }) => {
-                      if (
-                        !url.includes(
-                          `https://www.youtube.com/embed/${youtubeId}?color=white&modestbranding=1&playsinline=1&enablejsapi=1&start=`
-                        )
-                      )
-                        this.webview.stopLoading();
-                    }}
-                  />
+                    style={styles.webview}
+                    source={{ html: `
+                      <!DOCTYPE html>
+                      <html>
+                        <head>
+                          <meta name="viewport" content="width=device-width">
+                          <style>
+                            body {
+                              margin: 0;
+                            }
+                            .video {
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="video" id="player" />
+                          
+                          <script>
+                            var tag = document.createElement('script');
+                      
+                            tag.src = "https://www.youtube.com/iframe_api";
+                            var firstScriptTag = document.getElementsByTagName('script')[0];
+                            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                      
+                            var player;
+                            function onYouTubeIframeAPIReady() {
+                              player = new YT.Player('player', {
+                                width: '1000',
+                                height: '1000',
+                                videoId: '${youtubeId}',
+                                playerVars: {
+                                  rel: 1,
+                                  playsinline: 1,
+                                  start: '${last_watch_position_in_seconds}',
+                                  controls: 1,
+                                  fs: 1,
+                                },
+                                events: {
+                                  'onReady': onPlayerReady,
+                                  'onStateChange': onPlayerStateChange,
+                                }
+                              });
+                            }
+                      
+                            function onPlayerReady(event) {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerReady'}))
+                            }
+                      
+                            function onPlayerStateChange(event) {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
+                            }
+                          </script>
+                        </body>
+                      </html>
+                    `}}
+                   />
                 ) : (
                   <RNVideo
                     paused={paused}
@@ -1786,5 +1747,36 @@ const styles = StyleSheet.create({
     fontSize: 10,
     paddingLeft: 13,
     fontFamily: 'OpenSans'
+  },
+  fullscreenSafeArea: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'black',
+    alignItems: 'center',
+  },
+  maxWidth: {
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    position: 'absolute',
+  },
+  videoContainer: {
+    zIndex: 1,
+    overflow: 'hidden',
+    backgroundColor: 'black',
+    alignItems: 'stretch',
+  },
+  videoContainerFullscreen: {
+    top: 0,
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    justifyContent: 'center',
+  },
+  webview: {
+    width:'100%',
+    alignSelf: 'stretch',
+    backgroundColor: 'black',
   }
 });

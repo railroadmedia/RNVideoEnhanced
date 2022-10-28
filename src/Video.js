@@ -1003,7 +1003,7 @@ export default class Video extends React.Component {
     const audioOnly = contentType === 'play-along' && listening;
     const minsToStart = this.minsToStart(liveData?.live_event_start_time_in_timezone || 0)
     const showTimer = (!!liveData && !liveData?.isLive) || this.state.liveEnded || (!!liveData && liveData?.isLive && minsToStart < 15 && minsToStart > 0);
-    
+
     return (
       <SafeAreaView
         edges={fullscreen && !live ? ['top','bottom'] : ['top']}
@@ -1763,7 +1763,7 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     overflow: 'hidden',
-    backgroundColor: 'black',
+    backgroundColor: 'transparent',
     alignItems: 'stretch',
   },
   videoContainerFullscreen: {

@@ -1762,7 +1762,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   videoContainer: {
-    zIndex: 1,
     overflow: 'hidden',
     backgroundColor: 'black',
     alignItems: 'stretch',

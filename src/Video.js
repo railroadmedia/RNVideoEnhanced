@@ -1253,6 +1253,24 @@ export default class Video extends React.Component {
                   />
                 </Animated.View>
               )}
+              {!youtubeId && (
+                <View style={{
+                  width: '100%',
+                  height: '100%',
+                  ...styles.controlsContainer,
+                }}>
+                  <DoubleTapArea
+                    styles={styles.leftDoubleTap}
+                    onDoubleTap={() => this.onSeek((cTime -= 10))}
+                    onSingleTap={this.toggleControls}
+                  />
+                  <DoubleTapArea
+                    styles={styles.rightDoubleTap}
+                    onDoubleTap={() => this.onSeek((cTime += 10))}
+                    onSingleTap={this.toggleControls}
+                  />
+                </View>
+              )}
               {showControls && (
                 <>
                   <Animated.View
@@ -1267,54 +1285,58 @@ export default class Video extends React.Component {
                     }}
                   >
                     <DoubleTapArea
-                      styles={{ flex: 1, alignItems: 'center'}}
+                      styles={{ width: '43%', alignItems: 'center' }}
                       onDoubleTap={() => this.onSeek((cTime -= 10))}
-                    />
-                    {goToPreviousLesson && (
-                      <TouchableOpacity
-                        onPress={goToPreviousLesson}
-                        style={{
-                          flex: 1,
-                          alignItems: 'center',
-                          opacity: hasPrevious ? 1 : 0.5
-                        }}
-                        disabled={!hasPrevious}
-                      >
-                        {svgs.prevLesson({
-                          ...iconStyle,
-                          ...largePlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
+                    >
+                      {goToPreviousLesson && (
+                        <TouchableOpacity
+                          onPress={goToPreviousLesson}
+                          style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            opacity: hasPrevious ? 1 : 0.5,
+                          }}
+                          disabled={!hasPrevious}
+                        >
+                          {svgs.prevLesson({
+                            ...iconStyle,
+                            ...largePlayerControls
+                          })}
+                        </TouchableOpacity>
+                      )}
+                    </DoubleTapArea>
+
                     <TouchableOpacity
                       onPress={this.togglePaused}
-                      style={{ flex: 3, alignItems: 'center' }}
+                      style={{ flex: 1, alignItems: 'center' }}
                     >
                       {svgs[paused ? 'playSvg' : 'pause']({
                         ...iconStyle,
                         ...largePlayerControls
                       })}
                     </TouchableOpacity>
-                    {goToNextLesson && (
-                      <TouchableOpacity
-                        onPress={goToNextLesson}
-                        style={{
-                          flex: 1,
-                          alignItems: 'center',
-                          opacity: hasNext ? 1 : 0.5
-                        }}
-                        disabled={!hasNext}
-                      >
-                        {svgs.prevLesson({
-                          ...{ ...iconStyle, ...largePlayerControls },
-                          style: { transform: [{ rotate: '180deg' }] }
-                        })}
-                      </TouchableOpacity>
-                    )}
+
                     <DoubleTapArea
-                      styles={{ flex: 1, alignItems: 'center'}}
+                      styles={{ width: '43%', alignItems: 'center' }}
                       onDoubleTap={() => this.onSeek((cTime += 10))}
-                    />
+                    >
+                      {goToNextLesson && (
+                        <TouchableOpacity
+                          onPress={goToNextLesson}
+                          style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            opacity: hasNext ? 1 : 0.5
+                          }}
+                          disabled={!hasNext}
+                        >
+                          {svgs.prevLesson({
+                            ...{ ...iconStyle, ...largePlayerControls },
+                            style: { transform: [{ rotate: '180deg' }] }
+                          })}
+                        </TouchableOpacity>
+                      )}
+                    </DoubleTapArea>
                   </Animated.View>
                   {(!gCasting || (gCasting && this.googleCastClient)) && (
                     <Animated.View
@@ -1769,5 +1791,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     paddingLeft: 13,
     fontFamily: 'OpenSans'
+  },
+  leftDoubleTap: {
+    flex: 1,
+    position: 'absolute', 
+    left: 0, 
+    width: '40%', 
+    height: '100%'
+  },
+  rightDoubleTap: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'absolute', 
+    right: 0, 
+    width: '40%', 
+    height: '100%'
   }
 });

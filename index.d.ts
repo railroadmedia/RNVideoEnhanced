@@ -31,7 +31,7 @@ declare module "RNVideoEnhanced" {
 		goToNextLesson?: () => void;
 		goToPreviousLesson?: () => void;
 		onUpdateVideoProgress?: (
-      videoId: number,
+		  videoId: number,
 		  id: number,
 		  lengthInSec: number,
 		  currentTime: number,
@@ -63,5 +63,5 @@ declare module "RNVideoEnhanced" {
 	}
 	class Video extends React.Component<VideoProps, {}> {}
 
-	export default Video;
+    export default Video;
 }

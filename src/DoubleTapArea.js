@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
-const DoubleTapArea = ({ children, onDoubleTap, styles }) => {
+const DoubleTapArea = ({ children, onDoubleTap, onSingleTap, styles }) => {
   let clickCount = 0;
   let timeout = null;
 
@@ -16,12 +16,13 @@ const DoubleTapArea = ({ children, onDoubleTap, styles }) => {
     } else {
       timeout = setTimeout(() => {
         clickCount = 0;
+        onSingleTap?.();
       }, 300);
     }
   };
 
   return (
-    <TouchableOpacity onPress={onTap} style={styles}>
+    <TouchableOpacity onPress={onTap} style={styles} activeOpacity={1}>
       {children}
     </TouchableOpacity>
   );

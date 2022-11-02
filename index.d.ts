@@ -10,9 +10,11 @@ declare module "RNVideoEnhanced" {
 		youtubeId: string | null;
 		live: boolean;
 		liveData?: {
-			isLive,
-			live_event_end_time,
-			live_event_start_time,
+			isLive?: boolean;
+			live_event_end_time?: string;
+			live_event_start_time?: string;
+			live_event_end_time_in_timezone?: string;
+			live_event_start_time_in_timezone?: string;
 		};
 		connection: boolean | null;
 		maxWidth?: number | undefined;
@@ -29,7 +31,7 @@ declare module "RNVideoEnhanced" {
 		goToNextLesson?: () => void;
 		goToPreviousLesson?: () => void;
 		onUpdateVideoProgress?: (
-		  videoId: number,
+      videoId: number,
 		  id: number,
 		  lengthInSec: number,
 		  currentTime: number,
@@ -61,5 +63,5 @@ declare module "RNVideoEnhanced" {
 	}
 	class Video extends React.Component<VideoProps, {}> {}
 
-    export default Video;
+	export default Video;
 }

@@ -10,9 +10,11 @@ declare module "RNVideoEnhanced" {
 		youtubeId: string | null;
 		live: boolean;
 		liveData?: {
-			isLive,
-			live_event_end_time,
-			live_event_start_time,
+			isLive?: boolean;
+			live_event_end_time?: string;
+			live_event_start_time?: string;
+			live_event_end_time_in_timezone?: string;
+			live_event_start_time_in_timezone?: string;
 		};
 		connection: boolean | null;
 		maxWidth?: number | undefined;

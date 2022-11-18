@@ -765,6 +765,10 @@ export default class Video extends React.Component {
     this.translateControls._value = toValue;
   };
 
+  handleLiveBack = () => {
+    this.props.onBack();
+  }
+
   handleBack = () => {
     const { fullscreen } = this.state;
 
@@ -1012,10 +1016,10 @@ export default class Video extends React.Component {
         {!maxWidth && (
           <View style={styles.maxWidth} />
         )}
-        {!!youtubeId && !fullscreen && (
+        {(!!liveData || (!!youtubeId && !fullscreen) )&& (
           <TouchableOpacity
-            style={{ padding: 10, alignSelf: 'flex-start' }}
-            onPress={this.handleYtBack}
+            style={{ zIndex:5, padding: 10, alignSelf: 'flex-start' }}
+            onPress={!!liveData ? this.handleLiveBack : this.handleYtBack}
           >
             {svgs.arrowLeft({
               width: 18,

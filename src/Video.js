@@ -1024,7 +1024,7 @@ export default class Video extends React.Component {
             {svgs.arrowLeft({
               width: 18,
               height: 18,
-              fill: iconColor || 'white'
+              fill: fullscreen ? 'white' : iconColor || 'white'
             })}
           </TouchableOpacity>
         )}

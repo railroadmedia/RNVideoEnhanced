@@ -107,6 +107,7 @@ export default class Video extends React.Component {
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
     this.state.showControls = props.showControls;
+    this.state.showCastingOptions = props?.showCastingOptions !== undefined ? props.showCastingOptions : true;
     if (isTablet)
       this.state.tabOrientation =
         orientation || (windowWidth > windowHeight ? 'LANDSCAPE' : 'PORTRAIT');
@@ -969,6 +970,7 @@ export default class Video extends React.Component {
         repeat,
         fullscreen,
         showControls,
+        showCastingOptions,
         captionsHidden,
         videoRefreshing,
         tabOrientation,
@@ -1454,7 +1456,7 @@ export default class Video extends React.Component {
                 )}
               </TouchableOpacity>
             )}
-            {!youtubeId && (
+            {!youtubeId && showCastingOptions && (
               <>
                 {isiOS && (
                   <Animated.View

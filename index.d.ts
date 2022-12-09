@@ -20,6 +20,7 @@ declare module "RNVideoEnhanced" {
 		maxWidth?: number | undefined;
 		content: any;
 		listening?: boolean;
+		showCastingOptions?: boolean;
 		gCasting?: boolean;
 		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;

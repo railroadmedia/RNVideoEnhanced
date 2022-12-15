@@ -107,6 +107,7 @@ export default class Video extends React.Component {
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
     this.state.showControls = props.showControls;
+    this.state.showCastingOptions = props?.showCastingOptions !== undefined ? props.showCastingOptions : true;
     if (isTablet)
       this.state.tabOrientation =
         orientation || (windowWidth > windowHeight ? 'LANDSCAPE' : 'PORTRAIT');
@@ -766,7 +767,7 @@ export default class Video extends React.Component {
   };
 
   handleLiveBack = () => {
-    this.props.onBack();
+    this.props.onBack?.();
   }
 
   handleBack = () => {
@@ -783,7 +784,7 @@ export default class Video extends React.Component {
       Orientation.unlockAllOrientations();
     }
     this.animateControls(greaterWidthHeight, 1);
-    this.props.onBack();
+    this.props.onBack?.();
   };
 
   handleYtBack = () => {
@@ -812,14 +813,17 @@ export default class Video extends React.Component {
       content: { last_watch_position_in_seconds }
     } = this.props;
     if (this.videoRef) {
-      if (!isiOS || youtubeId)
-        this.onProgress({
-          currentTime: cTime || last_watch_position_in_seconds
-        });
-      this.videoRef[youtubeId ? 'seekTo' : 'seek'](
+      this.videoRef['seek'](
         cTime || last_watch_position_in_seconds || 0
       );
     }
+    if (this.webview) {
+      this.webview.injectJavaScript(`seekTo(${cTime || last_watch_position_in_seconds || 0})`);
+    }
+    if (!isiOS || youtubeId)
+      this.onProgress({
+        currentTime: cTime || last_watch_position_in_seconds
+      });
     let position = cTime || last_watch_position_in_seconds || 0;
     this.googleCastClient?.seek({
       position: parseFloat(position)
@@ -875,9 +879,12 @@ export default class Video extends React.Component {
     this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {
-        if (!isiOS) this.onProgress({ currentTime: 0 });
-        this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](0);
+        this.videoRef['seek'](0);
       }
+      if (this.webview) {
+        this.webview.injectJavaScript(`seekTo(0)`);
+      }
+      if (!isiOS) this.onProgress({ currentTime: 0 });
       this.googleCastClient?.seek({ position: 0 });
       this.animateControls(0);
       this.updateBlueX();
@@ -896,8 +903,12 @@ export default class Video extends React.Component {
     else if (time > fullLength) time = fullLength;
 
     this.updateVideoProgress();
-    if (this.videoRef)
-      this.videoRef[this.props.youtubeId ? 'seekTo' : 'seek'](time);
+    if (this.videoRef) {
+      this.videoRef['seek'](time);
+    }
+    if (this.webview) {
+      this.webview.injectJavaScript(`seekTo(${time})`);
+    }
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     this.googleCastClient?.seek({ position: parseFloat(time || 0) });
   };
@@ -959,6 +970,7 @@ export default class Video extends React.Component {
         repeat,
         fullscreen,
         showControls,
+        showCastingOptions,
         captionsHidden,
         videoRefreshing,
         tabOrientation,
@@ -971,6 +983,7 @@ export default class Video extends React.Component {
         youtubeId,
         settingsMode,
         onFullscreen,
+        onBack,
         goToPreviousLesson,
         goToNextLesson,
         styles: {
@@ -1016,7 +1029,7 @@ export default class Video extends React.Component {
         {!maxWidth && (
           <View style={styles.maxWidth} />
         )}
-        {(!!liveData || (!!youtubeId && !fullscreen) )&& (
+        {(!!liveData || (!!youtubeId && !fullscreen) ) && onBack && (
           <TouchableOpacity
             style={{ zIndex:5, padding: 10, alignSelf: 'flex-start' }}
             onPress={!!liveData ? this.handleLiveBack : this.handleYtBack}
@@ -1107,6 +1120,10 @@ export default class Video extends React.Component {
                       
                             function onPlayerStateChange(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
+                            }
+
+                            function seekTo(time) {
+                              player.seekTo(time, true);
                             }
                           </script>
                         </body>
@@ -1421,27 +1438,29 @@ export default class Video extends React.Component {
                   </Animated.View>
                 )}
 
-                <TouchableOpacity
-                  style={{
-                    ...styles.backContainer,
-                    transform: [
-                      {
-                        translateX: type === 'video' ? this.translateControls : 0
-                      }
-                    ]
-                  }}
-                  onPress={this.handleBack}
-                >
-                  {svgs[fullscreen ? 'x' : 'arrowLeft']({
-                    width: 18,
-                    height: 18,
-                    fill: '#ffffff',
-                    ...smallPlayerControls
-                  })}
-                </TouchableOpacity>
+                {onBack && (
+                  <TouchableOpacity
+                    style={{
+                      ...styles.backContainer,
+                      transform: [
+                        {
+                          translateX: type === 'video' ? this.translateControls : 0
+                        }
+                      ]
+                    }}
+                    onPress={this.handleBack}
+                  >
+                    {svgs[fullscreen ? 'x' : 'arrowLeft']({
+                      width: 18,
+                      height: 18,
+                      fill: '#ffffff',
+                      ...smallPlayerControls
+                    })}
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
             )}
-            {!youtubeId && (
+            {!youtubeId && showCastingOptions && (
               <>
                 {isiOS && (
                   <Animated.View

@@ -20,11 +20,12 @@ declare module "RNVideoEnhanced" {
 		maxWidth?: number | undefined;
 		content: any;
 		listening?: boolean;
+		showCastingOptions?: boolean;
 		gCasting?: boolean;
 		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;
 		toSupport: () => void;
-		onBack: () => void;
+		onBack?: () => void;
 		onEndLive?: () => void;
 		onStartLive?: () => void;
 		onFullscreen?: (isFullscreen: boolean) => void;

@@ -1034,6 +1034,7 @@ export default class Video extends React.Component {
               <>
                 {!!youtubeId ? (
                   <WebView
+                    originWhitelist={['*']}
                     androidLayerType={"hardware"}
                     scalesPageToFit={true}
                     javaScriptEnabled={true}
@@ -1049,6 +1050,7 @@ export default class Video extends React.Component {
                     automaticallyAdjustContentInsets={false}
                     style={styles.webview}
                     source={{
+                      baseUrl: 'https://www.musora.com',
                       html: `
                       <!DOCTYPE html>
                       <html>
@@ -1086,9 +1088,11 @@ export default class Video extends React.Component {
                                 playerVars: {
                                   rel: 1,
                                   playsinline: 1,
+                                  enablejsapi: 1,
                                   start: '${last_watch_position_in_seconds}',
                                   controls: 1,
                                   fs: 1,
+                                  origin: 'https://www.musora.com',
                                 },
                                 events: {
                                   'onReady': onPlayerReady,

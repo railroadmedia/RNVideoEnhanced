@@ -144,6 +144,10 @@ export default class Video extends React.Component {
       this.appleCastingListeners();
       this.googleCastingListeners();
       this.selectQuality(quality || 'Auto');
+      if (this.props?.autoPlay) {
+        this.toggleControls();
+        this.togglePaused();
+      }
     }
     this.stateListener = AppState.addEventListener('change', this.handleAppStateChange);
 
@@ -572,7 +576,7 @@ export default class Video extends React.Component {
   updateBlueX = () => {
     if (!this.translateBlueX) return;
     const { length_in_seconds } = this.props.content;
-    const translate = cTime !== undefined && !!length_in_seconds ? (cTime * videoW) / length_in_seconds - videoW : 0;
+    const translate = cTime !== undefined && !!length_in_seconds ? (cTime * videoW) / length_in_seconds - videoW : -videoW;
     if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
   }
 
@@ -876,6 +880,10 @@ export default class Video extends React.Component {
       !isTablet
     );
     this.updateVideoProgress();
+    if (this.props?.autoPlay) {
+      this.props?.goToNextLesson?.();
+      return;
+    }
     this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {
@@ -944,11 +952,17 @@ export default class Video extends React.Component {
 
     switch (parsedData.eventType) {
       case 'playerReady':
+        if (this.props?.autoPlay && this.webview) {
+          this.webview.injectJavaScript(`playVideo()`);
+        }
         break;
       case 'playerStateChange':
         cTime = parsedData.data?.target?.playerInfo?.currentTime;
         if (parsedData.data?.data === 2 || parsedData.data?.data === 1) { // 2=paused 1=playing
           this.updateVideoProgress();
+        }
+        if (parsedData.data?.data === 0) {
+          this.onEnd();
         }
         break;
       case 'back':
@@ -986,6 +1000,8 @@ export default class Video extends React.Component {
         onBack,
         goToPreviousLesson,
         goToNextLesson,
+        disableNext,
+        disablePrevious,
         styles: {
           alert,
           settings,
@@ -1014,9 +1030,13 @@ export default class Video extends React.Component {
     } = this;
 
     const hasPrevious =
-      previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
+      disablePrevious !== undefined
+        ? !disablePrevious
+        : previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
     const hasNext =
-      next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
+      disableNext !== undefined
+        ? !disableNext
+        : next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
     const audioOnly = contentType === 'play-along' && listening;
     const minsToStart = this.minsToStart(liveData?.live_event_start_time_in_timezone || 0)
     const showTimer = (!!liveData && !liveData?.isLive) || this.state.liveEnded || (!!liveData && liveData?.isLive && minsToStart < 15 && minsToStart > 0);
@@ -1124,6 +1144,10 @@ export default class Video extends React.Component {
 
                             function seekTo(time) {
                               player.seekTo(time, true);
+                            }
+
+                            function playVideo() {
+                              player.playVideo();
                             }
                           </script>
                         </body>

@@ -4,6 +4,7 @@ import React from 'react';
 
 import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 
 import ExpandableView from './ExpandableView';
 
@@ -199,190 +200,163 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
 
   render() {
     let {
-      state: { rate, quality, captions, subSettings },
+      state: { rate, quality, captions, subSettings, modalVisible },
       props: { showRate, qualities, showCaptions, settingsMode, styles: propStyle }
     } = this;
     return (
       <Modal
         transparent={true}
-        visible={this.state.modalVisible}
+        visible={modalVisible}
         onRequestClose={this.onRequestClose}
         supportedOrientations={['portrait', 'landscape']}
+        animationType={'none'}
       >
-        <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={this.onCancel}
-            style={settingsMode === 'bottom' ? styles.modalBackgroundBottom : styles.modalBackground}
-          >
-            <SafeAreaView
-              edges={['bottom']}
-              style={[
-                settingsMode === 'bottom' ? styles.scrollContainerBottom : styles.scrollContainer,
-                {
-                  backgroundColor: propStyle?.background || 'white'
-                }
-              ]}
-            >
-              <ScrollView>
-                {subSettings === 'quality' ? (
-                  this.renderQualities(qualities, quality, propStyle)
-                ) : subSettings === 'rate' ? (
-                  this.renderRate(rate, propStyle)
-                ) : subSettings === 'captions' ? (
-                  this.renderCaptions(captions, propStyle)
-                ) : (
-                  <>
-                    {settingsMode === 'bottom' ? (
-                      <TouchableOpacity style={styles.actionBottom} onPress={this.toggleQuality}>
-                        {videoQuality({
-                          width: 20,
-                          height: 20,
-                          fill: 'black'
-                        })}
-                        <Text style={styles.actionTextBottom}>
-                          Video Quality -{' '}
-                          {quality.height === 'Auto' ? `Auto (${quality.actualH}p)` : `${quality.height}p`}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <ExpandableView
-                        iconColor={'blue'}
-                        titleStyle={{
-                          ...styles.expandableTitle,
-                          color: propStyle?.selectedOptionTextColor
-                        }}
-                        title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
-                      >
-                        {this.renderQualities(qualities, quality, propStyle)}
-                      </ExpandableView>
-                    )}
+        <LinearGradient style={styles.gradient} colors={['rgba(0, 12, 23, 0.69)', 'rgba(0, 12, 23, 1)']} />
+        <TouchableOpacity
+          style={styles.modalBackground}
+          onPress={this.onCancel}
+          // accessible={IS_IOS ? false : true}
+        >
+          <SafeAreaView style={[styles.modalContent]}>
+            <ScrollView>
+              {subSettings === 'quality' ? (
+                this.renderQualities(qualities, quality, propStyle)
+              ) : subSettings === 'rate' ? (
+                this.renderRate(rate, propStyle)
+              ) : subSettings === 'captions' ? (
+                this.renderCaptions(captions, propStyle)
+              ) : (
+                <>
+                  {settingsMode === 'bottom' ? (
+                    <TouchableOpacity style={styles.actionBottom} onPress={this.toggleQuality}>
+                      {videoQuality({
+                        width: 20,
+                        height: 20,
+                        fill: 'black'
+                      })}
+                      <Text style={styles.actionTextBottom}>
+                        Video Quality -{' '}
+                        {quality.height === 'Auto' ? `Auto (${quality.actualH}p)` : `${quality.height}p`}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <ExpandableView
+                      iconColor={'blue'}
+                      titleStyle={{
+                        ...styles.expandableTitle,
+                        color: propStyle?.selectedOptionTextColor
+                      }}
+                      title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
+                    >
+                      {this.renderQualities(qualities, quality, propStyle)}
+                    </ExpandableView>
+                  )}
+                  <View
+                    style={{
+                      height: 0.5,
+                      backgroundColor: propStyle?.separatorColor || 'black'
+                    }}
+                  />
+                  {showRate && (
+                    <>
+                      {settingsMode === 'bottom' ? (
+                        <TouchableOpacity onPress={this.toggleRate} style={styles.actionBottom}>
+                          {speed({
+                            width: 20,
+                            height: 20,
+                            fill: 'black'
+                          })}
+                          <Text style={styles.actionTextBottom}>
+                            Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <ExpandableView
+                          title={`${rate}X`}
+                          iconColor={'blue'}
+                          titleStyle={{
+                            ...styles.expandableTitle,
+                            color: propStyle?.selectedOptionTextColor
+                          }}
+                        >
+                          {this.renderRate(rate, propStyle)}
+                        </ExpandableView>
+                      )}
+                    </>
+                  )}
+                  <View
+                    style={{
+                      height: 0.5,
+                      backgroundColor: propStyle?.separatorColor || 'black'
+                    }}
+                  />
+                  {showCaptions && (
+                    <>
+                      {settingsMode === 'bottom' ? (
+                        <TouchableOpacity onPress={this.toggleCaptions} style={styles.actionBottom}>
+                          {speed({
+                            width: 20,
+                            height: 20,
+                            fill: 'black'
+                          })}
+                          <Text style={styles.actionTextBottom}>Captions</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <ExpandableView
+                          title={`Captions ${captions}`}
+                          iconColor={'blue'}
+                          titleStyle={{
+                            ...styles.expandableTitle,
+                            color: propStyle?.selectedOptionTextColor
+                          }}
+                        >
+                          {this.renderCaptions(captions, propStyle)}
+                        </ExpandableView>
+                      )}
+                    </>
+                  )}
+                  {showCaptions && (
                     <View
                       style={{
                         height: 0.5,
                         backgroundColor: propStyle?.separatorColor || 'black'
                       }}
                     />
-                    {showRate && (
-                      <>
-                        {settingsMode === 'bottom' ? (
-                          <TouchableOpacity onPress={this.toggleRate} style={styles.actionBottom}>
-                            {speed({
-                              width: 20,
-                              height: 20,
-                              fill: 'black'
-                            })}
-                            <Text style={styles.actionTextBottom}>
-                              Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
-                            </Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <ExpandableView
-                            title={`${rate}X`}
-                            iconColor={'blue'}
-                            titleStyle={{
-                              ...styles.expandableTitle,
-                              color: propStyle?.selectedOptionTextColor
-                            }}
-                          >
-                            {this.renderRate(rate, propStyle)}
-                          </ExpandableView>
-                        )}
-                      </>
-                    )}
-                    <View
-                      style={{
-                        height: 0.5,
-                        backgroundColor: propStyle?.separatorColor || 'black'
-                      }}
-                    />
-                    {showCaptions && (
-                      <>
-                        {settingsMode === 'bottom' ? (
-                          <TouchableOpacity onPress={this.toggleCaptions} style={styles.actionBottom}>
-                            {speed({
-                              width: 20,
-                              height: 20,
-                              fill: 'black'
-                            })}
-                            <Text style={styles.actionTextBottom}>Captions</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <ExpandableView
-                            title={`Captions ${captions}`}
-                            iconColor={'blue'}
-                            titleStyle={{
-                              ...styles.expandableTitle,
-                              color: propStyle?.selectedOptionTextColor
-                            }}
-                          >
-                            {this.renderCaptions(captions, propStyle)}
-                          </ExpandableView>
-                        )}
-                      </>
-                    )}
-                    {showCaptions && (
-                      <View
-                        style={{
-                          height: 0.5,
-                          backgroundColor: propStyle?.separatorColor || 'black'
-                        }}
-                      />
-                    )}
-                  </>
-                )}
-              </ScrollView>
-              {settingsMode !== 'bottom' && (
-                <TouchableOpacity
-                  onPress={this.onSave}
-                  style={[
-                    styles.action,
-                    {
-                      margin: 20,
-                      marginBottom: 0,
-                      backgroundColor: propStyle?.save?.background || 'black'
-                    }
-                  ]}
-                >
-                  <Text
-                    maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                    style={[
-                      styles.actionText,
-                      {
-                        color: propStyle?.save?.color || 'white'
-                      }
-                    ]}
-                  >
-                    SAVE
-                  </Text>
-                </TouchableOpacity>
+                  )}
+                </>
               )}
+            </ScrollView>
+            {settingsMode !== 'bottom' && (
               <TouchableOpacity
-                style={{
-                  ...styles[settingsMode === 'bottom' ? 'actionBottom' : 'action'],
-                  backgroundColor: propStyle?.cancel?.background
-                }}
-                onPress={this.onCancel}
+                onPress={this.onSave}
+                style={[
+                  styles.action,
+                  {
+                    margin: 20,
+                    marginBottom: 0,
+                    backgroundColor: propStyle?.save?.background || 'black'
+                  }
+                ]}
               >
-                {settingsMode === 'bottom' &&
-                  x({
-                    width: 18,
-                    height: 18,
-                    fill: 'black'
-                  })}
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
                   style={[
-                    styles[settingsMode === 'bottom' ? 'actionTextBottom' : 'actionText'],
-                    { color: propStyle?.cancel?.color }
+                    styles.actionText,
+                    {
+                      color: propStyle?.save?.color || 'white'
+                    }
                   ]}
                 >
-                  {settingsMode === 'bottom' ? 'Cancel' : 'CANCEL'}
+                  SAVE
                 </Text>
               </TouchableOpacity>
-            </SafeAreaView>
-          </TouchableOpacity>
-        </SafeAreaView>
+            )}
+
+            <TouchableOpacity onPress={this.onCancel}>
+              <Text style={styles.cancelBtnText}>Close</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        </TouchableOpacity>
       </Modal>
     );
   }
@@ -390,9 +364,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
 
 const styles = StyleSheet.create({
   modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,.5)'
+    flex: 1
   },
   modalBackgroundBottom: {
     flex: 1,
@@ -440,5 +412,24 @@ const styles = StyleSheet.create({
   actionTextBottom: {
     marginLeft: 10,
     fontFamily: 'OpenSans'
+  },
+  gradient: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    zIndex: 0
+  },
+  modalContent: {
+    flex: 1,
+    justifyContent: 'center'
+  },
+  cancelBtnText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    padding: 10,
+    alignSelf: 'center',
+    textAlign: 'center',
+    fontFamily: 'OpenSans-Bold'
   }
 });

@@ -2,26 +2,47 @@
 
 import React from 'react';
 
-import {
-  View,
-  Text,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity
-} from 'react-native';
+import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ExpandableView from './ExpandableView';
 
 import { download, x, videoQuality, speed, check } from './img/svgs';
 
-export default class VideoSettings extends React.PureComponent {
+interface ISettingsProps {
+  qualities: any;
+  onSaveSettings: (rate: String, quality: any, captions: String) => void;
+  maxFontMultiplier?: number;
+  styles: any;
+  settingsMode?: String;
+  showRate: boolean;
+  showCaptions: boolean;
+  modalComponent: React.ReactElement;
+}
+type H = number | String;
+interface IQuality {
+  height: H;
+  actualH: number;
+}
+
+interface ISettingsState {
+  rate: String;
+  captions: String;
+  subSettings: String;
+  modalVisible: boolean;
+  quality: IQuality;
+}
+
+export default class VideoSettings extends React.PureComponent<ISettingsProps, ISettingsState> {
   state = {
     rate: '1.0',
     captions: 'Off',
     subSettings: '',
-    modalVisible: false
+    modalVisible: false,
+    quality: {
+      height: 'Auto',
+      actualH: 0
+    }
   };
 
   constructor(props) {
@@ -31,10 +52,11 @@ export default class VideoSettings extends React.PureComponent {
 
   onRequestClose = () => {};
 
+  prevQuality?: IQuality = undefined;
+
   toggle = modalVisible =>
     this.setState(state => {
-      modalVisible =
-        modalVisible === 'boolean' ? modalVisible : !state.modalVisible;
+      modalVisible = modalVisible === 'boolean' ? modalVisible : !state.modalVisible;
       if (modalVisible) this.prevQuality = state.quality;
       else delete this.prevQuality;
       return {
@@ -94,10 +116,7 @@ export default class VideoSettings extends React.PureComponent {
         <Text
           maxFontSizeMultiplier={this.props.maxFontMultiplier}
           style={{
-            color:
-              s === rate
-                ? propStyle?.selectedOptionTextColor
-                : propStyle?.unselectedOptionTextColor,
+            color: s === rate ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
             fontFamily: s === rate ? 'OpenSans-Bold' : 'OpenSans'
           }}
         >
@@ -111,9 +130,7 @@ export default class VideoSettings extends React.PureComponent {
       <TouchableOpacity
         key={q.height}
         style={[
-          styles[
-            this.props.settingsMode === 'bottom' ? 'optionBottom' : 'option'
-          ],
+          styles[this.props.settingsMode === 'bottom' ? 'optionBottom' : 'option'],
           {
             borderColor: propStyle?.optionsBorderColor
           }
@@ -137,9 +154,7 @@ export default class VideoSettings extends React.PureComponent {
           maxFontSizeMultiplier={this.props.maxFontMultiplier}
           style={{
             color:
-              q.height === quality.height
-                ? propStyle?.selectedOptionTextColor
-                : propStyle?.unselectedOptionTextColor,
+              q.height === quality.height ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
             fontFamily: 'OpenSans',
             marginLeft: this.props.settingsMode === 'bottom' ? 10 : 0
           }}
@@ -173,10 +188,7 @@ export default class VideoSettings extends React.PureComponent {
         <Text
           maxFontSizeMultiplier={this.props.maxFontMultiplier}
           style={{
-            color:
-              c === captions
-                ? propStyle?.selectedOptionTextColor
-                : propStyle?.unselectedOptionTextColor,
+            color: c === captions ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
             fontFamily: c === captions ? 'OpenSans-Bold' : 'OpenSans'
           }}
         >
@@ -188,13 +200,7 @@ export default class VideoSettings extends React.PureComponent {
   render() {
     let {
       state: { rate, quality, captions, subSettings },
-      props: {
-        showRate,
-        qualities,
-        showCaptions,
-        settingsMode,
-        styles: propStyle
-      }
+      props: { showRate, qualities, showCaptions, settingsMode, styles: propStyle }
     } = this;
     return (
       <Modal
@@ -207,18 +213,12 @@ export default class VideoSettings extends React.PureComponent {
           <TouchableOpacity
             activeOpacity={1}
             onPress={this.onCancel}
-            style={
-              settingsMode === 'bottom'
-                ? styles.modalBackgroundBottom
-                : styles.modalBackground
-            }
+            style={settingsMode === 'bottom' ? styles.modalBackgroundBottom : styles.modalBackground}
           >
             <SafeAreaView
               edges={['bottom']}
               style={[
-                settingsMode === 'bottom'
-                  ? styles.scrollContainerBottom
-                  : styles.scrollContainer,
+                settingsMode === 'bottom' ? styles.scrollContainerBottom : styles.scrollContainer,
                 {
                   backgroundColor: propStyle?.background || 'white'
                 }
@@ -234,10 +234,7 @@ export default class VideoSettings extends React.PureComponent {
                 ) : (
                   <>
                     {settingsMode === 'bottom' ? (
-                      <TouchableOpacity
-                        style={styles.actionBottom}
-                        onPress={this.toggleQuality}
-                      >
+                      <TouchableOpacity style={styles.actionBottom} onPress={this.toggleQuality}>
                         {videoQuality({
                           width: 20,
                           height: 20,
@@ -245,9 +242,7 @@ export default class VideoSettings extends React.PureComponent {
                         })}
                         <Text style={styles.actionTextBottom}>
                           Video Quality -{' '}
-                          {quality.height === 'Auto'
-                            ? `Auto (${quality.actualH}p)`
-                            : `${quality.height}p`}
+                          {quality.height === 'Auto' ? `Auto (${quality.actualH}p)` : `${quality.height}p`}
                         </Text>
                       </TouchableOpacity>
                     ) : (
@@ -257,11 +252,7 @@ export default class VideoSettings extends React.PureComponent {
                           ...styles.expandableTitle,
                           color: propStyle?.selectedOptionTextColor
                         }}
-                        title={
-                          quality.height === 'Auto'
-                            ? `Auto ${quality.actualH}p`
-                            : `${quality.height}p`
-                        }
+                        title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
                       >
                         {this.renderQualities(qualities, quality, propStyle)}
                       </ExpandableView>
@@ -275,18 +266,14 @@ export default class VideoSettings extends React.PureComponent {
                     {showRate && (
                       <>
                         {settingsMode === 'bottom' ? (
-                          <TouchableOpacity
-                            onPress={this.toggleRate}
-                            style={styles.actionBottom}
-                          >
+                          <TouchableOpacity onPress={this.toggleRate} style={styles.actionBottom}>
                             {speed({
                               width: 20,
                               height: 20,
                               fill: 'black'
                             })}
                             <Text style={styles.actionTextBottom}>
-                              Playback Speed -{' '}
-                              {rate === '1.0' ? 'Normal' : `${rate}X`}
+                              Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
                             </Text>
                           </TouchableOpacity>
                         ) : (
@@ -312,18 +299,13 @@ export default class VideoSettings extends React.PureComponent {
                     {showCaptions && (
                       <>
                         {settingsMode === 'bottom' ? (
-                          <TouchableOpacity
-                            onPress={this.toggleCaptions}
-                            style={styles.actionBottom}
-                          >
+                          <TouchableOpacity onPress={this.toggleCaptions} style={styles.actionBottom}>
                             {speed({
                               width: 20,
                               height: 20,
                               fill: 'black'
                             })}
-                            <Text style={styles.actionTextBottom}>
-                              Captions
-                            </Text>
+                            <Text style={styles.actionTextBottom}>Captions</Text>
                           </TouchableOpacity>
                         ) : (
                           <ExpandableView
@@ -377,9 +359,7 @@ export default class VideoSettings extends React.PureComponent {
               )}
               <TouchableOpacity
                 style={{
-                  ...styles[
-                    settingsMode === 'bottom' ? 'actionBottom' : 'action'
-                  ],
+                  ...styles[settingsMode === 'bottom' ? 'actionBottom' : 'action'],
                   backgroundColor: propStyle?.cancel?.background
                 }}
                 onPress={this.onCancel}
@@ -393,11 +373,7 @@ export default class VideoSettings extends React.PureComponent {
                 <Text
                   maxFontSizeMultiplier={this.props.maxFontMultiplier}
                   style={[
-                    styles[
-                      settingsMode === 'bottom'
-                        ? 'actionTextBottom'
-                        : 'actionText'
-                    ],
+                    styles[settingsMode === 'bottom' ? 'actionTextBottom' : 'actionText'],
                     { color: propStyle?.cancel?.color }
                   ]}
                 >

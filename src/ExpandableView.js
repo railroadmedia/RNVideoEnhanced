@@ -57,6 +57,7 @@ export default class ExpandableView extends React.Component {
 
   render() {
     let { maxHeight, contentVisible } = this.state;
+    const { icon } = this.props;
     return (
       <View testID='expandableCont' style={this.props.expandableContStyle}>
         <TouchableOpacity
@@ -72,6 +73,7 @@ export default class ExpandableView extends React.Component {
             this.props.dropStyle
           ]}
         >
+          {!!icon && icon}
           <Text
             testID='title'
             maxFontSizeMultiplier={this.props.maxFontMultiplier}
@@ -94,9 +96,7 @@ export default class ExpandableView extends React.Component {
             })}
         </TouchableOpacity>
         {contentVisible === undefined ? (
-          <View style={{ overflow: 'hidden', maxHeight }}>
-            {this.props.children}
-          </View>
+          <View style={{ overflow: 'hidden', maxHeight }}>{this.props.children}</View>
         ) : (
           contentVisible && this.props.children
         )}

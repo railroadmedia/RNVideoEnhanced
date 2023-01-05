@@ -12,24 +12,24 @@ import { download, x, videoQuality, speed, check } from './img/svgs';
 
 interface ISettingsProps {
   qualities: any;
-  onSaveSettings: (rate: String, quality: any, captions: String) => void;
+  onSaveSettings: (rate: string, quality: any, captions: string) => void;
   maxFontMultiplier?: number;
   styles: any;
-  settingsMode?: String;
+  settingsMode?: string;
   showRate: boolean;
   showCaptions: boolean;
   modalComponent: React.ReactElement;
 }
-type H = number | String;
+type H = number | string;
 interface IQuality {
   height: H;
   actualH: number;
 }
 
 interface ISettingsState {
-  rate: String;
-  captions: String;
-  subSettings: String;
+  rate: string;
+  captions: string;
+  subSettings: string;
   modalVisible: boolean;
   quality: IQuality;
 }

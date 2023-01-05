@@ -19,7 +19,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import RNFetchBlob from 'rn-fetch-blob';
 import WebView from 'react-native-webview';
@@ -466,7 +466,7 @@ export default class Video extends React.Component {
 
     this.props.onOrientationChange?.(o);
     if (parseInt(cTime) !== this.props.content.length_in_seconds) {
-      this.onProgress({ currentTime: cTime || 0});
+      this.onProgress({ currentTime: cTime || 0 });
     }
     this.props.onFullscreen?.(fs);
 
@@ -474,8 +474,8 @@ export default class Video extends React.Component {
       tabOrientation: o.includes('LEFT')
         ? LANDSCAPE_LEFT
         : o.includes('RIGHT')
-        ? LANDSCAPE_RIGHT
-        : PORTRAIT,
+          ? LANDSCAPE_RIGHT
+          : PORTRAIT,
       fullscreen: fs,
     });
   };
@@ -1541,66 +1541,75 @@ export default class Video extends React.Component {
                 </Animated.View>
               )}
           </View>
+
+          <SafeAreaInsetsContext.Consumer>
+            {(insets) => (
+              <>
+                {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
+                  <Animated.View
+                    onLayout={({
+                      nativeEvent: {
+                        layout: { x },
+                      },
+                    }) =>
+                      this.progressBarPositionX = (fullscreen && insets.left > 0 && isiOS) ? insets.left : x
+                    }
+                    {...this.pResponder()}
+                    style={{
+                      ...this.getVideoDimensions(),
+                      ...styles.timerContainer,
+                      position: fullscreen ? 'absolute' : 'relative',
+                      bottom: fullscreen
+                        ? windowHeight > videoH
+                          ? (windowHeight - videoH) / 2
+                          : 20
+                        : 0,
+                      transform: [
+                        {
+                          translateX: fullscreen
+                            ? type === 'video'
+                              ? this.translateControls
+                              : 0
+                            : 0
+                        }
+                      ]
+                    }}
+                  >
+                    <View
+                      style={{
+                        ...styles.timerGrey,
+                        backgroundColor: afterTimerCursorBackground || '#2F3334'
+                      }}
+                    >
+                      <Animated.View
+                        style={{
+                          ...styles.timerBlue,
+                          transform: [{ translateX: this.translateBlueX }],
+                          backgroundColor: beforeTimerCursorBackground || 'red'
+                        }}
+                      />
+                      <Animated.View
+                        style={{
+                          ...styles.timerDot,
+                          backgroundColor: timerCursorBackground || 'red',
+                          transform: [{ translateX: this.translateBlueX }],
+                          opacity:
+                            type === 'video'
+                              ? this.translateControls.interpolate({
+                                outputRange: [0, 1],
+                                inputRange: [-videoW, 0]
+                              })
+                              : 1
+                        }}
+                      />
+                    </View>
+                    <View style={styles.timerCover} />
+                  </Animated.View>
+                )}
+              </>
+            )}
+          </SafeAreaInsetsContext.Consumer>
         </View>
-        {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
-          <Animated.View
-            onLayout={({
-              nativeEvent: {
-                layout: { x },
-              },
-            }) => (this.progressBarPositionX = x)}
-            {...this.pResponder()}
-            style={{
-              ...this.getVideoDimensions(),
-              ...styles.timerContainer,
-              position: fullscreen ? 'absolute' : 'relative',
-              bottom: fullscreen
-              ? windowHeight > videoH
-                ? (windowHeight - videoH) / 2
-                : 20
-              : 0,
-              transform: [
-                {
-                  translateX: fullscreen
-                    ? type === 'video'
-                      ? this.translateControls
-                      : 0
-                    : 0
-                }
-              ]
-            }}
-          >
-            <View
-              style={{
-                ...styles.timerGrey,
-                backgroundColor: afterTimerCursorBackground || '#2F3334'
-              }}
-            >
-              <Animated.View
-                style={{
-                  ...styles.timerBlue,
-                  transform: [{ translateX: this.translateBlueX }],
-                  backgroundColor: beforeTimerCursorBackground || 'red'
-                }}
-              />
-              <Animated.View
-                style={{
-                  ...styles.timerDot,
-                  backgroundColor: timerCursorBackground || 'red',
-                  transform: [{ translateX: this.translateBlueX }],
-                  opacity:
-                    type === 'video'
-                      ? this.translateControls.interpolate({
-                          outputRange: [0, 1],
-                          inputRange: [-videoW, 0]
-                        })
-                      : 1
-                }}
-              />
-            </View>
-            <View style={styles.timerCover} />
-          </Animated.View>
-        )}
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         {!youtubeId && (
           <VideoSettings

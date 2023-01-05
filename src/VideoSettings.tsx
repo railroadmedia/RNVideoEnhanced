@@ -6,9 +6,9 @@ import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
-import ExpandableView from './ExpandableView';
+import SettingsOption from './SettingsOptions';
 
-import { download, x, videoQuality, speed, check } from './img/svgs';
+import { download, videoQuality, speed, check } from './img/svgs';
 
 interface ISettingsProps {
   qualities: any;
@@ -102,8 +102,10 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
 
   toggleCaptions = () => this.setState({ subSettings: 'captions' });
 
+  rates = ['0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'];
+
   renderRate = (rate, propStyle) =>
-    ['0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'].map(s => (
+    this.rates.map(s => (
       <TouchableOpacity
         key={s}
         style={[
@@ -240,23 +242,14 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                       </Text>
                     </TouchableOpacity>
                   ) : (
-                    <ExpandableView
-                      iconColor={'blue'}
-                      titleStyle={{
-                        ...styles.expandableTitle,
-                        color: propStyle?.selectedOptionTextColor
-                      }}
+                    <SettingsOption
                       title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
-                    >
-                      {this.renderQualities(qualities, quality, propStyle)}
-                    </ExpandableView>
+                      iconName={'playSvg'}
+                      data={qualities}
+                      onSelect={(item: IQuality) => console.log(item.height)}
+                      itemTitle={item => (item.height === 'Auto' ? `Auto ${item.actualH}p` : `${item.height}p`)}
+                    />
                   )}
-                  <View
-                    style={{
-                      height: 0.5,
-                      backgroundColor: propStyle?.separatorColor || 'black'
-                    }}
-                  />
                   {showRate && (
                     <>
                       {settingsMode === 'bottom' ? (
@@ -271,25 +264,16 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                           </Text>
                         </TouchableOpacity>
                       ) : (
-                        <ExpandableView
+                        <SettingsOption
                           title={`${rate}X`}
-                          iconColor={'blue'}
-                          titleStyle={{
-                            ...styles.expandableTitle,
-                            color: propStyle?.selectedOptionTextColor
-                          }}
-                        >
-                          {this.renderRate(rate, propStyle)}
-                        </ExpandableView>
+                          iconName={'playSvg'}
+                          data={this.rates}
+                          onSelect={item => console.log(item)}
+                          itemTitle={item => `${item}X`}
+                        />
                       )}
                     </>
                   )}
-                  <View
-                    style={{
-                      height: 0.5,
-                      backgroundColor: propStyle?.separatorColor || 'black'
-                    }}
-                  />
                   {showCaptions && (
                     <>
                       {settingsMode === 'bottom' ? (
@@ -302,33 +286,22 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                           <Text style={styles.actionTextBottom}>Captions</Text>
                         </TouchableOpacity>
                       ) : (
-                        <ExpandableView
+                        <SettingsOption
                           title={`Captions ${captions}`}
-                          iconColor={'blue'}
-                          titleStyle={{
-                            ...styles.expandableTitle,
-                            color: propStyle?.selectedOptionTextColor
-                          }}
-                        >
-                          {this.renderCaptions(captions, propStyle)}
-                        </ExpandableView>
+                          data={['On', 'Off']}
+                          iconName={'playSvg'}
+                          itemTitle={item => item}
+                          onSelect={item => this.onCaptionsChange(item)}
+                        />
                       )}
                     </>
-                  )}
-                  {showCaptions && (
-                    <View
-                      style={{
-                        height: 0.5,
-                        backgroundColor: propStyle?.separatorColor || 'black'
-                      }}
-                    />
                   )}
                 </>
               )}
             </ScrollView>
 
-            <TouchableOpacity onPress={this.onSave} style={[styles.action]}>
-              <Text maxFontSizeMultiplier={this.props.maxFontMultiplier} style={[styles.actionText]}>
+            <TouchableOpacity onPress={this.onSave} style={styles.action}>
+              <Text maxFontSizeMultiplier={this.props.maxFontMultiplier} style={styles.actionText}>
                 SAVE
               </Text>
             </TouchableOpacity>
@@ -358,10 +331,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   scrollContainerBottom: {},
-  expandableTitle: {
-    paddingHorizontal: 20,
-    fontFamily: 'OpenSans-Bold'
-  },
   option: {
     padding: 10,
     borderWidth: 0.5,
@@ -379,6 +348,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 50,
     borderRadius: 50,
     marginBottom: 70,
+    marginTop: 50,
     backgroundColor: 'clear',
     borderColor: 'white',
     borderWidth: 2,

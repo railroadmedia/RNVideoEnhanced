@@ -326,32 +326,12 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                 </>
               )}
             </ScrollView>
-            {settingsMode !== 'bottom' && (
-              <TouchableOpacity
-                onPress={this.onSave}
-                style={[
-                  styles.action,
-                  {
-                    margin: 20,
-                    marginBottom: 0,
-                    backgroundColor: propStyle?.save?.background || 'black'
-                  }
-                ]}
-              >
-                <Text
-                  maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                  style={[
-                    styles.actionText,
-                    {
-                      color: propStyle?.save?.color || 'white'
-                    }
-                  ]}
-                >
-                  SAVE
-                </Text>
-              </TouchableOpacity>
-            )}
 
+            <TouchableOpacity onPress={this.onSave} style={[styles.action]}>
+              <Text maxFontSizeMultiplier={this.props.maxFontMultiplier} style={[styles.actionText]}>
+                SAVE
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={this.onCancel}>
               <Text style={styles.cancelBtnText}>Close</Text>
             </TouchableOpacity>
@@ -396,9 +376,16 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans-Bold'
   },
   action: {
-    padding: 15,
+    paddingHorizontal: 50,
     borderRadius: 50,
-    marginHorizontal: 30
+    marginBottom: 70,
+    backgroundColor: 'clear',
+    borderColor: 'white',
+    borderWidth: 2,
+    alignSelf: 'center',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   actionBottom: {
     padding: 15,
@@ -407,7 +394,9 @@ const styles = StyleSheet.create({
   },
   actionText: {
     textAlign: 'center',
-    fontFamily: 'OpenSans-Bold'
+    fontFamily: 'BebasNeue',
+    color: 'white',
+    fontSize: 18
   },
   actionTextBottom: {
     marginLeft: 10,

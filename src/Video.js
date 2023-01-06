@@ -1541,75 +1541,74 @@ export default class Video extends React.Component {
                 </Animated.View>
               )}
           </View>
-
-          <SafeAreaInsetsContext.Consumer>
-            {(insets) => (
-              <>
-                {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
-                  <Animated.View
-                    onLayout={({
-                      nativeEvent: {
-                        layout: { x },
-                      },
-                    }) =>
-                      this.progressBarPositionX = (fullscreen && insets.left > 0 && isiOS) ? insets.left : x
-                    }
-                    {...this.pResponder()}
-                    style={{
-                      ...this.getVideoDimensions(),
-                      ...styles.timerContainer,
-                      position: fullscreen ? 'absolute' : 'relative',
-                      bottom: fullscreen
-                        ? windowHeight > videoH
-                          ? (windowHeight - videoH) / 2
-                          : 20
-                        : 0,
-                      transform: [
-                        {
-                          translateX: fullscreen
-                            ? type === 'video'
-                              ? this.translateControls
-                              : 0
+        </View>
+        <SafeAreaInsetsContext.Consumer>
+          {(insets) => (
+            <>
+              {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
+                <Animated.View
+                  onLayout={({
+                    nativeEvent: {
+                      layout: { x },
+                    },
+                  }) =>
+                    this.progressBarPositionX = (fullscreen && insets.left > 0 && isiOS) ? insets.left + x : x
+                  }
+                  {...this.pResponder()}
+                  style={{
+                    ...this.getVideoDimensions(),
+                    ...styles.timerContainer,
+                    position: fullscreen ? 'absolute' : 'relative',
+                    bottom: fullscreen
+                      ? windowHeight > videoH
+                        ? (windowHeight - videoH) / 2
+                        : 20
+                      : 0,
+                    transform: [
+                      {
+                        translateX: fullscreen
+                          ? type === 'video'
+                            ? this.translateControls
                             : 0
-                        }
-                      ]
+                          : 0
+                      }
+                    ]
+                  }}
+                >
+                  <View
+                    style={{
+                      ...styles.timerGrey,
+                      backgroundColor: afterTimerCursorBackground || '#2F3334'
                     }}
                   >
-                    <View
+                    <Animated.View
                       style={{
-                        ...styles.timerGrey,
-                        backgroundColor: afterTimerCursorBackground || '#2F3334'
+                        ...styles.timerBlue,
+                        transform: [{ translateX: this.translateBlueX }],
+                        backgroundColor: beforeTimerCursorBackground || 'red'
                       }}
-                    >
-                      <Animated.View
-                        style={{
-                          ...styles.timerBlue,
-                          transform: [{ translateX: this.translateBlueX }],
-                          backgroundColor: beforeTimerCursorBackground || 'red'
-                        }}
-                      />
-                      <Animated.View
-                        style={{
-                          ...styles.timerDot,
-                          backgroundColor: timerCursorBackground || 'red',
-                          transform: [{ translateX: this.translateBlueX }],
-                          opacity:
-                            type === 'video'
-                              ? this.translateControls.interpolate({
-                                outputRange: [0, 1],
-                                inputRange: [-videoW, 0]
-                              })
-                              : 1
-                        }}
-                      />
-                    </View>
-                    <View style={styles.timerCover} />
-                  </Animated.View>
-                )}
-              </>
-            )}
-          </SafeAreaInsetsContext.Consumer>
-        </View>
+                    />
+                    <Animated.View
+                      style={{
+                        ...styles.timerDot,
+                        backgroundColor: timerCursorBackground || 'red',
+                        transform: [{ translateX: this.translateBlueX }],
+                        opacity:
+                          type === 'video'
+                            ? this.translateControls.interpolate({
+                              outputRange: [0, 1],
+                              inputRange: [-videoW, 0]
+                            })
+                            : 1
+                      }}
+                    />
+                  </View>
+                  <View style={styles.timerCover} />
+                </Animated.View>
+              )}
+            </>
+          )}
+        </SafeAreaInsetsContext.Consumer>
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         {!youtubeId && (
           <VideoSettings
@@ -1847,6 +1846,7 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'absolute',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   webview: {
     width: '100%',

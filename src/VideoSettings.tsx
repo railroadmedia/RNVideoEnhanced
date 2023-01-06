@@ -244,7 +244,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                   ) : (
                     <SettingsOption
                       title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
-                      iconName={'playSvg'}
+                      iconName={'CameraSvg'}
                       data={qualities}
                       onSelect={(item: IQuality) => this.onQualityChange(item)}
                       itemTitle={item => (item.height === 'Auto' ? `Auto ${item.actualH}p` : `${item.height}p`)}
@@ -266,7 +266,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                       ) : (
                         <SettingsOption
                           title={`${rate}X`}
-                          iconName={'playSvg'}
+                          iconName={'RateSvg'}
                           data={this.rates}
                           onSelect={item => this.onRateChange(item)}
                           itemTitle={item => `${item}X`}
@@ -289,7 +289,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                         <SettingsOption
                           title={`Captions ${captions}`}
                           data={['On', 'Off']}
-                          iconName={'playSvg'}
+                          iconName={'CaptionsSvg'}
                           itemTitle={item => item}
                           onSelect={item => this.onCaptionsChange(item)}
                         />

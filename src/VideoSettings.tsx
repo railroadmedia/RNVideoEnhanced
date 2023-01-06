@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -217,7 +217,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
         <TouchableOpacity
           style={styles.modalBackground}
           onPress={this.onCancel}
-          // accessible={IS_IOS ? false : true}
+          accessible={Platform.OS === 'ios' ? false : true}
         >
           <SafeAreaView style={[styles.modalContent]}>
             <ScrollView style={{ transform: [{ scaleY: -1 }] }}>
@@ -249,6 +249,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                         data={qualities}
                         onSelect={(item: IQuality) => this.onQualityChange(item)}
                         itemTitle={item => (item.height === 'Auto' ? `Auto ${item.actualH}p` : `${item.height}p`)}
+                        selected={quality}
                       />
                     )}
                     {showRate && (
@@ -271,6 +272,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                             data={this.rates}
                             onSelect={item => this.onRateChange(item)}
                             itemTitle={item => `${item}X`}
+                            selected={rate}
                           />
                         )}
                       </>
@@ -293,6 +295,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                             iconName={'CaptionsSvg'}
                             itemTitle={item => item}
                             onSelect={item => this.onCaptionsChange(item)}
+                            selected={captions}
                           />
                         )}
                       </>

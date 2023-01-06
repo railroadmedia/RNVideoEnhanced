@@ -220,9 +220,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
           // accessible={IS_IOS ? false : true}
         >
           <SafeAreaView style={[styles.modalContent]}>
-            <ScrollView
-              style={{ transform: [{ scaleY: -1 }] }}
-            >
+            <ScrollView style={{ transform: [{ scaleY: -1 }] }}>
               <View style={{ transform: [{ scaleY: -1 }] }}>
                 {subSettings === 'quality' ? (
                   this.renderQualities(qualities, quality, propStyle)

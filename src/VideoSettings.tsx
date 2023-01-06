@@ -220,84 +220,88 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
           // accessible={IS_IOS ? false : true}
         >
           <SafeAreaView style={[styles.modalContent]}>
-            <ScrollView>
-              {subSettings === 'quality' ? (
-                this.renderQualities(qualities, quality, propStyle)
-              ) : subSettings === 'rate' ? (
-                this.renderRate(rate, propStyle)
-              ) : subSettings === 'captions' ? (
-                this.renderCaptions(captions, propStyle)
-              ) : (
-                <>
-                  {settingsMode === 'bottom' ? (
-                    <TouchableOpacity style={styles.actionBottom} onPress={this.toggleQuality}>
-                      {videoQuality({
-                        width: 20,
-                        height: 20,
-                        fill: 'black'
-                      })}
-                      <Text style={styles.actionTextBottom}>
-                        Video Quality -{' '}
-                        {quality.height === 'Auto' ? `Auto (${quality.actualH}p)` : `${quality.height}p`}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <SettingsOption
-                      title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
-                      iconName={'CameraSvg'}
-                      data={qualities}
-                      onSelect={(item: IQuality) => this.onQualityChange(item)}
-                      itemTitle={item => (item.height === 'Auto' ? `Auto ${item.actualH}p` : `${item.height}p`)}
-                    />
-                  )}
-                  {showRate && (
-                    <>
-                      {settingsMode === 'bottom' ? (
-                        <TouchableOpacity onPress={this.toggleRate} style={styles.actionBottom}>
-                          {speed({
-                            width: 20,
-                            height: 20,
-                            fill: 'black'
-                          })}
-                          <Text style={styles.actionTextBottom}>
-                            Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
-                          </Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <SettingsOption
-                          title={`${rate}X`}
-                          iconName={'RateSvg'}
-                          data={this.rates}
-                          onSelect={item => this.onRateChange(item)}
-                          itemTitle={item => `${item}X`}
-                        />
-                      )}
-                    </>
-                  )}
-                  {showCaptions && (
-                    <>
-                      {settingsMode === 'bottom' ? (
-                        <TouchableOpacity onPress={this.toggleCaptions} style={styles.actionBottom}>
-                          {speed({
-                            width: 20,
-                            height: 20,
-                            fill: 'black'
-                          })}
-                          <Text style={styles.actionTextBottom}>Captions</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <SettingsOption
-                          title={`Captions ${captions}`}
-                          data={['On', 'Off']}
-                          iconName={'CaptionsSvg'}
-                          itemTitle={item => item}
-                          onSelect={item => this.onCaptionsChange(item)}
-                        />
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+            <ScrollView
+              style={{ transform: [{ scaleY: -1 }] }}
+            >
+              <View style={{ transform: [{ scaleY: -1 }] }}>
+                {subSettings === 'quality' ? (
+                  this.renderQualities(qualities, quality, propStyle)
+                ) : subSettings === 'rate' ? (
+                  this.renderRate(rate, propStyle)
+                ) : subSettings === 'captions' ? (
+                  this.renderCaptions(captions, propStyle)
+                ) : (
+                  <>
+                    {settingsMode === 'bottom' ? (
+                      <TouchableOpacity style={styles.actionBottom} onPress={this.toggleQuality}>
+                        {videoQuality({
+                          width: 20,
+                          height: 20,
+                          fill: 'black'
+                        })}
+                        <Text style={styles.actionTextBottom}>
+                          Video Quality -{' '}
+                          {quality.height === 'Auto' ? `Auto (${quality.actualH}p)` : `${quality.height}p`}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <SettingsOption
+                        title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
+                        iconName={'CameraSvg'}
+                        data={qualities}
+                        onSelect={(item: IQuality) => this.onQualityChange(item)}
+                        itemTitle={item => (item.height === 'Auto' ? `Auto ${item.actualH}p` : `${item.height}p`)}
+                      />
+                    )}
+                    {showRate && (
+                      <>
+                        {settingsMode === 'bottom' ? (
+                          <TouchableOpacity onPress={this.toggleRate} style={styles.actionBottom}>
+                            {speed({
+                              width: 20,
+                              height: 20,
+                              fill: 'black'
+                            })}
+                            <Text style={styles.actionTextBottom}>
+                              Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
+                            </Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <SettingsOption
+                            title={`${rate}X`}
+                            iconName={'RateSvg'}
+                            data={this.rates}
+                            onSelect={item => this.onRateChange(item)}
+                            itemTitle={item => `${item}X`}
+                          />
+                        )}
+                      </>
+                    )}
+                    {showCaptions && (
+                      <>
+                        {settingsMode === 'bottom' ? (
+                          <TouchableOpacity onPress={this.toggleCaptions} style={styles.actionBottom}>
+                            {speed({
+                              width: 20,
+                              height: 20,
+                              fill: 'black'
+                            })}
+                            <Text style={styles.actionTextBottom}>Captions</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <SettingsOption
+                            title={`Captions ${captions}`}
+                            data={['On', 'Off']}
+                            iconName={'CaptionsSvg'}
+                            itemTitle={item => item}
+                            onSelect={item => this.onCaptionsChange(item)}
+                          />
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </View>
             </ScrollView>
 
             <TouchableOpacity onPress={this.onSave} style={styles.action}>

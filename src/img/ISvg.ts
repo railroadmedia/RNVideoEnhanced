@@ -4,7 +4,3 @@ export default interface ISvg {
   fill?: string;
   active?: boolean;
 }
-
-export interface ISubbanerCardSvg extends ISvg {
-  children: any;
-}

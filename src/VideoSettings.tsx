@@ -5,6 +5,7 @@ import React from 'react';
 import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import Orientation from 'react-native-orientation-locker';
 
 import SettingsOption from './SettingsOptions';
 
@@ -32,6 +33,7 @@ interface ISettingsState {
   subSettings: string;
   modalVisible: boolean;
   quality: IQuality;
+  isLandscape: boolean;
 }
 
 export default class VideoSettings extends React.PureComponent<ISettingsProps, ISettingsState> {
@@ -43,13 +45,23 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
     quality: {
       height: 'Auto',
       actualH: 0
-    }
+    },
+    isLandscape: false
   };
 
   constructor(props) {
     super(props);
     this.state.quality = props.qualities.find(q => q.selected);
   }
+
+  componentDidMount = () => {
+    Orientation.getOrientation(this.orientationListener);
+    Orientation.addDeviceOrientationListener(this.orientationListener);
+  };
+
+  orientationListener = orientation => {
+    this.setState(() => ({ isLandscape: orientation.includes('LANDSCAPE') }));
+  };
 
   onRequestClose = () => {};
 
@@ -202,7 +214,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
 
   render() {
     let {
-      state: { rate, quality, captions, subSettings, modalVisible },
+      state: { rate, quality, captions, subSettings, modalVisible, isLandscape },
       props: { showRate, qualities, showCaptions, settingsMode, styles: propStyle }
     } = this;
     return (
@@ -305,7 +317,16 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
               </View>
             </ScrollView>
 
-            <TouchableOpacity onPress={this.onSave} style={styles.action}>
+            <TouchableOpacity
+              onPress={this.onSave}
+              style={[
+                styles.action,
+                {
+                  marginTop: isLandscape ? 10 : 50,
+                  marginBottom: isLandscape ? 10 : 70
+                }
+              ]}
+            >
               <Text maxFontSizeMultiplier={this.props.maxFontMultiplier} style={styles.actionText}>
                 SAVE
               </Text>
@@ -352,13 +373,11 @@ const styles = StyleSheet.create({
   action: {
     paddingHorizontal: 50,
     borderRadius: 50,
-    marginBottom: 70,
-    marginTop: 50,
+    height: 40,
     backgroundColor: 'clear',
     borderColor: 'white',
     borderWidth: 2,
     alignSelf: 'center',
-    height: 40,
     justifyContent: 'center',
     alignItems: 'center'
   },

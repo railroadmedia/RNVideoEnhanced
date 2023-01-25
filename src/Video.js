@@ -944,6 +944,7 @@ export default class Video extends React.Component {
 
     switch (parsedData.eventType) {
       case 'playerReady':
+        this.props.onPlayerReady?.();
         break;
       case 'playerStateChange':
         cTime = parsedData.data?.target?.playerInfo?.currentTime;

@@ -38,6 +38,7 @@ declare module "RNVideoEnhanced" {
 			currentTime: number,
 			mediaCategory: string
 		) => void;
+		onPlayerReady?: () => void;
 		styles: {
 			iconColor: string;
 			containerStyle?: ViewStyle;

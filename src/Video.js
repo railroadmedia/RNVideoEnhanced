@@ -944,6 +944,7 @@ export default class Video extends React.Component {
 
     switch (parsedData.eventType) {
       case 'playerReady':
+        this.props.onPlayerReady?.();
         break;
       case 'playerStateChange':
         cTime = parsedData.data?.target?.playerInfo?.currentTime;
@@ -1084,14 +1085,14 @@ export default class Video extends React.Component {
                         </head>
                         <body>
                           <div class="video" id="player" />
-                          
+
                           <script>
                             var tag = document.createElement('script');
-                      
+
                             tag.src = "https://www.youtube.com/iframe_api";
                             var firstScriptTag = document.getElementsByTagName('script')[0];
                             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-                      
+
                             var player;
                             function onYouTubeIframeAPIReady() {
                               player = new YT.Player('player', {
@@ -1113,11 +1114,11 @@ export default class Video extends React.Component {
                                 }
                               });
                             }
-                      
+
                             function onPlayerReady(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerReady'}))
                             }
-                      
+
                             function onPlayerStateChange(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
                             }
@@ -1809,17 +1810,17 @@ const styles = StyleSheet.create({
   },
   leftDoubleTap: {
     flex: 1,
-    position: 'absolute', 
-    left: 0, 
-    width: '40%', 
+    position: 'absolute',
+    left: 0,
+    width: '40%',
     height: '100%'
   },
   rightDoubleTap: {
     flex: 1,
     alignItems: 'center',
-    position: 'absolute', 
-    right: 0, 
-    width: '40%', 
+    position: 'absolute',
+    right: 0,
+    width: '40%',
     height: '100%'
   },
   fullscreenSafeArea: {

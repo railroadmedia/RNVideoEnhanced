@@ -163,7 +163,13 @@ export default class Video extends React.Component {
       this.stateListener.remove();
     }
     Orientation.removeDeviceOrientationListener(this.orientationListener);
-    Orientation.unlockAllOrientations();
+    Orientation.getAutoRotateState(s => {
+      if (s) {
+        Orientation.unlockAllOrientations();
+      } else {
+        Orientation.lockToPortrait();
+      }
+    });
   }
 
   shouldComponentUpdate(nextProps, nextState) {

@@ -1141,7 +1141,7 @@ export default class Video extends React.Component {
                     onLoad={this.onLoad}
                     onError={this.onError}
                     rate={parseFloat(rate)}
-                    playInBackground={true}
+                    playInBackground={false}
                     playWhenInactive={true}
                     audioOnly={audioOnly}
                     onProgress={this.onProgress}

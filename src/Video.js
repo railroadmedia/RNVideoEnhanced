@@ -106,6 +106,7 @@ export default class Video extends React.Component {
     this.state.fullscreen = !isTablet && windowWidth > windowHeight;
     this.state.paused = props.paused;
     this.state.repeat = props.repeat ? props.repeat : false;
+    this.state.showPoster = true;
     this.state.showControls = props.showControls;
     this.state.showCastingOptions = props?.showCastingOptions !== undefined ? props.showCastingOptions : true;
     if (isTablet)
@@ -742,6 +743,9 @@ export default class Video extends React.Component {
 
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
     this.updateVideoProgress();
+    if (this.state.showPoster){
+       this.setState({showPoster: false});
+    }
     this.setState(({ paused }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
       if (gCasting && !skipActionOnCasting)
@@ -903,6 +907,9 @@ export default class Video extends React.Component {
     else if (time > fullLength) time = fullLength;
 
     this.updateVideoProgress();
+    if (this.state.showPoster){
+    this.setState({showPoster: false});
+    }  
     if (this.videoRef) {
       this.videoRef['seek'](time);
     }
@@ -975,6 +982,7 @@ export default class Video extends React.Component {
         captionsHidden,
         videoRefreshing,
         tabOrientation,
+        showPoster
       },
       props: {
         type,
@@ -1220,7 +1228,7 @@ export default class Video extends React.Component {
                   ...styles.controlsContainer
                 }}
               >
-                {audioOnly && (
+                {(audioOnly || showPoster) && (
                   <Image
                     source={{ uri: thumbnail_url }}
                     style={{

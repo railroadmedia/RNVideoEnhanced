@@ -207,6 +207,9 @@ export default class Video extends React.Component {
   }
 
   handleAppStateChange = () => {
+    if (state === 'background') {
+      this.setState({ paused: true });
+    }
     this.toggleControls(0);
     this.updateVideoProgress();
     clearTimeout(this.controlsTO);
@@ -1147,7 +1150,7 @@ export default class Video extends React.Component {
                     onLoad={this.onLoad}
                     onError={this.onError}
                     rate={parseFloat(rate)}
-                    playInBackground={true}
+                    playInBackground={false}
                     playWhenInactive={true}
                     audioOnly={audioOnly}
                     onProgress={this.onProgress}

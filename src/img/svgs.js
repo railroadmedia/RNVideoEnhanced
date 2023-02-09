@@ -1,14 +1,8 @@
 import React from 'react';
-import Svg, {
-  G,
-  Use,
-  Rect,
-  Defs,
-  Path,
-  Text,
-  Image,
-  Circle
-} from 'react-native-svg';
+import Svg, { G, Use, Rect, Defs, Path, Text, Image, Circle } from 'react-native-svg';
+import CameraSvg from './CameraSvg';
+import CaptionsSvg from './CaptionsSvg';
+import RateSvg from './RateSvg';
 
 export const back10 = props => (
   <Svg
@@ -172,11 +166,7 @@ export const playSvg = props => (
 );
 
 export const x = props => (
-  <Svg
-    viewBox='0 0 32 32'
-    version='1.1'
-    style={{ height: props.height, width: props.width }}
-  >
+  <Svg viewBox='0 0 32 32' version='1.1' style={{ height: props.height, width: props.width }}>
     <Path
       id='X'
       fill={props.fill}
@@ -304,10 +294,7 @@ export const prevLesson = props => (
       }
     ]}
   >
-    <G
-      id='prev-lesson'
-      transform='matrix(-1,-1.22465e-16,1.22465e-16,-1,32,32)'
-    >
+    <G id='prev-lesson' transform='matrix(-1,-1.22465e-16,1.22465e-16,-1,32,32)'>
       <Path
         d='M26.749,16L26.749,7.625C26.749,6.728 27.477,6 28.375,6C29.272,6 30,6.728 30,7.625L30,24.375C30,25.272 29.272,26 28.375,26C27.477,26 26.749,25.272 26.749,24.375L26.749,16C26.749,16.155 26.682,16.288 26.547,16.399L14.867,25.905C14.732,26.017 14.616,26.03 14.52,25.944C14.423,25.858 14.375,25.704 14.375,25.48L14.375,16C14.375,16.155 14.307,16.288 14.172,16.399L2.493,25.905C2.358,26.017 2.242,26.03 2.145,25.944C2.048,25.858 2,25.704 2,25.48L2,6.52C2,6.296 2.048,6.142 2.145,6.056C2.242,5.97 2.358,5.983 2.493,6.095L14.172,15.601C14.307,15.712 14.375,15.845 14.375,16L14.375,6.52C14.375,6.296 14.423,6.142 14.52,6.056C14.616,5.97 14.732,5.983 14.867,6.095L26.547,15.601C26.682,15.712 26.749,15.845 26.749,16Z'
         style={{ fillRule: 'nonzero' }}
@@ -354,5 +341,8 @@ export const svgs = {
   arrowDown,
   prevLesson,
   fullScreen,
-  videoQuality
+  videoQuality,
+  CameraSvg,
+  CaptionsSvg,
+  RateSvg
 };

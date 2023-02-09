@@ -19,7 +19,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import RNFetchBlob from 'rn-fetch-blob';
 import WebView from 'react-native-webview';
@@ -167,7 +167,13 @@ export default class Video extends React.Component {
       this.stateListener.remove();
     }
     Orientation.removeDeviceOrientationListener(this.orientationListener);
-    Orientation.unlockAllOrientations();
+    Orientation.getAutoRotateState(s => {
+      if (s) {
+        Orientation.unlockAllOrientations();
+      } else {
+        Orientation.lockToPortrait();
+      }
+    });
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -470,7 +476,7 @@ export default class Video extends React.Component {
 
     this.props.onOrientationChange?.(o);
     if (parseInt(cTime) !== this.props.content.length_in_seconds) {
-      this.onProgress({ currentTime: cTime || 0});
+      this.onProgress({ currentTime: cTime || 0 });
     }
     this.props.onFullscreen?.(fs);
 
@@ -478,8 +484,8 @@ export default class Video extends React.Component {
       tabOrientation: o.includes('LEFT')
         ? LANDSCAPE_LEFT
         : o.includes('RIGHT')
-        ? LANDSCAPE_RIGHT
-        : PORTRAIT,
+          ? LANDSCAPE_RIGHT
+          : PORTRAIT,
       fullscreen: fs,
     });
   };
@@ -955,6 +961,7 @@ export default class Video extends React.Component {
         if (this.props?.autoPlay && this.webview) {
           this.webview.injectJavaScript(`playVideo()`);
         }
+        this.props.onPlayerReady?.();
         break;
       case 'playerStateChange':
         cTime = parsedData.data?.target?.playerInfo?.currentTime;
@@ -1104,14 +1111,14 @@ export default class Video extends React.Component {
                         </head>
                         <body>
                           <div class="video" id="player" />
-                          
+
                           <script>
                             var tag = document.createElement('script');
-                      
+
                             tag.src = "https://www.youtube.com/iframe_api";
                             var firstScriptTag = document.getElementsByTagName('script')[0];
                             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-                      
+
                             var player;
                             function onYouTubeIframeAPIReady() {
                               player = new YT.Player('player', {
@@ -1133,11 +1140,11 @@ export default class Video extends React.Component {
                                 }
                               });
                             }
-                      
+
                             function onPlayerReady(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerReady'}))
                             }
-                      
+
                             function onPlayerStateChange(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
                             }
@@ -1566,65 +1573,73 @@ export default class Video extends React.Component {
               )}
           </View>
         </View>
-        {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
-          <Animated.View
-            onLayout={({
-              nativeEvent: {
-                layout: { x },
-              },
-            }) => (this.progressBarPositionX = x)}
-            {...this.pResponder()}
-            style={{
-              ...this.getVideoDimensions(),
-              ...styles.timerContainer,
-              position: fullscreen ? 'absolute' : 'relative',
-              bottom: fullscreen
-              ? windowHeight > videoH
-                ? (windowHeight - videoH) / 2
-                : 20
-              : 0,
-              transform: [
-                {
-                  translateX: fullscreen
-                    ? type === 'video'
-                      ? this.translateControls
-                      : 0
-                    : 0
-                }
-              ]
-            }}
-          >
-            <View
-              style={{
-                ...styles.timerGrey,
-                backgroundColor: afterTimerCursorBackground || '#2F3334'
-              }}
-            >
-              <Animated.View
-                style={{
-                  ...styles.timerBlue,
-                  transform: [{ translateX: this.translateBlueX }],
-                  backgroundColor: beforeTimerCursorBackground || 'red'
-                }}
-              />
-              <Animated.View
-                style={{
-                  ...styles.timerDot,
-                  backgroundColor: timerCursorBackground || 'red',
-                  transform: [{ translateX: this.translateBlueX }],
-                  opacity:
-                    type === 'video'
-                      ? this.translateControls.interpolate({
-                          outputRange: [0, 1],
-                          inputRange: [-videoW, 0]
-                        })
-                      : 1
-                }}
-              />
-            </View>
-            <View style={styles.timerCover} />
-          </Animated.View>
-        )}
+        <SafeAreaInsetsContext.Consumer>
+          {(insets) => (
+            <>
+              {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
+                <Animated.View
+                  onLayout={({
+                    nativeEvent: {
+                      layout: { x },
+                    },
+                  }) =>
+                    this.progressBarPositionX = (fullscreen && insets.left > 0 && isiOS) ? insets.left + x : x
+                  }
+                  {...this.pResponder()}
+                  style={{
+                    ...this.getVideoDimensions(),
+                    ...styles.timerContainer,
+                    position: fullscreen ? 'absolute' : 'relative',
+                    bottom: fullscreen
+                      ? windowHeight > videoH
+                        ? (windowHeight - videoH) / 2
+                        : 20
+                      : 0,
+                    transform: [
+                      {
+                        translateX: fullscreen
+                          ? type === 'video'
+                            ? this.translateControls
+                            : 0
+                          : 0
+                      }
+                    ]
+                  }}
+                >
+                  <View
+                    style={{
+                      ...styles.timerGrey,
+                      backgroundColor: afterTimerCursorBackground || '#2F3334'
+                    }}
+                  >
+                    <Animated.View
+                      style={{
+                        ...styles.timerBlue,
+                        transform: [{ translateX: this.translateBlueX }],
+                        backgroundColor: beforeTimerCursorBackground || 'red'
+                      }}
+                    />
+                    <Animated.View
+                      style={{
+                        ...styles.timerDot,
+                        backgroundColor: timerCursorBackground || 'red',
+                        transform: [{ translateX: this.translateBlueX }],
+                        opacity:
+                          type === 'video'
+                            ? this.translateControls.interpolate({
+                              outputRange: [0, 1],
+                              inputRange: [-videoW, 0]
+                            })
+                            : 1
+                      }}
+                    />
+                  </View>
+                  <View style={styles.timerCover} />
+                </Animated.View>
+              )}
+            </>
+          )}
+        </SafeAreaInsetsContext.Consumer>
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         {!youtubeId && (
           <VideoSettings
@@ -1825,17 +1840,17 @@ const styles = StyleSheet.create({
   },
   leftDoubleTap: {
     flex: 1,
-    position: 'absolute', 
-    left: 0, 
-    width: '40%', 
+    position: 'absolute',
+    left: 0,
+    width: '40%',
     height: '100%'
   },
   rightDoubleTap: {
     flex: 1,
     alignItems: 'center',
-    position: 'absolute', 
-    right: 0, 
-    width: '40%', 
+    position: 'absolute',
+    right: 0,
+    width: '40%',
     height: '100%'
   },
   fullscreenSafeArea: {
@@ -1862,6 +1877,7 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'absolute',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   webview: {
     width: '100%',

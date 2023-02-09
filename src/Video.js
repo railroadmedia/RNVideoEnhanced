@@ -743,11 +743,11 @@ export default class Video extends React.Component {
 
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
     this.updateVideoProgress();
-    if (this.state.showPoster){
-       this.setState({showPoster: false});
-    }
-    this.setState(({ paused }) => {
+    this.setState(({ paused, showPoster }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
+      if (showPoster) {
+        showPoster = false;
+      }
       if (gCasting && !skipActionOnCasting)
         if (paused) this.googleCastClient?.pause();
         else this.googleCastClient?.play();
@@ -755,7 +755,7 @@ export default class Video extends React.Component {
       clearTimeout(this.bufferingTO);
       clearTimeout(this.bufferingTooLongTO);
       this.bufferingOpacity?.setValue(paused || aCasting || gCasting ? 0 : 1);
-      return { paused };
+      return { paused, showPoster };
     });
   };
 

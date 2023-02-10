@@ -206,7 +206,7 @@ export default class Video extends React.Component {
     }
   }
 
-  handleAppStateChange = () => {
+  handleAppStateChange = (state) => {
     if (state === 'background') {
       this.setState({ paused: true });
     }
@@ -713,25 +713,8 @@ export default class Video extends React.Component {
       youtubeId
     } = this.props;
     if (this.seeking) return;
-    clearTimeout(this.bufferingTO);
-    clearTimeout(this.bufferingTooLongTO);
-    delete this.bufferingTO;
-    this.bufferingOpacity?.setValue(0);
     this.updateBlueX();
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
-    if (!aCasting && !youtubeId) {
-      this.bufferingTO = setTimeout(
-        () =>
-          this.bufferingOpacity.setValue(
-            this.state.paused || aCasting || gCasting ? 0 : 1
-          ),
-        3000
-      );
-      this.bufferingTooLongTO = setTimeout(
-        () => this.selectQuality('Auto'),
-        10000
-      );
-    }
     if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
   };
 
@@ -757,9 +740,6 @@ export default class Video extends React.Component {
         if (paused) this.googleCastClient?.pause();
         else this.googleCastClient?.play();
       this.animateControls(paused ? 0 : -greaterWidthHeight);
-      clearTimeout(this.bufferingTO);
-      clearTimeout(this.bufferingTooLongTO);
-      this.bufferingOpacity?.setValue(paused || aCasting || gCasting ? 0 : 1);
       return { paused };
     });
   };
@@ -839,6 +819,20 @@ export default class Video extends React.Component {
     });
     this.bufferingOpacity?.setValue(0);
   };
+
+  onBuffer = ({ isBuffering }) => {
+    clearTimeout(this.bufferingTO);
+    clearTimeout(this.bufferingTooLongTO);
+    if (!aCasting && !gCasting && !this.props.youtubeId) {
+      this.bufferingTO = setTimeout(
+        () => this.bufferingOpacity.setValue(this.state.pasued ? 0 : isBuffering), 3000
+      );
+      this.bufferingTooLongTO = setTimeout(
+        () => this.selectQuality('Auto'),
+        10000
+      );
+    }
+  }
 
   onSaveSettings = (rate, qual, captions) =>
     this.setState({ rate, captionsHidden: captions === 'Off' }, () =>
@@ -1149,6 +1143,7 @@ export default class Video extends React.Component {
                     resizeMode='cover'
                     onLoad={this.onLoad}
                     onError={this.onError}
+                    onBuffer={this.onBuffer}
                     rate={parseFloat(rate)}
                     playInBackground={false}
                     playWhenInactive={true}

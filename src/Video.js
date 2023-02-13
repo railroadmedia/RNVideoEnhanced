@@ -825,7 +825,7 @@ export default class Video extends React.Component {
     clearTimeout(this.bufferingTooLongTO);
     if (!aCasting && !gCasting && !this.props.youtubeId) {
       this.bufferingTO = setTimeout(
-        () => this.bufferingOpacity.setValue(this.state.pasued ? 0 : isBuffering), 3000
+        () => this.bufferingOpacity.setValue(this.state.paused ? 0 : isBuffering), 3000
       );
       this.bufferingTooLongTO = setTimeout(
         () => this.selectQuality('Auto'),

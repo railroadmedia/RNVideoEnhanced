@@ -912,7 +912,7 @@ export default class Video extends React.Component {
     this.updateVideoProgress();
     if (this.state.showPoster){
       this.setState({showPoster: false});
-    }  
+    }
     if (this.videoRef) {
       this.videoRef['seek'](time);
     }
@@ -998,6 +998,8 @@ export default class Video extends React.Component {
         onBack,
         goToPreviousLesson,
         goToNextLesson,
+        startTime,
+        endTime,
         styles: {
           alert,
           settings,
@@ -1114,7 +1116,8 @@ export default class Video extends React.Component {
                                   rel: 1,
                                   playsinline: 1,
                                   enablejsapi: 1,
-                                  start: '${last_watch_position_in_seconds}',
+                                  start: '${startTime || last_watch_position_in_seconds}',
+                                  end: '${endTime}',
                                   controls: 1,
                                   fs: 1,
                                   origin: 'https://www.musora.com',
@@ -1216,7 +1219,7 @@ export default class Video extends React.Component {
                   this.setState({
                     liveEnded: true
                   });
-                  this.props.onEndLive?.();
+                  this.props.onEnd?.();
                 }}
                 onStart={() => {
                   this.props.onStartLive?.();

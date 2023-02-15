@@ -22,12 +22,14 @@ declare module "RNVideoEnhanced" {
 		listening?: boolean;
 		showCastingOptions?: boolean;
 		gCasting?: boolean;
+		startTime?: number;
+		endTime?: number;
 		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;
 		toSupport: () => void;
 		onBack?: () => void;
-		onEndLive?: () => void;
-		onStartLive?: () => void;
+		onEnd?: () => void;
+		onStart?: () => void;
 		onFullscreen?: (isFullscreen: boolean) => void;
 		goToNextLesson?: () => void;
 		goToPreviousLesson?: () => void;

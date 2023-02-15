@@ -84,7 +84,7 @@ export default class Video extends React.Component {
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
-    cTime = props.content.last_watch_position_in_seconds;
+    cTime = props.startTime || props.content.last_watch_position_in_seconds;
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
@@ -960,6 +960,9 @@ export default class Video extends React.Component {
         cTime = parsedData.data?.target?.playerInfo?.currentTime;
         if (parsedData.data?.data === 2 || parsedData.data?.data === 1) { // 2=paused 1=playing
           this.updateVideoProgress();
+        }
+        if (parsedData.data?.data === 0) {
+          this.props.onEnd?.();
         }
         break;
       case 'back':

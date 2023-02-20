@@ -115,8 +115,6 @@ export default class Video extends React.Component {
     try {
       this.state.mp3s[0].selected = true;
     } catch (e) {}
-    this.autoplay = undefined;
-    this.autoplayTime = 10;
   }
 
   componentDidMount() {
@@ -159,7 +157,6 @@ export default class Video extends React.Component {
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
-    clearTimeout(this.autoplay);
     if (!this.props.youtubeId) {
       this.setState({ paused: true });
     }
@@ -709,15 +706,7 @@ export default class Video extends React.Component {
   };
 
   toggleAutoplay = () => {
-    this.autoplayTime = 10;
-    this.autoplay = setInterval(() => {
-      this.togglePaused(true, true);
-      this.autoplayTime -= 1;
-      if (this.autoplayTime === 0) {
-        clearInterval(this.autoplay);
-        this.props.onEnd?.();
-      }
-    }, 1000);
+    this.props.onEnd?.();
   };
 
   onProgress = ({ currentTime }) => {
@@ -821,7 +810,8 @@ export default class Video extends React.Component {
   onLoad = () => {
     let {
       youtubeId,
-      content: { last_watch_position_in_seconds }
+      content: { last_watch_position_in_seconds },
+      autoplay,
     } = this.props;
     if (this.videoRef) {
       this.videoRef['seek'](
@@ -840,6 +830,9 @@ export default class Video extends React.Component {
       position: parseFloat(position)
     });
     this.bufferingOpacity?.setValue(0);
+    if (!!autoplay) {
+      this.togglePaused(false, false)
+    }
   };
 
   onBuffer = ({ isBuffering }) => {
@@ -914,6 +907,9 @@ export default class Video extends React.Component {
       this.animateControls(0);
       this.updateBlueX();
       this.videoTimer?.setProgress(0);
+      if (this.props.autoplay) {
+        this.toggleAutoplay();
+      }
     });
   };
 
@@ -972,6 +968,9 @@ export default class Video extends React.Component {
 
     switch (parsedData.eventType) {
       case 'playerReady':
+        if (this.props.autoplay) {
+          this.webview.injectJavaScript(`play()`);
+        }
         this.props.onPlayerReady?.();
         break;
       case 'playerStateChange':
@@ -980,7 +979,7 @@ export default class Video extends React.Component {
           this.updateVideoProgress();
         }
         if (parsedData.data?.data === 0) {
-          this.props.onEnd?.();
+          this.toggleAutoplay();
         }
         break;
       case 'back':
@@ -1160,6 +1159,10 @@ export default class Video extends React.Component {
 
                             function seekTo(time) {
                               player.seekTo(time, true);
+                            }
+
+                            function play() {
+                              player.playVideo();
                             }
                           </script>
                         </body>

@@ -115,6 +115,8 @@ export default class Video extends React.Component {
     try {
       this.state.mp3s[0].selected = true;
     } catch (e) {}
+    this.autoplay = undefined;
+    this.autoplayTime = 10;
   }
 
   componentDidMount() {
@@ -157,6 +159,7 @@ export default class Video extends React.Component {
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
+    clearTimeout(this.autoplay);
     if (!this.props.youtubeId) {
       this.setState({ paused: true });
     }
@@ -705,17 +708,32 @@ export default class Video extends React.Component {
     }).panHandlers;
   };
 
+  toggleAutoplay = () => {
+    this.autoplayTime = 10;
+    this.autoplay = setInterval(() => {
+      this.togglePaused(true, true);
+      this.autoplayTime -= 1;
+      if (this.autoplayTime === 0) {
+        clearInterval(this.autoplay);
+        this.props.onEnd?.();
+      }
+    }, 1000);
+  };
+
   onProgress = ({ currentTime }) => {
     if (currentTime === undefined) return;
     this.getVideoDimensions();
     cTime = currentTime;
     let {
       content: { length_in_seconds },
-      youtubeId
+      endTime
     } = this.props;
     if (this.seeking) return;
     this.updateBlueX();
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
+    if (!!endTime && endTime === parseInt(currentTime)) {
+      this.toggleAutoplay();
+    }
     if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
   };
 

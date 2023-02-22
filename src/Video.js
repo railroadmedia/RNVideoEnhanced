@@ -84,7 +84,7 @@ export default class Video extends React.Component {
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
-    cTime = props.content.last_watch_position_in_seconds;
+    cTime = props.startTime || props.content.last_watch_position_in_seconds;
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
@@ -715,11 +715,14 @@ export default class Video extends React.Component {
     cTime = currentTime;
     let {
       content: { length_in_seconds },
-      youtubeId
+      endTime
     } = this.props;
     if (this.seeking) return;
     this.updateBlueX();
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
+    if (!!endTime && endTime === parseInt(currentTime)) {
+      this.props.onEnd?.();
+    }
     if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
   };
 
@@ -807,7 +810,8 @@ export default class Video extends React.Component {
   onLoad = () => {
     let {
       youtubeId,
-      content: { last_watch_position_in_seconds }
+      content: { last_watch_position_in_seconds },
+      autoplay,
     } = this.props;
     if (this.videoRef) {
       this.videoRef['seek'](
@@ -826,6 +830,9 @@ export default class Video extends React.Component {
       position: parseFloat(position)
     });
     this.bufferingOpacity?.setValue(0);
+    if (!!autoplay) {
+      this.togglePaused(false, false)
+    }
   };
 
   onBuffer = ({ isBuffering }) => {
@@ -920,7 +927,7 @@ export default class Video extends React.Component {
     this.updateVideoProgress();
     if (this.state.showPoster){
       this.setState({showPoster: false});
-    }  
+    }
     if (this.videoRef) {
       this.videoRef['seek'](time);
     }
@@ -1012,6 +1019,8 @@ export default class Video extends React.Component {
         onBack,
         goToPreviousLesson,
         goToNextLesson,
+        startTime,
+        endTime,
         disableNext,
         disablePrevious,
         styles: {
@@ -1134,7 +1143,8 @@ export default class Video extends React.Component {
                                   rel: 1,
                                   playsinline: 1,
                                   enablejsapi: 1,
-                                  start: '${last_watch_position_in_seconds}',
+                                  start: '${startTime || last_watch_position_in_seconds}',
+                                  end: '${endTime}',
                                   controls: 1,
                                   fs: 1,
                                   origin: 'https://www.musora.com',
@@ -1240,7 +1250,7 @@ export default class Video extends React.Component {
                   this.setState({
                     liveEnded: true
                   });
-                  this.props.onEndLive?.();
+                  this.props.onEnd?.();
                 }}
                 onStart={() => {
                   this.props.onStartLive?.();

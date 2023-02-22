@@ -709,10 +709,6 @@ export default class Video extends React.Component {
     }).panHandlers;
   };
 
-  toggleAutoplay = () => {
-    this.props.onEnd?.();
-  };
-
   onProgress = ({ currentTime }) => {
     if (currentTime === undefined) return;
     this.getVideoDimensions();

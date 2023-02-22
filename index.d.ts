@@ -19,12 +19,14 @@ declare module "RNVideoEnhanced" {
 		connection: boolean | null;
 		maxWidth?: number | undefined;
 		content: any;
+		disableNext?: boolean;
+		disablePrevious?: boolean;
+		autoPlay?: boolean;
 		listening?: boolean;
 		showCastingOptions?: boolean;
 		gCasting?: boolean;
 		startTime?: number;
 		endTime?: number;
-		autoplay?: boolean;
 		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;
 		toSupport: () => void;

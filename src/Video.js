@@ -145,10 +145,6 @@ export default class Video extends React.Component {
       this.appleCastingListeners();
       this.googleCastingListeners();
       this.selectQuality(quality || 'Auto');
-      if (this.props?.autoPlay) {
-        this.toggleControls();
-        this.togglePaused();
-      }
     }
     this.stateListener = AppState.addEventListener('change', this.handleAppStateChange);
 
@@ -811,7 +807,7 @@ export default class Video extends React.Component {
     let {
       youtubeId,
       content: { last_watch_position_in_seconds },
-      autoplay,
+      autoPlay,
     } = this.props;
     if (this.videoRef) {
       this.videoRef['seek'](
@@ -830,8 +826,9 @@ export default class Video extends React.Component {
       position: parseFloat(position)
     });
     this.bufferingOpacity?.setValue(0);
-    if (!!autoplay) {
-      this.togglePaused(false, false)
+    if (autoPlay) {
+      this.toggleControls();
+      this.togglePaused(false,false);
     }
   };
 

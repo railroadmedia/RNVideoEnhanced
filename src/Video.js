@@ -813,6 +813,7 @@ export default class Video extends React.Component {
       this.videoRef['seek'](
         cTime || last_watch_position_in_seconds || 0
       );
+      this.props.onPlayerReady?.();
     }
     if (this.webview) {
       this.webview.injectJavaScript(`seekTo(${cTime || last_watch_position_in_seconds || 0})`);

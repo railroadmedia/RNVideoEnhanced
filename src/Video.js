@@ -1234,7 +1234,7 @@ export default class Video extends React.Component {
               >
                 {(audioOnly || showPoster) && (
                   <Image
-                    source={{ uri: thumbnail_url }}
+                    source={{ uri: `https://www.musora.com/musora-cdn/image/${thumbnail_url}` }}
                     style={{
                       width: '100%',
                       height: '100%',

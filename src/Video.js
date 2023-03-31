@@ -1067,7 +1067,7 @@ export default class Video extends React.Component {
                     mixedContentMode='always'
                     startInLoadingState={false}
                     allowsFullscreenVideo={true}
-                    userAgent={'Mozilla (iPad)'}
+                    userAgent={(isTablet && isiOS) ? `Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/ 604.1.21 (KHTML, like Gecko) Version/ 12.0 Mobile/17A6278a Safari/602.1.26` : null}
                     ref={r => (this.webview = r)}
                     allowsInlineMediaPlayback={true}
                     onMessage={this.onWebViewMessage}

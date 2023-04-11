@@ -1094,13 +1094,18 @@ export default class Video extends React.Component {
                     mixedContentMode='always'
                     startInLoadingState={false}
                     allowsFullscreenVideo={true}
-                    userAgent={'Mozilla (iPad)'}
+                    userAgent={(isTablet && isiOS) ? `Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/ 604.1.21 (KHTML, like Gecko) Version/ 12.0 Mobile/17A6278a Safari/602.1.26` : null}
                     ref={r => (this.webview = r)}
                     allowsInlineMediaPlayback={true}
                     onMessage={this.onWebViewMessage}
                     mediaPlaybackRequiresUserAction={false}
                     automaticallyAdjustContentInsets={false}
                     style={styles.webview}
+                    onNavigationStateChange={({ url }) => {
+                      if (url.includes(`www.youtube.com`)) {
+                        this.webview.stopLoading();
+                      }
+                    }}
                     source={{
                       baseUrl: 'https://www.musora.com',
                       html: `
@@ -1146,6 +1151,7 @@ export default class Video extends React.Component {
                                   controls: 1,
                                   fs: 1,
                                   origin: 'https://www.musora.com',
+                                  modestbranding: 1
                                 },
                                 events: {
                                   'onReady': onPlayerReady,
@@ -1266,7 +1272,7 @@ export default class Video extends React.Component {
               >
                 {(audioOnly || showPoster) && (
                   <Image
-                    source={{ uri: thumbnail_url }}
+                    source={{ uri: `https://www.musora.com/musora-cdn/image/${thumbnail_url}` }}
                     style={{
                       width: '100%',
                       height: '100%',

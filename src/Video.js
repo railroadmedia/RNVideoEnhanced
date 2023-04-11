@@ -1074,6 +1074,11 @@ export default class Video extends React.Component {
                     mediaPlaybackRequiresUserAction={false}
                     automaticallyAdjustContentInsets={false}
                     style={styles.webview}
+                    onNavigationStateChange={({ url }) => {
+                      if (url.includes(`www.youtube.com`)) {
+                        this.webview.stopLoading();
+                      }
+                    }}
                     source={{
                       baseUrl: 'https://www.musora.com',
                       html: `
@@ -1118,6 +1123,7 @@ export default class Video extends React.Component {
                                   controls: 1,
                                   fs: 1,
                                   origin: 'https://www.musora.com',
+                                  modestbranding: 1
                                 },
                                 events: {
                                   'onReady': onPlayerReady,

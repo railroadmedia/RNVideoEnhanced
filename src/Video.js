@@ -49,6 +49,8 @@ const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
 const isTablet = DeviceInfo.isTablet();
 const iconStyle = { width: 40, height: 40, fill: 'white' };
+let playPressedFirstTime = true;
+let secondsPlayed = 0;
 let cTime,
   videoW,
   videoH,
@@ -154,6 +156,8 @@ export default class Video extends React.Component {
 
   componentWillUnmount() {
     this.updateVideoProgress();
+    playPressedFirstTime = true;
+    secondsPlayed = 0;
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
@@ -199,6 +203,8 @@ export default class Video extends React.Component {
     const { props: { content, youtubeId } } = this;
     if (prevProps.content.id !== content.id) {
       cTime = content.last_watch_position_in_seconds;
+      playPressedFirstTime = true;
+      secondsPlayed = 0;
       this.setState({
         mp3s: getMP3Array(content),
       });
@@ -208,11 +214,12 @@ export default class Video extends React.Component {
   }
 
   handleAppStateChange = (state) => {
+    console.log(state);
     if (state === 'background') {
       this.setState({ paused: true });
+      this.updateVideoProgress();
     }
     this.toggleControls(0);
-    this.updateVideoProgress();
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
@@ -434,13 +441,16 @@ export default class Video extends React.Component {
       youtubeId,
       content: { vimeo_video_id, id, length_in_seconds }
     } = this.props;
+    console.log('updateVideoProgress', secondsPlayed);
     this.props.onUpdateVideoProgress?.(
       youtubeId || vimeo_video_id,
       id,
       length_in_seconds,
       cTime,
+      secondsPlayed,
       youtubeId ? 'youtube' : 'vimeo'
     );
+    secondsPlayed = 0;
   };
 
   orientationListener = (o, force) => {
@@ -707,6 +717,9 @@ export default class Video extends React.Component {
 
   onProgress = ({ currentTime }) => {
     if (currentTime === undefined) return;
+    if (currentTime > 0) {
+      secondsPlayed++;
+    }
     this.getVideoDimensions();
     cTime = currentTime;
     let {
@@ -734,11 +747,14 @@ export default class Video extends React.Component {
   };
 
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
-    this.updateVideoProgress();
     this.setState(({ paused, showPoster }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
       if (showPoster) {
         showPoster = false;
+      }
+      if (!paused && playPressedFirstTime) {
+        this.updateVideoProgress();
+        playPressedFirstTime = false;
       }
       if (gCasting && !skipActionOnCasting)
         if (paused) this.googleCastClient?.pause();
@@ -909,7 +925,6 @@ export default class Video extends React.Component {
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
 
-    this.updateVideoProgress();
     if (this.state.showPoster){
       this.setState({showPoster: false});
     }  

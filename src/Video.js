@@ -51,6 +51,8 @@ const isTablet = DeviceInfo.isTablet();
 const iconStyle = { width: 40, height: 40, fill: 'white' };
 let playPressedFirstTime = true;
 let secondsPlayed = 0;
+let startPlaySec = 0;
+let endPlaySec = 0;
 let cTime,
   videoW,
   videoH,
@@ -214,7 +216,6 @@ export default class Video extends React.Component {
   }
 
   handleAppStateChange = (state) => {
-    console.log(state);
     if (state === 'background') {
       this.setState({ paused: true });
       this.updateVideoProgress();
@@ -441,7 +442,7 @@ export default class Video extends React.Component {
       youtubeId,
       content: { vimeo_video_id, id, length_in_seconds }
     } = this.props;
-    console.log('updateVideoProgress', secondsPlayed);
+
     this.props.onUpdateVideoProgress?.(
       youtubeId || vimeo_video_id,
       id,
@@ -973,8 +974,15 @@ export default class Video extends React.Component {
         break;
       case 'playerStateChange':
         cTime = parsedData.data?.target?.playerInfo?.currentTime;
-        if (parsedData.data?.data === 2 || parsedData.data?.data === 1) { // 2=paused 1=playing
-          this.updateVideoProgress();
+        if (parsedData.data?.data === 1) {
+          startPlaySec = cTime;
+        }
+        if (parsedData.data?.data === 2) {
+          endPlaySec = cTime;
+          secondsPlayed = endPlaySec - startPlaySec;
+          if (secondsPlayed > 0) {
+            this.updateVideoProgress();
+          } 
         }
         break;
       case 'back':
@@ -1158,6 +1166,8 @@ export default class Video extends React.Component {
                             function seekTo(time) {
                               player.seekTo(time, true);
                             }
+
+                        
                           </script>
                         </body>
                       </html>

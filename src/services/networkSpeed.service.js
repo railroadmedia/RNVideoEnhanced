@@ -1,9 +1,9 @@
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 export default {
   getNetworkSpeed: function (url, offPath, signal) {
     const unlink = () =>
-      RNFetchBlob.fs.unlink(`${offPath}/networkSpeed`).catch(() => {});
+      ReactNativeBlobUtil.fs.unlink(`${offPath}/networkSpeed`).catch(() => {});
     return new Promise((res, rej) => {
       let start, end;
       try {
@@ -11,7 +11,7 @@ export default {
           task.cancel(err => {});
           res({ aborted: true });
         });
-        let task = RNFetchBlob.config({
+        let task = ReactNativeBlobUtil.config({
           path: `${offPath}/networkSpeed`
         }).fetch('GET', url);
         task

@@ -16,7 +16,7 @@ Customizable video player, based on [react-native-video](https://github.com/reac
 * Video controls are customised for musora mobile apps
 * Fullscreen functionality on iOS is modified in order to use the custom video controls
 ## Libraries used
-* [rn-fetch-blob](https://github.com/joltup/rn-fetch-blob)
+* [react-native-blob-util](https://github.com/RonRadtke/react-native-blob-util)
 * [react-native-video](https://github.com/bogdan-vol/react-native-video)
 * [react-native-airplay-ios](https://github.com/gazedash/react-native-airplay-ios)
 * [react-native-device-info](https://github.com/react-native-community/react-native-device-info)

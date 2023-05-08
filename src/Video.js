@@ -21,7 +21,7 @@ import {
 
 import { SafeAreaView, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import WebView from 'react-native-webview';
 import DeviceInfo from 'react-native-device-info';
 import Orientation, { LANDSCAPE_LEFT, LANDSCAPE_RIGHT, PORTRAIT } from 'react-native-orientation-locker';
@@ -96,8 +96,8 @@ export default class Video extends React.Component {
       windowWidth < windowHeight ? windowHeight : windowWidth;
     offlinePath =
       props.offlinePath || isiOS
-        ? RNFetchBlob.fs.dirs.LibraryDir
-        : RNFetchBlob.fs.dirs.DocumentDir;
+        ? ReactNativeBlobUtil.fs.dirs.LibraryDir
+        : ReactNativeBlobUtil.fs.dirs.DocumentDir;
     this.getVideoDimensions();
 
     if (!props.youtubeId) this.bufferingOpacity = new Animated.Value(1);

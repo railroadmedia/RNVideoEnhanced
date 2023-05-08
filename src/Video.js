@@ -216,7 +216,7 @@ export default class Video extends React.Component {
   }
 
   handleAppStateChange = (state) => {
-    if (state === 'background') {
+    if (state === 'background' && !this.props.youtubeId) {
       this.setState({ paused: true });
       this.updateVideoProgress();
     }
@@ -661,6 +661,7 @@ export default class Video extends React.Component {
         }
         delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
+        cTime = this.seekTime;
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(
@@ -676,6 +677,7 @@ export default class Video extends React.Component {
         }
         delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
+        cTime = this.seekTime;
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(
@@ -899,6 +901,7 @@ export default class Video extends React.Component {
       isTablet ? this.state.tabOrientation : 'PORT',
       !isTablet
     );
+
     this.updateVideoProgress();
     this.setState({ paused: true }, () => {
       cTime = 0;

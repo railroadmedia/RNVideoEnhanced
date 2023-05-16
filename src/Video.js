@@ -801,21 +801,7 @@ export default class Video extends React.Component {
 
   handleYtBack = () => {
     this.webview.injectJavaScript(`(function() {
-      let currentTime = ${cTime || 0};
-      try {
-        if(window.video)
-          if(window.video.getCurrentTime) currentTime = window.video.getCurrentTime();
-          else currentTime = window.video.currentTime || 0;
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          eventType: 'back',
-          currentTime
-        }));
-      } catch(e) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          eventType: 'back',
-          currentTime
-        }));
-      }
+      onBack();
     })()`);
   };
 
@@ -828,9 +814,6 @@ export default class Video extends React.Component {
       this.videoRef['seek'](
         cTime || last_watch_position_in_seconds || 0
       );
-    }
-    if (this.webview) {
-      this.webview.injectJavaScript(`seekTo(${cTime || last_watch_position_in_seconds || 0})`);
     }
     if (!isiOS || youtubeId)
       this.onProgress({
@@ -908,9 +891,6 @@ export default class Video extends React.Component {
       if (this.videoRef) {
         this.videoRef['seek'](0);
       }
-      if (this.webview) {
-        this.webview.injectJavaScript(`seekTo(0)`);
-      }
       if (!isiOS) this.onProgress({ currentTime: 0 });
       this.googleCastClient?.seek({ position: 0 });
       this.animateControls(0);
@@ -934,9 +914,6 @@ export default class Video extends React.Component {
     }  
     if (this.videoRef) {
       this.videoRef['seek'](time);
-    }
-    if (this.webview) {
-      this.webview.injectJavaScript(`seekTo(${time})`);
     }
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     this.googleCastClient?.seek({ position: parseFloat(time || 0) });
@@ -990,8 +967,11 @@ export default class Video extends React.Component {
         break;
       case 'back':
         cTime = parsedData.currentTime;
+        endPlaySec = cTime;
+        secondsPlayed = endPlaySec - startPlaySec;
         this.handleBack();
         break;
+
     }
   };
 
@@ -1166,10 +1146,9 @@ export default class Video extends React.Component {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
                             }
 
-                            function seekTo(time) {
-                              player.seekTo(time, true);
+                            function onBack() {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'back', currentTime: player.getCurrentTime()}))
                             }
-
                         
                           </script>
                         </body>

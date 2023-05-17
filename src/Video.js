@@ -216,9 +216,13 @@ export default class Video extends React.Component {
   }
 
   handleAppStateChange = (state) => {
-    if (state === 'background' && !this.props.youtubeId) {
-      this.setState({ paused: true });
-      this.updateVideoProgress();
+    if (
+      state === (isiOS ? "inactive" : "background") &&
+      !this.props.youtubeId
+    ) {
+      this.setState({ paused: true }, () => {
+        this.updateVideoProgress();
+      });
     }
     this.toggleControls(0);
     clearTimeout(this.controlsTO);

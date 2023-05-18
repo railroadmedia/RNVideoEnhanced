@@ -36,6 +36,7 @@ declare module "RNVideoEnhanced" {
 			id: number,
 			lengthInSec: number,
 			currentTime: number,
+			secondsPlayed: number,
 			mediaCategory: string
 		) => void;
 		onPlayerReady?: () => void;

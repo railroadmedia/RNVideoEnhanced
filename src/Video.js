@@ -49,6 +49,10 @@ const pixR = PixelRatio.get();
 const isiOS = Platform.OS === 'ios';
 const isTablet = DeviceInfo.isTablet();
 const iconStyle = { width: 40, height: 40, fill: 'white' };
+let playPressedFirstTime = true;
+let secondsPlayed = 0;
+let startPlaySec = 0;
+let endPlaySec = 0;
 let cTime,
   videoW,
   videoH,
@@ -154,6 +158,8 @@ export default class Video extends React.Component {
 
   componentWillUnmount() {
     this.updateVideoProgress();
+    playPressedFirstTime = true;
+    secondsPlayed = 0;
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
@@ -199,6 +205,8 @@ export default class Video extends React.Component {
     const { props: { content, youtubeId } } = this;
     if (prevProps.content.id !== content.id) {
       cTime = content.last_watch_position_in_seconds;
+      playPressedFirstTime = true;
+      secondsPlayed = 0;
       this.setState({
         mp3s: getMP3Array(content),
       });
@@ -208,11 +216,15 @@ export default class Video extends React.Component {
   }
 
   handleAppStateChange = (state) => {
-    if (state === 'background') {
-      this.setState({ paused: true });
+    if (
+      state === (isiOS ? "inactive" : "background") &&
+      !this.props.youtubeId
+    ) {
+      this.setState({ paused: true }, () => {
+        this.updateVideoProgress();
+      });
     }
     this.toggleControls(0);
-    this.updateVideoProgress();
     clearTimeout(this.controlsTO);
     clearTimeout(this.bufferingTO);
     clearTimeout(this.bufferingTooLongTO);
@@ -434,13 +446,16 @@ export default class Video extends React.Component {
       youtubeId,
       content: { vimeo_video_id, id, length_in_seconds }
     } = this.props;
+
     this.props.onUpdateVideoProgress?.(
       youtubeId || vimeo_video_id,
       id,
       length_in_seconds,
       cTime,
+      secondsPlayed,
       youtubeId ? 'youtube' : 'vimeo'
     );
+    secondsPlayed = 0;
   };
 
   orientationListener = (o, force) => {
@@ -650,6 +665,7 @@ export default class Video extends React.Component {
         }
         delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
+        cTime = this.seekTime;
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(
@@ -665,6 +681,7 @@ export default class Video extends React.Component {
         }
         delete this.videoPlayStatus;
         this.onSeek(this.seekTime);
+        cTime = this.seekTime;
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(
@@ -707,6 +724,9 @@ export default class Video extends React.Component {
 
   onProgress = ({ currentTime }) => {
     if (currentTime === undefined) return;
+    if (currentTime > 0) {
+      secondsPlayed++;
+    }
     this.getVideoDimensions();
     cTime = currentTime;
     let {
@@ -734,11 +754,14 @@ export default class Video extends React.Component {
   };
 
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
-    this.updateVideoProgress();
     this.setState(({ paused, showPoster }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
       if (showPoster) {
         showPoster = false;
+      }
+      if (!paused && playPressedFirstTime) {
+        this.updateVideoProgress();
+        playPressedFirstTime = false;
       }
       if (gCasting && !skipActionOnCasting)
         if (paused) this.googleCastClient?.pause();
@@ -782,21 +805,7 @@ export default class Video extends React.Component {
 
   handleYtBack = () => {
     this.webview.injectJavaScript(`(function() {
-      let currentTime = ${cTime || 0};
-      try {
-        if(window.video)
-          if(window.video.getCurrentTime) currentTime = window.video.getCurrentTime();
-          else currentTime = window.video.currentTime || 0;
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          eventType: 'back',
-          currentTime
-        }));
-      } catch(e) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          eventType: 'back',
-          currentTime
-        }));
-      }
+      onBack();
     })()`);
   };
 
@@ -809,9 +818,6 @@ export default class Video extends React.Component {
       this.videoRef['seek'](
         cTime || last_watch_position_in_seconds || 0
       );
-    }
-    if (this.webview) {
-      this.webview.injectJavaScript(`seekTo(${cTime || last_watch_position_in_seconds || 0})`);
     }
     if (!isiOS || youtubeId)
       this.onProgress({
@@ -882,14 +888,12 @@ export default class Video extends React.Component {
       isTablet ? this.state.tabOrientation : 'PORT',
       !isTablet
     );
+
     this.updateVideoProgress();
     this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {
         this.videoRef['seek'](0);
-      }
-      if (this.webview) {
-        this.webview.injectJavaScript(`seekTo(0)`);
       }
       if (!isiOS) this.onProgress({ currentTime: 0 });
       this.googleCastClient?.seek({ position: 0 });
@@ -909,15 +913,11 @@ export default class Video extends React.Component {
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
 
-    this.updateVideoProgress();
     if (this.state.showPoster){
       this.setState({showPoster: false});
     }  
     if (this.videoRef) {
       this.videoRef['seek'](time);
-    }
-    if (this.webview) {
-      this.webview.injectJavaScript(`seekTo(${time})`);
     }
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     this.googleCastClient?.seek({ position: parseFloat(time || 0) });
@@ -958,14 +958,24 @@ export default class Video extends React.Component {
         break;
       case 'playerStateChange':
         cTime = parsedData.data?.target?.playerInfo?.currentTime;
-        if (parsedData.data?.data === 2 || parsedData.data?.data === 1) { // 2=paused 1=playing
-          this.updateVideoProgress();
+        if (parsedData.data?.data === 1) {
+          startPlaySec = cTime;
+        }
+        if (parsedData.data?.data === 2) {
+          endPlaySec = cTime;
+          secondsPlayed = endPlaySec - startPlaySec;
+          if (secondsPlayed > 0) {
+            this.updateVideoProgress();
+          } 
         }
         break;
       case 'back':
         cTime = parsedData.currentTime;
+        endPlaySec = cTime;
+        secondsPlayed = endPlaySec - startPlaySec;
         this.handleBack();
         break;
+
     }
   };
 
@@ -1140,9 +1150,10 @@ export default class Video extends React.Component {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
                             }
 
-                            function seekTo(time) {
-                              player.seekTo(time, true);
+                            function onBack() {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'back', currentTime: player.getCurrentTime()}))
                             }
+                        
                           </script>
                         </body>
                       </html>

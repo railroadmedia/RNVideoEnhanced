@@ -164,7 +164,6 @@ export default class Video extends React.Component {
     playPressedFirstTime = true;
     secondsPlayed = 0;
     clearTimeout(this.controlsTO);
-    // clearTimeout(this.bufferingTooLongTO);
     if (!this.props.youtubeId) {
       this.setState({ paused: true });
     }
@@ -228,7 +227,6 @@ export default class Video extends React.Component {
     }
     this.toggleControls(0);
     clearTimeout(this.controlsTO);
-    // clearTimeout(this.bufferingTooLongTO);
   };
 
   appleCastingListeners() {
@@ -831,13 +829,11 @@ export default class Video extends React.Component {
   };
 
   onBuffer = ({ isBuffering }) => {
-    // clearTimeout(this.bufferingTooLongTO);
     if (!aCasting && !gCasting && !this.props.youtubeId) {
-      this.setState({buffering: this.state.paused ? 0 : isBuffering, showPoster: this.state.paused?true:isBuffering})
-      // this.bufferingTooLongTO = setTimeout(
-      //   () => this.selectQuality('Auto'),
-      //   10000
-      // );
+      this.setState({ 
+        buffering: this.state.paused ? 0 : isBuffering, 
+        showPoster: this.state.paused ? true : isBuffering
+      })
     }
   }
 

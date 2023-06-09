@@ -548,6 +548,7 @@ export default class Video extends React.Component {
         content: { signal }
       }
     } = this;
+
     if (q === 'Auto') {
       recommendedVideoQuality = vpe.find(v => !v?.file.includes('http'));
       if (!recommendedVideoQuality) {
@@ -831,8 +832,7 @@ export default class Video extends React.Component {
   onBuffer = ({ isBuffering }) => {
     if (!aCasting && !gCasting && !this.props.youtubeId) {
       this.setState({ 
-        buffering: this.state.paused ? 0 : isBuffering, 
-        showPoster: this.state.paused ? true : isBuffering
+        buffering: this.state.paused ? 0 : isBuffering,
       })
     }
   }
@@ -840,7 +840,7 @@ export default class Video extends React.Component {
   onSaveSettings = (rate, qual, captions) =>
     this.setState({ rate, captionsHidden: captions === 'Off' }, () =>
       this.selectQuality(qual, true).then(vpe =>
-        this.setState({ vpe, buffering: true, showPoster: true }, () => {
+        this.setState({ vpe, buffering: true }, () => {
           quality = qual;
           this.props.onQualityChange?.(qual);
           if (gCasting) this.gCastMedia();
@@ -1296,7 +1296,7 @@ export default class Video extends React.Component {
                     />
                   </View>
                 )}
-                {showControls && !buffering && (
+                {showControls && (
                   <>
                     <Animated.View
                       style={{
@@ -1859,7 +1859,7 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     overflow: 'hidden',
-    backgroundColor: 'transparent',
+    backgroundColor: 'black',
     alignItems: 'stretch',
   },
   videoContainerFullscreen: {

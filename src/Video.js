@@ -932,6 +932,9 @@ export default class Video extends React.Component {
     if (this.videoRef) {
       this.videoRef['seek'](time);
     }
+    if (this.webview) {
+      this.webview.injectJavaScript(`seekTo(${time})`);
+    }
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     this.googleCastClient?.seek({ position: parseFloat(time || 0) });
   };
@@ -1184,6 +1187,10 @@ export default class Video extends React.Component {
 
                             function playVideo() {
                               player.playVideo();
+                            }
+
+                            function seekTo(time) {
+                              player.seekTo(time, true);
                             }
                         
                           </script>

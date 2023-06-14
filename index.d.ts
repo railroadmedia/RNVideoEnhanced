@@ -18,6 +18,7 @@ declare module "RNVideoEnhanced" {
 		};
 		connection: boolean | null;
 		maxWidth?: number | undefined;
+		orientationIsLocked?: boolean;
 		content: any;
 		disableNext?: boolean;
 		disablePrevious?: boolean;

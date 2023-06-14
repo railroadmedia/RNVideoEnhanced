@@ -459,6 +459,9 @@ export default class Video extends React.Component {
   };
 
   orientationListener = (o, force) => {
+    if (this.props.orientationIsLocked) {
+      return;
+    }
     orientation = o.includes('UPSIDE') ? PORTRAIT: o;
 
     if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) return;

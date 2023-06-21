@@ -84,11 +84,12 @@ export default class Video extends React.Component {
 
   constructor(props) {
     super(props);
+
     connection = !!props.connection;
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
-    cTime = props.startTime || props.content.last_watch_position_in_seconds;
+    cTime = props.autoPlay ? props.startTime ? props.startTime : 0 : props.last_watch_position_in_seconds
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
@@ -202,9 +203,9 @@ export default class Video extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    const { props: { content, youtubeId } } = this;
+    const { props: { content, youtubeId, autoPlay } } = this;
     if (prevProps.content.id !== content.id) {
-      cTime = content.last_watch_position_in_seconds;
+      cTime = autoPlay ? 0 : content.last_watch_position_in_seconds;
       playPressedFirstTime = true;
       secondsPlayed = 0;
       this.setState({
@@ -820,18 +821,20 @@ export default class Video extends React.Component {
       youtubeId,
       content: { last_watch_position_in_seconds },
       autoPlay,
+      startTime,
     } = this.props;
+
     if (this.videoRef) {
       this.videoRef['seek'](
-        cTime || last_watch_position_in_seconds || 0
+        autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0
       );
       this.props.onPlayerReady?.();
     }
     if (!isiOS || youtubeId)
       this.onProgress({
-        currentTime: cTime || last_watch_position_in_seconds
+        currentTime: autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0
       });
-    let position = cTime || last_watch_position_in_seconds || 0;
+    let position = autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0;
     this.googleCastClient?.seek({
       position: parseFloat(position)
     });
@@ -1037,6 +1040,7 @@ export default class Video extends React.Component {
         endTime,
         disableNext,
         disablePrevious,
+        autoPlay,
         styles: {
           alert,
           settings,
@@ -1162,7 +1166,7 @@ export default class Video extends React.Component {
                                   rel: 1,
                                   playsinline: 1,
                                   enablejsapi: 1,
-                                  start: '${startTime || last_watch_position_in_seconds}',
+                                  start: '${autoPlay ? startTime ? startTime : 0 : last_watch_position_in_seconds}',
                                   end: '${endTime}',
                                   controls: 1,
                                   fs: 1,

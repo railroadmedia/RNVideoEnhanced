@@ -85,11 +85,12 @@ export default class Video extends React.Component {
 
   constructor(props) {
     super(props);
+
     connection = !!props.connection;
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
-    cTime = props.content.last_watch_position_in_seconds;
+    cTime = props.autoPlay ? props.startTime ? props.startTime : 0 : props.last_watch_position_in_seconds
     orientation = props.orientation || orientation;
     windowWidth = Math.round(Dimensions.get('screen').width);
     windowHeight = Math.round(Dimensions.get('screen').height);
@@ -203,9 +204,9 @@ export default class Video extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    const { props: { content, youtubeId } } = this;
+    const { props: { content, youtubeId, autoPlay } } = this;
     if (prevProps.content.id !== content.id) {
-      cTime = content.last_watch_position_in_seconds;
+      cTime = autoPlay ? 0 : content.last_watch_position_in_seconds;
       playPressedFirstTime = true;
       secondsPlayed = 0;
       this.setState({
@@ -458,6 +459,9 @@ export default class Video extends React.Component {
   };
 
   orientationListener = (o, force) => {
+    if (this.props.orientationIsLocked) {
+      return;
+    }
     orientation = o.includes('UPSIDE') ? PORTRAIT: o;
 
     if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) return;
@@ -597,7 +601,7 @@ export default class Video extends React.Component {
   updateBlueX = () => {
     if (!this.translateBlueX) return;
     const { length_in_seconds } = this.props.content;
-    const translate = cTime !== undefined && !!length_in_seconds ? (cTime * videoW) / length_in_seconds - videoW : 0;
+    const translate = cTime !== undefined && !!length_in_seconds ? (cTime * videoW) / length_in_seconds - videoW : -videoW;
     if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
   }
 
@@ -731,10 +735,14 @@ export default class Video extends React.Component {
     cTime = currentTime;
     let {
       content: { length_in_seconds },
+      endTime
     } = this.props;
     if (this.seeking) return;
     this.updateBlueX();
     if (this.videoTimer) this.videoTimer.setProgress(currentTime);
+    if (!!endTime && endTime === parseInt(currentTime)) {
+      this.props.onEnd?.();
+    }
     if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
   };
 
@@ -811,22 +819,30 @@ export default class Video extends React.Component {
   onLoad = () => {
     let {
       youtubeId,
-      content: { last_watch_position_in_seconds }
+      content: { last_watch_position_in_seconds },
+      autoPlay,
+      startTime,
     } = this.props;
+
     if (this.videoRef) {
       this.videoRef['seek'](
-        cTime || last_watch_position_in_seconds || 0
+        autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0
       );
+      this.props.onPlayerReady?.();
     }
     if (!isiOS || youtubeId)
       this.onProgress({
-        currentTime: cTime || last_watch_position_in_seconds
+        currentTime: autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0
       });
-    let position = cTime || last_watch_position_in_seconds || 0;
+    let position = autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0;
     this.googleCastClient?.seek({
       position: parseFloat(position)
     });
     this.setState({ buffering: false });
+    if (autoPlay) {
+      this.toggleControls();
+      this.togglePaused(false,false);
+    }
   };
 
   onBuffer = ({ isBuffering }) => {
@@ -883,6 +899,10 @@ export default class Video extends React.Component {
     );
 
     this.updateVideoProgress();
+    if (this.props?.autoPlay) {
+      this.props?.goToNextLesson?.();
+      return;
+    }
     this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {
@@ -911,6 +931,9 @@ export default class Video extends React.Component {
     }
     if (this.videoRef) {
       this.videoRef['seek'](time);
+    }
+    if (this.webview) {
+      this.webview.injectJavaScript(`seekTo(${time})`);
     }
     if (!isiOS || gCasting) this.onProgress({ currentTime: time });
     this.googleCastClient?.seek({ position: parseFloat(time || 0) });
@@ -947,6 +970,9 @@ export default class Video extends React.Component {
 
     switch (parsedData.eventType) {
       case 'playerReady':
+        if (this.props?.autoPlay && this.webview) {
+          this.webview.injectJavaScript(`playVideo()`);
+        }
         this.props.onPlayerReady?.();
         break;
       case 'playerStateChange':
@@ -960,6 +986,9 @@ export default class Video extends React.Component {
           if (secondsPlayed > 0) {
             this.updateVideoProgress();
           } 
+        }
+        if (parsedData.data?.data === 0) {
+          this.onEnd();
         }
         break;
       case 'back':
@@ -1002,6 +1031,11 @@ export default class Video extends React.Component {
         onBack,
         goToPreviousLesson,
         goToNextLesson,
+        startTime,
+        endTime,
+        disableNext,
+        disablePrevious,
+        autoPlay,
         styles: {
           alert,
           settings,
@@ -1029,9 +1063,13 @@ export default class Video extends React.Component {
     } = this;
 
     const hasPrevious =
-      previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
+      disablePrevious !== undefined
+        ? !disablePrevious
+        : previous_lesson && (previous_lesson.id || previous_lesson.mobile_app_url);
     const hasNext =
-      next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
+      disableNext !== undefined
+        ? !disableNext
+        : next_lesson && (next_lesson.id || next_lesson.mobile_app_url);
     const audioOnly = contentType === 'play-along' && listening;
     const minsToStart = this.minsToStart(liveData?.live_event_start_time_in_timezone || 0)
     const showTimer = (!!liveData && !liveData?.isLive) || this.state.liveEnded || (!!liveData && liveData?.isLive && minsToStart < 15 && minsToStart > 0);
@@ -1122,7 +1160,8 @@ export default class Video extends React.Component {
                                   rel: 1,
                                   playsinline: 1,
                                   enablejsapi: 1,
-                                  start: '${last_watch_position_in_seconds}',
+                                  start: '${autoPlay ? startTime ? startTime : 0 : last_watch_position_in_seconds}',
+                                  end: '${endTime}',
                                   controls: 1,
                                   fs: 1,
                                   origin: 'https://www.musora.com',
@@ -1145,6 +1184,14 @@ export default class Video extends React.Component {
 
                             function onBack() {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'back', currentTime: player.getCurrentTime()}))
+                            }
+
+                            function playVideo() {
+                              player.playVideo();
+                            }
+
+                            function seekTo(time) {
+                              player.seekTo(time, true);
                             }
                         
                           </script>
@@ -1226,7 +1273,7 @@ export default class Video extends React.Component {
                   this.setState({
                     liveEnded: true
                   });
-                  this.props.onEndLive?.();
+                  this.props.onEnd?.();
                 }}
                 onStart={() => {
                   this.props.onStartLive?.();

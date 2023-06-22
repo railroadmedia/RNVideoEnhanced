@@ -10,13 +10,13 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "react-native-airplay-ios": "https://github.com/railroadmedia/react-native-airplay-ios#musora-app",
+    "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#musora-app",
     "react-native-android-keyboard-adjust": "^1.2.0",
-    "react-native-device-info": "^8.4.9",
-    "react-native-google-cast": "^4.2.4",
-    "react-native-home-indicator": "https://github.com/railroadmedia/react-native-home-indicator#musora-app",
-    "react-native-orientation-locker": "https://github.com/railroadmedia/react-native-orientation-locker#musora-app",
-    "react-native-svg": "^12.1.1",
+    "react-native-device-info": "^8.7.1",
+    "react-native-google-cast": "^4.0.1",
+    "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#musora-app",
+    "react-native-orientation-locker": "github:railroadmedia/react-native-orientation-locker#musora-app",
+    "react-native-svg": "^12.1.0",
     "react-native-video": "https://github.com/railroadmedia/react-native-video.git",
     "react-native-webview": "https://github.com/railroadmedia/react-native-webview.git",
     "react-native-blob-util": "^0.17.3",
@@ -24,18 +24,18 @@
     "react-native-linear-gradient": "^2.5.6"
   },
   "devDependencies": {
-    "react": "18.2.0",
-    "react-native": "0.71.4",
-    "@babel/core": "^7.20.0",
-    "@babel/runtime": "^7.20.0",
-    "@react-native-community/eslint-config": "^3.2.0",
-    "@types/react": "^18.0.24",
+    "react": "17.0.2",
+    "react-native": "0.67.2",
+    "@babel/core": "^7.8.4",
+    "@babel/runtime": "^7.8.4",
+    "@react-native-community/eslint-config": "^1.1.0",
+    "@types/react": "^17.0.0",
     "@types/react-native": "^0.66.15",
-    "babel-jest": "^29.2.1",
-    "eslint": "^8.36.0",
-    "jest": "^29.2.1",
-    "metro-react-native-babel-preset": "^0.73.8",
-    "react-test-renderer": "^18.0.0"
+    "babel-jest": "^25.1.0",
+    "eslint": "^6.5.1",
+    "jest": "^25.1.0",
+    "metro-react-native-babel-preset": "^0.59.0",
+    "react-test-renderer": "^17.0.0"
   },
   "jest": {
     "preset": "react-native"

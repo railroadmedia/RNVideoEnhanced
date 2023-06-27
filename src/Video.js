@@ -80,6 +80,7 @@ export default class Video extends React.Component {
     showControls: true,
     repeat: false,
     liveEnded: false,
+    buffering: true,
   };
 
   constructor(props) {
@@ -101,7 +102,9 @@ export default class Video extends React.Component {
         : ReactNativeBlobUtil.fs.dirs.DocumentDir;
     this.getVideoDimensions();
 
-    if (!props.youtubeId) this.bufferingOpacity = new Animated.Value(1);
+    if (!props.youtubeId) {
+      this.state.buffering = true;
+    }
     this.translateControls = new Animated.Value(0);
     this.translateBlueX = new Animated.Value(-videoW + 11);
     this.translateBlueX.setOffset(-11); // Offsets half the timer dot width so its centered.
@@ -162,8 +165,6 @@ export default class Video extends React.Component {
     playPressedFirstTime = true;
     secondsPlayed = 0;
     clearTimeout(this.controlsTO);
-    clearTimeout(this.bufferingTO);
-    clearTimeout(this.bufferingTooLongTO);
     if (!this.props.youtubeId) {
       this.setState({ paused: true });
     }
@@ -227,8 +228,6 @@ export default class Video extends React.Component {
     }
     this.toggleControls(0);
     clearTimeout(this.controlsTO);
-    clearTimeout(this.bufferingTO);
-    clearTimeout(this.bufferingTooLongTO);
   };
 
   appleCastingListeners() {
@@ -553,6 +552,7 @@ export default class Video extends React.Component {
         content: { signal }
       }
     } = this;
+
     if (q === 'Auto') {
       recommendedVideoQuality = vpe.find(v => !v?.file.includes('http'));
       if (!recommendedVideoQuality) {
@@ -838,7 +838,7 @@ export default class Video extends React.Component {
     this.googleCastClient?.seek({
       position: parseFloat(position)
     });
-    this.bufferingOpacity?.setValue(0);
+    this.setState({ buffering: false });
     if (autoPlay) {
       this.toggleControls();
       this.togglePaused(false,false);
@@ -846,23 +846,17 @@ export default class Video extends React.Component {
   };
 
   onBuffer = ({ isBuffering }) => {
-    clearTimeout(this.bufferingTO);
-    clearTimeout(this.bufferingTooLongTO);
     if (!aCasting && !gCasting && !this.props.youtubeId) {
-      this.bufferingTO = setTimeout(
-        () => this.bufferingOpacity.setValue(this.state.paused ? 0 : isBuffering), 3000
-      );
-      this.bufferingTooLongTO = setTimeout(
-        () => this.selectQuality('Auto'),
-        10000
-      );
+      this.setState({ 
+        buffering: isBuffering,
+      })
     }
   }
 
   onSaveSettings = (rate, qual, captions) =>
     this.setState({ rate, captionsHidden: captions === 'Off' }, () =>
       this.selectQuality(qual, true).then(vpe =>
-        this.setState({ vpe }, () => {
+        this.setState({ vpe, buffering: true }, () => {
           quality = qual;
           this.props.onQualityChange?.(qual);
           if (gCasting) this.gCastMedia();
@@ -1023,7 +1017,8 @@ export default class Video extends React.Component {
         captionsHidden,
         videoRefreshing,
         tabOrientation,
-        showPoster
+        showPoster,
+        buffering
       },
       props: {
         type,
@@ -1056,7 +1051,6 @@ export default class Video extends React.Component {
         },
         content: {
           captions,
-          buffering,
           length_in_seconds,
           thumbnail_url,
           last_watch_position_in_seconds,
@@ -1317,12 +1311,11 @@ export default class Video extends React.Component {
                         : 0.5
                   }}
                 />
-                {!!this.bufferingOpacity && (
+                {!!buffering && !paused && (
                   <Animated.View
                     style={{
                       position: 'absolute',
                       alignSelf: 'center',
-                      opacity: this.bufferingOpacity
                     }}
                   >
                     <ActivityIndicator
@@ -1913,7 +1906,7 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     overflow: 'hidden',
-    backgroundColor: 'transparent',
+    backgroundColor: 'black',
     alignItems: 'stretch',
   },
   videoContainerFullscreen: {

@@ -848,7 +848,7 @@ export default class Video extends React.Component {
   onBuffer = ({ isBuffering }) => {
     if (!aCasting && !gCasting && !this.props.youtubeId) {
       this.setState({ 
-        buffering: this.state.paused ? 0 : isBuffering,
+        buffering: isBuffering,
       })
     }
   }
@@ -1311,7 +1311,7 @@ export default class Video extends React.Component {
                         : 0.5
                   }}
                 />
-                {!!buffering && (
+                {!!buffering && !paused && (
                   <Animated.View
                     style={{
                       position: 'absolute',

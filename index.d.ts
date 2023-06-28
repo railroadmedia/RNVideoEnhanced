@@ -28,6 +28,7 @@ declare module "RNVideoEnhanced" {
 		gCasting?: boolean;
 		startTime?: number;
 		endTime?: number;
+		quality?: number;
 		onGCastingChange?: (casting: boolean) => void;
 		onRefresh: () => void;
 		toSupport: () => void;

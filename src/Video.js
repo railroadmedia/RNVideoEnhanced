@@ -1082,7 +1082,7 @@ export default class Video extends React.Component {
         {!maxWidth && (
           <View style={styles.maxWidth} />
         )}
-        {(!!liveData || (!!youtubeId && !fullscreen) ) && onBack && (
+        {(!!liveData || (!!youtubeId && !audioOnly && !fullscreen) ) && onBack && (
           <TouchableOpacity
             style={{ zIndex:5, padding: 10, alignSelf: 'flex-start' }}
             onPress={!!liveData ? this.handleLiveBack : this.handleYtBack}
@@ -1098,7 +1098,7 @@ export default class Video extends React.Component {
           <View style={this.getVideoDimensions()}>
             {!videoRefreshing && (
               <>
-                {!!youtubeId ? (
+                {!!youtubeId && !audioOnly ? (
                   <WebView
                     originWhitelist={['*']}
                     androidLayerType={"hardware"}
@@ -1280,7 +1280,7 @@ export default class Video extends React.Component {
                 }}
               />
             )}
-            {!youtubeId && (
+            {(!youtubeId || audioOnly) && (
               <TouchableOpacity
                 onPress={this.toggleControls}
                 style={{
@@ -1480,7 +1480,7 @@ export default class Video extends React.Component {
                         })}
                       </TouchableOpacity>
                     )}
-                    {contentType === 'play-along' && (
+                    {audioOnly && (
                       <TouchableOpacity
                         style={styles.mp3TogglerContainer}
                         onPress={() => this.mp3ActionModal.toggleModal()}
@@ -1693,7 +1693,7 @@ export default class Video extends React.Component {
             showCaptions={!!captions && !aCasting}
           />
         )}
-        {contentType === 'play-along' && (
+        {audioOnly && (
           <ActionModal
             modalStyle={{ width: '80%' }}
             ref={r => (this.mp3ActionModal = r)}

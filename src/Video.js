@@ -893,16 +893,15 @@ export default class Video extends React.Component {
   };
 
   onEnd = () => {
-    this.orientationListener(
-      isTablet ? this.state.tabOrientation : 'PORT',
-      !isTablet
-    );
-
     this.updateVideoProgress();
     if (this.props?.autoPlay) {
       this.props?.goToNextLesson?.();
       return;
     }
+    this.orientationListener(
+      isTablet ? this.state.tabOrientation : 'PORT',
+      !isTablet
+    );
     this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {

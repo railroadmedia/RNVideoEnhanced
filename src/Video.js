@@ -59,7 +59,6 @@ let cTime,
   aCasting,
   gCasting,
   aListener,
-  connection,
   orientation,
   gListenerMP,
   gListenerSE,
@@ -86,7 +85,6 @@ export default class Video extends React.Component {
   constructor(props) {
     super(props);
 
-    connection = !!props.connection;
     quality = props.quality || quality;
     aCasting = props.aCasting || aCasting;
     gCasting = props.gCasting || gCasting;
@@ -204,7 +202,10 @@ export default class Video extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    const { props: { content, youtubeId, autoPlay } } = this;
+    const { props: { content, youtubeId, autoPlay, connection } } = this;
+    if (prevProps.connection !== connection && !connection) {
+      this.selectQuality('Auto')
+    }
     if (prevProps.content.id !== content.id) {
       cTime = autoPlay ? 0 : content.last_watch_position_in_seconds;
       playPressedFirstTime = true;
@@ -583,7 +584,7 @@ export default class Video extends React.Component {
                 : v.file,
             actualH:
               q === 'Auto' && v.height === 'Auto'
-                ? recommendedVideoQuality.height
+                ? recommendedVideoQuality.actualH || recommendedVideoQuality.height
                 : v.height === 'Auto'
                 ? v.actualH
                 : v.height
@@ -955,7 +956,7 @@ export default class Video extends React.Component {
           this.props.onQualityChange?.(vpe[vpe.length - 2].height);
         }
       );
-    } else if (code === -1009 && !connection) {
+    } else if (code === -1009 && !this.props.connection) {
       this.onLoad();
     } else {
       this.alert.toggle(
@@ -1036,6 +1037,7 @@ export default class Video extends React.Component {
         disableNext,
         disablePrevious,
         autoPlay,
+        connection,
         styles: {
           alert,
           settings,
@@ -1679,7 +1681,7 @@ export default class Video extends React.Component {
           )}
         </SafeAreaInsetsContext.Consumer>
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
-        {!youtubeId && (
+        {!youtubeId && connection && (
           <VideoSettings
             qualities={vpe.sort((i, j) =>
               i.height < j.height || j.height === 'Auto' ? 1 : -1

@@ -124,7 +124,7 @@ export default class Video extends React.Component {
       this.state.mp3s[0].selected = true;
     } catch (e) {}
   }
-
+  
   componentDidMount() {
     if (!this.props.youtubeId) {
       if (gCasting) {
@@ -601,7 +601,7 @@ export default class Video extends React.Component {
   getVideoDimensions = () => {
     let width, height;
     let {
-      props: { maxWidth, live },
+      props: { maxWidth, live, type },
       state: { fullscreen }
     } = this;
 
@@ -619,7 +619,12 @@ export default class Video extends React.Component {
           height: "100%",
         };
       }
-      return { width: "100%", aspectRatio: 16 / 9 };
+      if (type === 'audio') {
+        width = 640;
+        height = 360;
+      } else {
+        return { width: "100%", aspectRatio: 16 / 9 };
+      }
     } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
@@ -964,6 +969,9 @@ export default class Video extends React.Component {
       case 'playerReady':
         if (this.props?.autoPlay && this.webview) {
           this.webview.injectJavaScript(`playVideo()`);
+        } 
+        if (this.webview && this.props.content.type === 'play-along') {
+          this.webview.injectJavaScript(`seekTo(${cTime})`);
         }
         this.props.onPlayerReady?.();
         break;
@@ -1606,7 +1614,7 @@ export default class Video extends React.Component {
         <SafeAreaInsetsContext.Consumer>
           {(insets) => (
             <>
-              {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
+              {(!youtubeId || audioOnly) && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
                 <Animated.View
                   onLayout={({
                     nativeEvent: {

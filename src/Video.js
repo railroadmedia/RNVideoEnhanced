@@ -982,9 +982,6 @@ export default class Video extends React.Component {
       case 'playerReady':
         if (this.props?.autoPlay && this.webview) {
           this.webview.injectJavaScript(`playVideo()`);
-        } 
-        if (this.webview && this.props.content.type === 'play-along') {
-          this.webview.injectJavaScript(`seekTo(${cTime})`);
         }
         this.props.onPlayerReady?.();
         break;

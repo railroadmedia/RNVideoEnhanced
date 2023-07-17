@@ -80,6 +80,7 @@ export default class Video extends React.Component {
     repeat: false,
     liveEnded: false,
     buffering: true,
+    mp3Length: 0,
   };
 
   constructor(props) {
@@ -122,7 +123,7 @@ export default class Video extends React.Component {
       this.state.mp3s[0].selected = true;
     } catch (e) {}
   }
-
+  
   componentDidMount() {
     if (!this.props.youtubeId) {
       if (gCasting) {
@@ -326,7 +327,7 @@ export default class Video extends React.Component {
 
   gCastMedia = async (time) => {
     let {
-      state: { vpe, mp3s, rate, captionsHidden },
+      state: { vpe, mp3s, rate, captionsHidden, mp3Length },
       props: {
         type,
         content: {
@@ -381,7 +382,7 @@ export default class Video extends React.Component {
                 title: title || '',
                 subtitle: description || '',
               },
-              streamDuration: parseFloat(length_in_seconds)
+              streamDuration: parseFloat(mp3Length || length_in_seconds)
             },
             playbackRate: parseFloat(rate),
             startTime: Math.round(time || cTime || 0)
@@ -444,7 +445,7 @@ export default class Video extends React.Component {
     this.props.onUpdateVideoProgress?.(
       youtubeId || vimeo_video_id,
       id,
-      length_in_seconds,
+      this.state.mp3Length || length_in_seconds,
       cTime,
       secondsPlayed,
       youtubeId ? 'youtube' : 'vimeo'
@@ -487,8 +488,14 @@ export default class Video extends React.Component {
     let fs = (!isTablet || this.props.live) ? isLandscape : force ? !this.state.fullscreen : this.state.fullscreen;
 
     this.props.onOrientationChange?.(o);
-    if (parseInt(cTime) !== this.props.content.length_in_seconds) {
-      this.onProgress({ currentTime: cTime || 0 });
+    if (this.state.mp3Length > 0) {
+      if (parseInt(cTime) !== this.state.mp3Length) {
+        this.onProgress({ currentTime: cTime || 0 });
+      }
+    } else {
+      if (parseInt(cTime) !== this.props.content.length_in_seconds) {
+        this.onProgress({ currentTime: cTime || 0 });
+      }
     }
     this.props.onFullscreen?.(fs);
 
@@ -595,14 +602,16 @@ export default class Video extends React.Component {
   updateBlueX = () => {
     if (!this.translateBlueX) return;
     const { length_in_seconds } = this.props.content;
-    const translate = cTime !== undefined && !!length_in_seconds ? (cTime * videoW) / length_in_seconds - videoW : -videoW;
+    const { mp3Length } = this.state;
+    const secLength = mp3Length > 0 ? mp3Length : length_in_seconds;
+    const translate = cTime !== undefined && !!secLength ? (cTime * videoW) / secLength - videoW : -videoW;
     if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
   }
 
   getVideoDimensions = () => {
     let width, height;
     let {
-      props: { maxWidth, live },
+      props: { maxWidth, live, type },
       state: { fullscreen }
     } = this;
 
@@ -620,7 +629,12 @@ export default class Video extends React.Component {
           height: "100%",
         };
       }
-      return { width: "100%", aspectRatio: 16 / 9 };
+      if (type === 'audio') {
+        width = 640;
+        height = 360;
+      } else {
+        return { width: "100%", aspectRatio: 16 / 9 };
+      }
     } else ({ width, height } = this.props.content.video_playback_endpoints[0]);
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
@@ -691,7 +705,7 @@ export default class Video extends React.Component {
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(this.controlsTO);
         this.animateControls(0);
-        this.seekTime = (locationX / videoW) * this.props.content.length_in_seconds;
+        this.seekTime = (locationX / videoW) * (this.state.mp3Length > 0 ? this.state.mp3Length : this.props.content.length_in_seconds);
         if (!isiOS) {
           this.onProgress({ currentTime: this.seekTime });
         }
@@ -708,7 +722,7 @@ export default class Video extends React.Component {
         let translate = moveX - videoW;
         if (moveX < 0 || translate > 0) return;
         this.translateBlueX.setValue(translate);
-        this.seekTime = (moveX / videoW) * this.props.content.length_in_seconds;
+        this.seekTime = (moveX / videoW) * (this.state.mp3Length > 0 ? this.state.mp3Length : this.props.content.length_in_seconds);
         if (!isiOS) {
           this.onProgress({ currentTime: this.seekTime });
         }
@@ -737,7 +751,8 @@ export default class Video extends React.Component {
     if (!!endTime && endTime === parseInt(currentTime)) {
       this.props.onEnd?.();
     }
-    if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
+    if (this.state.mp3Length > 0 && this.state.mp3Length === parseInt(currentTime)) this.onEnd();
+    else if (length_in_seconds && length_in_seconds === parseInt(currentTime)) this.onEnd();
   };
 
   toggleControls = controlsOverwrite => {
@@ -810,14 +825,17 @@ export default class Video extends React.Component {
     })()`);
   };
 
-  onLoad = () => {
+  onLoad = (videoDetails) => {
     let {
       youtubeId,
       content: { last_watch_position_in_seconds },
       autoPlay,
       startTime,
+      listening
     } = this.props;
-
+    if (youtubeId && listening) {
+      this.setState({ mp3Length: videoDetails.duration });
+    }
     if (this.videoRef) {
       this.videoRef['seek'](
         autoPlay ? startTime || 0 : cTime || last_watch_position_in_seconds || 0
@@ -915,7 +933,7 @@ export default class Video extends React.Component {
 
   onSeek = time => {
     time = parseFloat(time);
-    let fullLength = parseFloat(this.props.content.length_in_seconds);
+    let fullLength = parseFloat(this.state.mp3Length || this.props.content.length_in_seconds);
     if (time < 0) time = 0;
     else if (time > fullLength) time = fullLength;
 
@@ -1011,7 +1029,8 @@ export default class Video extends React.Component {
         videoRefreshing,
         tabOrientation,
         showPoster,
-        buffering
+        buffering,
+        mp3Length,
       },
       props: {
         type,
@@ -1076,7 +1095,7 @@ export default class Video extends React.Component {
         {!maxWidth && (
           <View style={styles.maxWidth} />
         )}
-        {(!!liveData || (!!youtubeId && !fullscreen) ) && onBack && (
+        {(!!liveData || (!!youtubeId && !audioOnly && !fullscreen) ) && onBack && (
           <TouchableOpacity
             style={{ zIndex:5, padding: 10, alignSelf: 'flex-start' }}
             onPress={!!liveData ? this.handleLiveBack : this.handleYtBack}
@@ -1092,7 +1111,7 @@ export default class Video extends React.Component {
           <View style={this.getVideoDimensions()}>
             {!videoRefreshing && (
               <>
-                {!!youtubeId ? (
+                {!!youtubeId && !audioOnly ? (
                   <WebView
                     originWhitelist={['*']}
                     androidLayerType={"hardware"}
@@ -1274,7 +1293,7 @@ export default class Video extends React.Component {
                 }}
               />
             )}
-            {!youtubeId && (
+            {(!youtubeId || audioOnly) && (
               <TouchableOpacity
                 onPress={this.toggleControls}
                 style={{
@@ -1422,7 +1441,7 @@ export default class Video extends React.Component {
                     <VideoTimer
                       live={live}
                       styles={timerText}
-                      length_in_seconds={length_in_seconds}
+                      length_in_seconds={mp3Length || length_in_seconds}
                       ref={r => (this.videoTimer = r)}
                       maxFontMultiplier={this.props.maxFontMultiplier}
                     />
@@ -1474,7 +1493,7 @@ export default class Video extends React.Component {
                         })}
                       </TouchableOpacity>
                     )}
-                    {contentType === 'play-along' && (
+                    {audioOnly && (
                       <TouchableOpacity
                         style={styles.mp3TogglerContainer}
                         onPress={() => this.mp3ActionModal.toggleModal()}
@@ -1608,7 +1627,7 @@ export default class Video extends React.Component {
         <SafeAreaInsetsContext.Consumer>
           {(insets) => (
             <>
-              {!youtubeId && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
+              {(!youtubeId || audioOnly) && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
                 <Animated.View
                   onLayout={({
                     nativeEvent: {
@@ -1687,7 +1706,7 @@ export default class Video extends React.Component {
             showCaptions={!!captions && !aCasting}
           />
         )}
-        {contentType === 'play-along' && (
+        {audioOnly && (
           <ActionModal
             modalStyle={{ width: '80%' }}
             ref={r => (this.mp3ActionModal = r)}

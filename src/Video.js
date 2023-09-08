@@ -58,11 +58,7 @@ let cTime,
   videoH,
   aCasting,
   gCasting,
-  aListener,
   orientation,
-  gListenerMP,
-  gListenerSE,
-  gListenerSS,
   windowWidth,
   offlinePath,
   windowHeight,
@@ -130,13 +126,14 @@ export default class Video extends React.Component {
         this.setState({ showControls: false });
       }
       this.googleCastSession?.getCurrentCastSession().then(client => {
-        client = client?.client;
         if (!client) {
           return (gCasting = false);
         } else {
           gCasting = true;
         }
-        client.getMediaStatus().then(st => {
+        client = client?.client;
+
+        client?.getMediaStatus().then(st => {
           this.setState({ showControls: true, paused: false });
           this.googleCastClient = client;
           this.gCastProgressListener();
@@ -310,7 +307,7 @@ export default class Video extends React.Component {
   };
 
   gCastProgressListener = () => {
-    gListenerMP = this.googleCastClient?.onMediaProgressUpdated(progress => {
+    this.googleCastClient?.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
       let { length_in_seconds } = this.props.content;
@@ -400,7 +397,7 @@ export default class Video extends React.Component {
           this.googleCastClient?.loadMedia(castOptions);
           if (captions)
             if (!captionsHidden) {
-              let gCastStartedListener = this.googleCastClient?.onMediaPlaybackStarted(
+              this.googleCastClient?.onMediaPlaybackStarted(
                 s => {
                   if (s.playerState === 'playing') {
                     this.googleCastClient?.setActiveTrackIds([1]);
@@ -410,18 +407,14 @@ export default class Video extends React.Component {
                       edgeColor: '#000000FF',
                       fontFamily: 'OpenSans'
                     });
-                    gCastStartedListener.remove();
-                    gCastStartedListener = undefined;
                   }
                 }
               );
             } else {
-              let gCastStartedListener = this.googleCastClient?.onMediaPlaybackStarted(
+              this.googleCastClient?.onMediaPlaybackStarted(
                 s => {
                   if (s.playerState === 'playing') {
                     this.googleCastClient?.setActiveTrackIds([]);
-                    gCastStartedListener.remove();
-                    gCastStartedListener = undefined;
                   }
                 }
               );
@@ -725,9 +718,6 @@ export default class Video extends React.Component {
         if (!isiOS) {
           this.onProgress({ currentTime: this.seekTime });
         }
-        this.googleCastClient?.seek({
-          position: parseFloat(this.seekTime)
-        });
         this.videoTimer.setProgress(this.seekTime);
       }
     }).panHandlers;

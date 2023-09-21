@@ -58,11 +58,7 @@ let cTime,
   videoH,
   aCasting,
   gCasting,
-  aListener,
   orientation,
-  gListenerMP,
-  gListenerSE,
-  gListenerSS,
   windowWidth,
   offlinePath,
   windowHeight,
@@ -130,13 +126,14 @@ export default class Video extends React.Component {
         this.setState({ showControls: false });
       }
       this.googleCastSession?.getCurrentCastSession().then(client => {
-        client = client?.client;
         if (!client) {
           return (gCasting = false);
         } else {
           gCasting = true;
         }
-        client.getMediaStatus().then(st => {
+        client = client?.client;
+
+        client?.getMediaStatus().then(st => {
           this.setState({ showControls: true, paused: false });
           this.googleCastClient = client;
           this.gCastProgressListener();
@@ -284,41 +281,38 @@ export default class Video extends React.Component {
   }
 
   googleCastingListeners = async () => {
-    gListenerSE?.remove();
-    gListenerSE = undefined;
-    gListenerSE = this.googleCastSession?.onSessionEnding(() => {
+    this.googleCastSession?.onSessionEnding((res) => {
       delete this.googleCastClient;
       gCasting = false;
       this.props.onGCastingChange?.(false);
       this.setState({
         videoRefreshing: false,
-        vpe: this.filterVideosByResolution()
+        vpe: this.filterVideosByResolution(),
+        showPoster: false
       });
-      gListenerMP?.remove();
-      gListenerMP = undefined;
+      this.animateControls(this.state.paused ? 0 : -greaterWidthHeight);
     });
 
-    gListenerSS?.remove();
-    gListenerSS = undefined;
-    gListenerSS = this.googleCastSession?.onSessionStarted(({ client }) => {
+    this.googleCastSession?.onSessionStarted(({ client }) => {
       this.googleCastClient = client;
       this.animateControls(0);
       gCasting = true;
       this.props.onGCastingChange?.(true);
       this.gCastMedia();
       this.gCastProgressListener();
+      this.setState({
+        showPoster: true
+      })
     });
   };
 
   gCastProgressListener = () => {
-    gListenerMP?.remove();
-    gListenerMP = undefined;
-    gListenerMP = this.googleCastClient.onMediaProgressUpdated(progress => {
+    this.googleCastClient?.onMediaProgressUpdated(progress => {
       if (!progress) return;
       progress = Math.round(progress);
       let { length_in_seconds } = this.props.content;
       if (progress === parseInt(length_in_seconds) - 1) {
-        this.googleCastClient.pause();
+        this.googleCastClient?.pause();
         return this.onEnd();
       }
       this.onProgress({ currentTime: progress });
@@ -374,7 +368,9 @@ export default class Video extends React.Component {
             mediaInfo: {
               contentUrl:
                 (type === 'video'
-                  ? this.state.vpe.find(v => v.selected).file
+                  ? !!this.state.vpe.find(v => v.selected)?.originalFile
+                  ? this.state.vpe.find(v => v.selected).originalFile 
+                  : this.state.vpe.find(v => v.selected).file
                   : mp3s.find(mp3 => mp3.selected).value) || '',
               metadata: {
                 type: 'movie',
@@ -401,28 +397,24 @@ export default class Video extends React.Component {
           this.googleCastClient?.loadMedia(castOptions);
           if (captions)
             if (!captionsHidden) {
-              let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
+              this.googleCastClient?.onMediaPlaybackStarted(
                 s => {
                   if (s.playerState === 'playing') {
-                    this.googleCastClient.setActiveTrackIds([1]);
-                    this.googleCastClient.setTextTrackStyle({
+                    this.googleCastClient?.setActiveTrackIds([1]);
+                    this.googleCastClient?.setTextTrackStyle({
                       backgroundColor: '#00000000',
                       edgeType: 'outline',
                       edgeColor: '#000000FF',
                       fontFamily: 'OpenSans'
                     });
-                    gCastStartedListener.remove();
-                    gCastStartedListener = undefined;
                   }
                 }
               );
             } else {
-              let gCastStartedListener = this.googleCastClient.onMediaPlaybackStarted(
+              this.googleCastClient?.onMediaPlaybackStarted(
                 s => {
                   if (s.playerState === 'playing') {
-                    this.googleCastClient.setActiveTrackIds([]);
-                    gCastStartedListener.remove();
-                    gCastStartedListener = undefined;
+                    this.googleCastClient?.setActiveTrackIds([]);
                   }
                 }
               );
@@ -555,17 +547,17 @@ export default class Video extends React.Component {
     } = this;
 
     if (q === 'Auto') {
-      recommendedVideoQuality = vpe?.find(v => !v?.file?.includes('http'));
+      recommendedVideoQuality = vpe.find(v => !v?.file.includes('http'));
       if (!recommendedVideoQuality) {
         let networkSpeed = await networkSpeedService.getNetworkSpeed(
-          vpe[0]?.file,
+          vpe[0].file,
           offlinePath,
           signal
         );
         if (networkSpeed.aborted) return;
         recommendedVideoQuality = Object.create(vpe)
-          ?.sort((i, j) => (i.height < j.height ? 1 : -1))
-          ?.find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
+          .sort((i, j) => (i.height < j.height ? 1 : -1))
+          .find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
       }
     }
     let newVPE = {
@@ -726,9 +718,6 @@ export default class Video extends React.Component {
         if (!isiOS) {
           this.onProgress({ currentTime: this.seekTime });
         }
-        this.googleCastClient?.seek({
-          position: parseFloat(this.seekTime)
-        });
         this.videoTimer.setProgress(this.seekTime);
       }
     }).panHandlers;
@@ -772,7 +761,9 @@ export default class Video extends React.Component {
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
     this.setState(({ paused, showPoster }) => {
       paused = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
-      if (showPoster) {
+      if (gCasting) {
+        showPoster = true;
+      } else if (showPoster) {
         showPoster = false;
       }
       if (!paused && playPressedFirstTime) {
@@ -938,7 +929,9 @@ export default class Video extends React.Component {
     else if (time > fullLength) time = fullLength;
 
     if (this.state.showPoster){
-      this.setState({showPoster: false});
+      this.setState({showPoster: gCasting ? true : false});
+    } else if (gCasting) {
+      this.setState({showPoster: true})
     }
     if (this.videoRef) {
       this.videoRef['seek'](time);

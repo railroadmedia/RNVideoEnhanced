@@ -12,11 +12,11 @@
   "peerDependencies": {
     "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#musora-app",
     "react-native-android-keyboard-adjust": "^1.2.0",
-    "react-native-device-info": "^8.7.1",
+    "react-native-device-info": "^10.9.0",
     "react-native-google-cast": "^4.0.1",
     "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#musora-app",
     "react-native-orientation-locker": "github:railroadmedia/react-native-orientation-locker#musora-app",
-    "react-native-svg": "^12.1.0",
+    "react-native-svg": "^13.13.0",
     "react-native-video": "https://github.com/railroadmedia/react-native-video.git",
     "react-native-webview": "https://github.com/railroadmedia/react-native-webview.git",
     "react-native-blob-util": "^0.17.3",

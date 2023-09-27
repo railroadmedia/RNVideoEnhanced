@@ -157,7 +157,6 @@ export default class Video extends React.Component {
   }
 
   componentWillUnmount() {
-    this.updateVideoProgress();
     playPressedFirstTime = true;
     secondsPlayed = 0;
     clearTimeout(this.controlsTO);

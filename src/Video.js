@@ -194,7 +194,7 @@ export default class Video extends React.Component {
 
   componentDidUpdate(prevProps) {
     const { props: { content, youtubeId, autoPlay, connection } } = this;
-    if (prevProps.connection !== connection && !connection) {
+    if (prevProps.connection !== connection && !connection && !youtubeId) {
       this.selectQuality('Auto')
     }
     if (prevProps.content.id !== content.id) {

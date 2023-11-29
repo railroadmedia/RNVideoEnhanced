@@ -650,7 +650,7 @@ export default class Video extends React.Component {
       !this.props.maxWidth
     ) {
       videoH = Math.round(windowHeight / 2);
-      videoW = Math.round((videoH * greaterVDim) / lowerVDim);
+      return { width: '100%', height: videoH };
     }
     this.updateBlueX();
     return { width: videoW, height: videoH };

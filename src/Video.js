@@ -237,9 +237,9 @@ export default class Video extends React.Component {
             this.animateControls(0);
             aCasting = true;
             this.props.onACastingChange?.(true);
-            let svpe = this.state.vpe.find(v => v.selected);
+            let svpe = this.state.vpe?.find(v => v.selected);
             let networkSpeed = await networkSpeedService.getNetworkSpeed(
-              this.state.vpe[0].file,
+              this.state.vpe[0]?.file,
               offlinePath,
               signal
             );
@@ -248,7 +248,7 @@ export default class Video extends React.Component {
               this.setState({
                 videoRefreshing: false,
                 vpe: [
-                  ...video_playback_endpoints.map(v => ({
+                  ...video_playback_endpoints?.map(v => ({
                     ...v,
                     selected: v.height === svpe.height
                   })),
@@ -257,10 +257,10 @@ export default class Video extends React.Component {
                     selected: svpe.height === 'Auto',
                     actualH: networkSpeed.recommendedVideoQuality,
                     file: Object.create(video_playback_endpoints)
-                      .sort((i, j) => (i.height < j.height ? 1 : -1))
-                      .find(
+                      ?.sort((i, j) => (i.height < j.height ? 1 : -1))
+                      ?.find(
                         v => v.height <= networkSpeed.recommendedVideoQuality
-                      ).file
+                      )?.file
                   }
                 ]
               })
@@ -335,10 +335,10 @@ export default class Video extends React.Component {
         }
       }
     } = this;
-    let svpe = vpe.find(v => v.selected);
+    let svpe = vpe?.find(v => v.selected);
     try {
       let networkSpeed = await networkSpeedService.getNetworkSpeed(
-        vpe[0].file,
+        vpe[0]?.file,
         offlinePath,
         signal
       );
@@ -348,7 +348,7 @@ export default class Video extends React.Component {
           paused: false,
           videoRefreshing: true,
           vpe: [
-            ...video_playback_endpoints.map(v => ({
+            ...video_playback_endpoints?.map(v => ({
               ...v,
               selected: v.height === svpe.height
             })),
@@ -357,9 +357,9 @@ export default class Video extends React.Component {
               selected: svpe.height === 'Auto',
               actualH: networkSpeed.recommendedVideoQuality,
               file: Object.create(video_playback_endpoints)
-                .sort((i, j) => (i.height < j.height ? 1 : -1))
-                .find(v => v.height <= networkSpeed.recommendedVideoQuality)
-                .file
+                ?.sort((i, j) => (i.height < j.height ? 1 : -1))
+                ?.find(v => v.height <= networkSpeed.recommendedVideoQuality)
+                ?.file
             }
           ]
         },
@@ -368,10 +368,10 @@ export default class Video extends React.Component {
             mediaInfo: {
               contentUrl:
                 (type === 'video'
-                  ? !!this.state.vpe.find(v => v.selected)?.originalFile
-                  ? this.state.vpe.find(v => v.selected).originalFile 
-                  : this.state.vpe.find(v => v.selected).file
-                  : mp3s.find(mp3 => mp3.selected).value) || '',
+                  ? !!this.state.vpe?.find(v => v.selected)?.originalFile
+                  ? this.state.vpe?.find(v => v.selected)?.originalFile 
+                  : this.state.vpe?.find(v => v.selected)?.file
+                  : mp3s?.find(mp3 => mp3.selected)?.value) || '',
               metadata: {
                 type: 'movie',
                 studio: 'Drumeo',
@@ -502,35 +502,35 @@ export default class Video extends React.Component {
   };
 
   filterVideosByResolution = () => {
-    let vpe = this.props.content.video_playback_endpoints.map(v => ({
+    let vpe = this.props.content.video_playback_endpoints?.map(v => ({
       ...v
     }));
     if (!aCasting)
-      vpe = vpe.filter(v =>
+      vpe = vpe?.filter(v =>
         windowWidth < windowHeight
           ? v.height <= -~windowWidth * pixR
           : v.height <= -~windowHeight * pixR
       );
     vpe = aCasting
-      ? vpe.map(v => ({
+      ? vpe?.map(v => ({
           ...v,
           selected: v.height === quality
         }))
       : [
-          ...vpe.map(v => ({
+          ...vpe?.map(v => ({
             ...v,
             selected: v.height === quality
           })),
           {
             height: 'Auto',
-            file: vpe[vpe.length - 1].file,
+            file: vpe[vpe.length - 1]?.file,
             actualH: vpe[vpe.length - 1].height,
             selected: quality === 'Auto'
           }
         ];
 
-    if (!vpe.find(v => v.selected))
-      return vpe.map(v => ({
+    if (!vpe?.find(v => v.selected))
+      return vpe?.map(v => ({
         ...v,
         selected: v.height === 720
       }));
@@ -547,10 +547,10 @@ export default class Video extends React.Component {
     } = this;
 
     if (q === 'Auto') {
-      recommendedVideoQuality = vpe.find(v => !v?.file.includes('http'));
+      recommendedVideoQuality = vpe?.find(v => !v?.file.includes('http'));
       if (!recommendedVideoQuality) {
         let networkSpeed = await networkSpeedService.getNetworkSpeed(
-          vpe[0].file,
+          vpe[0]?.file,
           offlinePath,
           signal
         );
@@ -563,17 +563,17 @@ export default class Video extends React.Component {
     let newVPE = {
       videoRefreshing: gCasting,
       vpe: aCasting
-        ? vpe.map(v => ({
+        ? vpe?.map(v => ({
             ...v,
             selected: v.height === q
           }))
-        : vpe.map(v => ({
+        : vpe?.map(v => ({
             ...v,
             selected: v.height === q,
             file:
               q === 'Auto' && v.height === 'Auto'
-                ? recommendedVideoQuality.file
-                : v.file,
+                ? recommendedVideoQuality?.file
+                : v?.file,
             actualH:
               q === 'Auto' && v.height === 'Auto'
                 ? recommendedVideoQuality.actualH || recommendedVideoQuality.height
@@ -582,8 +582,8 @@ export default class Video extends React.Component {
                 : v.height
           }))
     };
-    if (!newVPE.vpe.find(v => v.selected))
-      newVPE.vpe = newVPE.vpe.map(v => ({
+    if (!newVPE.vpe?.find(v => v.selected))
+      newVPE.vpe = newVPE.vpe?.map(v => ({
         ...v,
         selected: v.height === 720
       }));
@@ -947,9 +947,9 @@ export default class Video extends React.Component {
     if (code === -11855) {
       this.setState(
         ({ vpe }) => {
-          let selectedHeight = vpe.find(v => v.selected).height;
+          let selectedHeight = vpe?.find(v => v.selected).height;
           return {
-            vpe: vpe.filter(
+            vpe: vpe?.filter(
               v => v.height < selectedHeight || v.height === 'Auto'
             )
           };
@@ -1230,8 +1230,8 @@ export default class Video extends React.Component {
                     source={{
                       uri:
                         audioOnly
-                          ? mp3s.find(mp3 => mp3.selected).value
-                          : vpe.find(v => v.selected).file
+                          ? mp3s?.find(mp3 => mp3.selected)?.value
+                          : vpe?.find(v => v.selected)?.file
                     }}
                     onExternalPlaybackChange={() => {
                       if (isiOS) AirPlay.startScan();
@@ -1687,7 +1687,7 @@ export default class Video extends React.Component {
         {fullscreen && <PrefersHomeIndicatorAutoHidden />}
         {!youtubeId && connection && (
           <VideoSettings
-            qualities={vpe.sort((i, j) =>
+            qualities={vpe?.sort((i, j) =>
               i.height < j.height || j.height === 'Auto' ? 1 : -1
             )}
             styles={settings}

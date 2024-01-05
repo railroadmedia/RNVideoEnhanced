@@ -524,7 +524,7 @@ export default class Video extends React.Component {
           {
             height: 'Auto',
             file: vpe[vpe.length - 1]?.file,
-            actualH: vpe[vpe.length - 1].height,
+            actualH: vpe[vpe.length - 1]?.height,
             selected: quality === 'Auto'
           }
         ];
@@ -576,10 +576,10 @@ export default class Video extends React.Component {
                 : v?.file,
             actualH:
               q === 'Auto' && v.height === 'Auto'
-                ? recommendedVideoQuality.actualH || recommendedVideoQuality.height
+                ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v.height === 'Auto'
-                ? v.actualH
-                : v.height
+                ? v?.actualH
+                : v?.height
           }))
     };
     if (!newVPE.vpe?.find(v => v.selected))

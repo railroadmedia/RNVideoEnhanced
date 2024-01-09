@@ -73,6 +73,7 @@ export default class Video extends React.Component {
     captionsHidden: true,
     videoRefreshing: false,
     showControls: true,
+    isControlVisible: true,
     repeat: false,
     liveEnded: false,
     buffering: true,
@@ -100,7 +101,7 @@ export default class Video extends React.Component {
     if (!props.youtubeId) {
       this.state.buffering = true;
     }
-    this.translateControls = new Animated.Value(0);
+    this.translateControls = new Animated.Value(1);
     this.translateBlueX = new Animated.Value(-videoW + 11);
     this.translateBlueX.setOffset(-11); // Offsets half the timer dot width so its centered.
 
@@ -218,7 +219,7 @@ export default class Video extends React.Component {
         this.updateVideoProgress();
       });
     }
-    this.toggleControls(0);
+    this.toggleControls(1);
     clearTimeout(this.controlsTO);
   };
 
@@ -234,7 +235,8 @@ export default class Video extends React.Component {
       async ({ devices }) => {
         try {
           if (devices[0].portType === 'AirPlay') {
-            this.animateControls(0);
+            this.setState({ isControlVisible: true });
+            this.animateControls(1);
             aCasting = true;
             this.props.onACastingChange?.(true);
             let svpe = this.state.vpe?.find(v => v.selected);
@@ -288,14 +290,16 @@ export default class Video extends React.Component {
       this.setState({
         videoRefreshing: false,
         vpe: this.filterVideosByResolution(),
-        showPoster: false
+        showPoster: false,
+        isControlVisible: this.state.paused ? true : false,
       });
-      this.animateControls(this.state.paused ? 0 : -greaterWidthHeight);
+      this.animateControls(this.state.paused ? 1 : 0);
     });
 
     this.googleCastSession?.onSessionStarted(({ client }) => {
       this.googleCastClient = client;
-      this.animateControls(0);
+      this.setState({ isControlVisible: true });
+      this.animateControls(1);
       gCasting = true;
       this.props.onGCastingChange?.(true);
       this.gCastMedia();
@@ -672,11 +676,10 @@ export default class Video extends React.Component {
         cTime = this.seekTime;
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
-        this.controlsTO = setTimeout(
-          () =>
-            this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-          3000
-        );
+        this.controlsTO = setTimeout(() => {
+          this.animateControls(this.state.paused ? 1 : 0);
+          this.setState({ isControlVisible: this.state.paused ? true : false });
+        }, 3000);
       },
       onPanResponderTerminate: () => {
         delete this.seeking;
@@ -688,15 +691,15 @@ export default class Video extends React.Component {
         cTime = this.seekTime;
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
-        this.controlsTO = setTimeout(
-          () =>
-            this.animateControls(this.state.paused ? 0 : -greaterWidthHeight),
-          3000
-        );
+        this.controlsTO = setTimeout(() => {
+          this.animateControls(this.state.paused ? 1 : 0);
+          this.setState({ isControlVisible: this.state.paused ? true : false });
+        }, 3000);
       },
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(this.controlsTO);
-        this.animateControls(0);
+        this.setState({ isControlVisible: true })
+        this.animateControls(1);
         this.seekTime = (locationX / videoW) * (this.state.mp3Length > 0 ? this.state.mp3Length : this.props.content.length_in_seconds);
         if (!isiOS) {
           this.onProgress({ currentTime: this.seekTime });
@@ -749,13 +752,18 @@ export default class Video extends React.Component {
     controlsOverwrite = isNaN(controlsOverwrite)
       ? this.translateControls._value
         ? 0
-        : -greaterWidthHeight
+        : 1
       : controlsOverwrite;
-    this.animateControls(controlsOverwrite);
-    this.controlsTO = setTimeout(
-      () => !this.state.paused && this.animateControls(-greaterWidthHeight),
-      3000
-    );
+    this.setState({ isControlVisible: controlsOverwrite ? true : false });
+    this.controlsTO = setTimeout(() => {
+      if (!this.state.paused) {
+        this.setState({ isControlVisible: false });
+        this.animateControls(0);
+      }
+    }, 3000);
+    this.translateControls?.stopAnimation(() => {
+      this.animateControls(controlsOverwrite);
+    });
   };
 
   togglePaused = (pausedOverwrite, skipActionOnCasting) => {
@@ -773,17 +781,17 @@ export default class Video extends React.Component {
       if (gCasting && !skipActionOnCasting)
         if (paused) this.googleCastClient?.pause();
         else this.googleCastClient?.play();
-      this.animateControls(paused ? 0 : -greaterWidthHeight);
+      this.setState({ isControlVisible: paused ? true : false });
+      this.animateControls(paused ? 1 : 0);
       return { paused, showPoster };
     });
   };
 
   animateControls = (toValue, speed) => {
     if ((this.props.content.type === 'play-along' && this.props.listening) || aCasting || gCasting) return;
-    Animated.spring(this.translateControls, {
+    Animated.timing(this.translateControls, {
       toValue,
-      speed: speed || 100,
-      bounciness: 12,
+      duration: speed || 100,
       useNativeDriver: true
     }).start();
     this.translateControls._value = toValue;
@@ -806,7 +814,8 @@ export default class Video extends React.Component {
     if (isTablet) {
       Orientation.unlockAllOrientations();
     }
-    this.animateControls(greaterWidthHeight, 1);
+    this.setState({ isControlVisible: true });
+    this.animateControls(1, 1);
     this.props.onBack?.();
   };
 
@@ -905,14 +914,14 @@ export default class Video extends React.Component {
       isTablet ? this.state.tabOrientation : 'PORT',
       !isTablet
     );
-    this.setState({ paused: true }, () => {
+    this.setState({ paused: true, isControlVisible: true }, () => {
       cTime = 0;
       if (this.videoRef) {
         this.videoRef['seek'](0);
       }
       if (!isiOS) this.onProgress({ currentTime: 0 });
       this.googleCastClient?.seek({ position: 0 });
-      this.animateControls(0);
+      this.animateControls(1);
       this.updateBlueX();
       this.videoTimer?.setProgress(0);
     });
@@ -1024,6 +1033,7 @@ export default class Video extends React.Component {
         showPoster,
         buffering,
         mp3Length,
+        isControlVisible,
       },
       props: {
         type,
@@ -1305,18 +1315,21 @@ export default class Video extends React.Component {
                     }}
                   />
                 )}
-                <Animated.View
-                  style={{
-                    ...styles.constrolsBackground,
-                    opacity:
-                      type === 'video'
-                        ? this.translateControls.interpolate({
-                          outputRange: [0, 0.5],
-                          inputRange: [-videoW, 0]
-                        })
-                        : 0.5
-                  }}
-                />
+                {!!isControlVisible && (
+                  <Animated.View
+                    style={{
+                      ...styles.constrolsBackground,
+                      opacity:
+                        type === 'video'
+                          ? this.translateControls.interpolate({
+                              outputRange: [0, 0.5],
+                              inputRange: [0, 1],
+                            })
+                          : 0.5,
+                    }}
+                  />
+                )}
+                
                 {!!buffering && !paused && (
                   <Animated.View
                     style={{
@@ -1354,19 +1367,14 @@ export default class Video extends React.Component {
                     <Animated.View
                       style={{
                         flexDirection: 'row',
-                        transform: [
-                          {
-                            translateX:
-                              type === 'video' ? this.translateControls : 0
-                          }
-                        ]
+                        opacity: type === 'video' ? this.translateControls : 1,
                       }}
                     >
                       <DoubleTapArea
                         styles={{ width: '43%', alignItems: 'center' }}
                         onDoubleTap={() => this.onSeek((cTime -= 10))}
                       >
-                        {goToPreviousLesson && (
+                        {goToPreviousLesson && isControlVisible && (
                           <TouchableOpacity
                             onPress={goToPreviousLesson}
                             style={{
@@ -1383,22 +1391,22 @@ export default class Video extends React.Component {
                           </TouchableOpacity>
                         )}
                       </DoubleTapArea>
-
-                      <TouchableOpacity
-                        onPress={this.togglePaused}
-                        style={{ flex: 1, alignItems: 'center' }}
-                      >
-                        {svgs[paused ? 'playSvg' : 'pause']({
-                          ...iconStyle,
-                          ...largePlayerControls
-                        })}
-                      </TouchableOpacity>
-
+                      {isControlVisible && (
+                        <TouchableOpacity
+                          onPress={this.togglePaused}
+                          style={{ flex: 1, alignItems: 'center' }}
+                        >
+                          {svgs[paused ? 'playSvg' : 'pause']({
+                            ...iconStyle,
+                            ...largePlayerControls,
+                          })}
+                        </TouchableOpacity>
+                      )}
                       <DoubleTapArea
                         styles={{ width: '43%', alignItems: 'center' }}
                         onDoubleTap={() => this.onSeek((cTime += 10))}
                       >
-                        {goToNextLesson && (
+                        {goToNextLesson && isControlVisible && (
                           <TouchableOpacity
                             onPress={goToNextLesson}
                             style={{
@@ -1423,115 +1431,108 @@ export default class Video extends React.Component {
                     style={{
                       bottom: fullscreen ? 30 + 25 : 11,
                       ...styles.bottomControlsContainer,
-                      transform: [
-                        {
-                          translateX:
-                            type === 'video' ? this.translateControls : 0
-                        }
-                      ]
+                      opacity: type === 'video' ? this.translateControls : 1,
                     }}
                   >
-                    <VideoTimer
-                      live={live}
-                      styles={timerText}
-                      length_in_seconds={mp3Length || length_in_seconds}
-                      ref={r => (this.videoTimer = r)}
-                      maxFontMultiplier={this.props.maxFontMultiplier}
-                    />
-                    {!youtubeId &&
-                      settingsMode !== 'bottom' &&
-                      connection &&
-                      !audioOnly && (
-                        <TouchableOpacity
-                          style={{
-                            padding: 10
-                          }}
-                          underlayColor={'transparent'}
-                          onPress={() => {
-                            this.videoSettings.toggle();
-                          }}
-                        >
-                          {svgs.videoQuality({
-                            width: 20,
-                            height: 20,
-                            fill: 'white',
-                            ...smallPlayerControls
-                          })}
-                        </TouchableOpacity>
-                      )}
-                    {!audioOnly && onFullscreen && (
-                      <TouchableOpacity
-                        style={{ padding: 10 }}
-                        underlayColor={'transparent'}
-                        onPress={() => {
-                          this.orientationListener(
-                            this.state.fullscreen
-                              ? isTablet
-                                ? orientation.includes('PORT')
-                                  ? PORTRAIT
-                                  : orientation
-                                : PORTRAIT
-                              : isTablet
-                                ? tabOrientation
-                                : LANDSCAPE_LEFT,
-                            true
-                          );
-                        }}
-                      >
-                        {svgs.fullScreen({
-                          width: 20,
-                          height: 20,
-                          fill: 'white',
-                          ...smallPlayerControls
-                        })}
-                      </TouchableOpacity>
-                    )}
-                    {audioOnly && (
-                      <TouchableOpacity
-                        style={styles.mp3TogglerContainer}
-                        onPress={() => this.mp3ActionModal.toggleModal()}
-                      >
-                        <Text
-                          maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                          style={{
-                            ...styles.mp3TogglerText,
-                            color: mp3TogglerTextColor || 'white'
-                          }}
-                        >
-                          {this.formatMP3Name(
-                            mp3s.find(mp3 => mp3.selected).key
-                          )}
-                        </Text>
-                        {svgs.arrowDown({
-                          height: 20,
-                          width: 20,
-                          fill: '#ffffff',
-                          ...smallPlayerControls
-                        })}
-                      </TouchableOpacity>
+                    {!!isControlVisible && (
+                      <>
+                        <VideoTimer
+                          live={live}
+                          styles={timerText}
+                          length_in_seconds={mp3Length || length_in_seconds}
+                          ref={r => (this.videoTimer = r)}
+                          maxFontMultiplier={this.props.maxFontMultiplier}
+                        />
+                        {!youtubeId && settingsMode !== 'bottom' && connection && !audioOnly && (
+                          <TouchableOpacity
+                            style={{
+                              padding: 10,
+                            }}
+                            underlayColor={'transparent'}
+                            onPress={() => {
+                              this.videoSettings.toggle();
+                            }}
+                          >
+                            {svgs.videoQuality({
+                              width: 20,
+                              height: 20,
+                              fill: 'white',
+                              ...smallPlayerControls,
+                            })}
+                          </TouchableOpacity>
+                        )}
+                        {!audioOnly && onFullscreen && (
+                          <TouchableOpacity
+                            style={{ padding: 10 }}
+                            underlayColor={'transparent'}
+                            onPress={() => {
+                              this.orientationListener(
+                                this.state.fullscreen
+                                  ? isTablet
+                                    ? orientation.includes('PORT')
+                                      ? PORTRAIT
+                                      : orientation
+                                    : PORTRAIT
+                                  : isTablet
+                                  ? tabOrientation
+                                  : LANDSCAPE_LEFT,
+                                true
+                              );
+                            }}
+                          >
+                            {svgs.fullScreen({
+                              width: 20,
+                              height: 20,
+                              fill: 'white',
+                              ...smallPlayerControls,
+                            })}
+                          </TouchableOpacity>
+                        )}
+                        {audioOnly && (
+                          <TouchableOpacity
+                            style={styles.mp3TogglerContainer}
+                            onPress={() => this.mp3ActionModal.toggleModal()}
+                          >
+                            <Text
+                              maxFontSizeMultiplier={this.props.maxFontMultiplier}
+                              style={{
+                                ...styles.mp3TogglerText,
+                                color: mp3TogglerTextColor || 'white',
+                              }}
+                            >
+                              {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
+                            </Text>
+                            {svgs.arrowDown({
+                              height: 20,
+                              width: 20,
+                              fill: '#ffffff',
+                              ...smallPlayerControls,
+                            })}
+                          </TouchableOpacity>
+                        )}
+                      </>
                     )}
                   </Animated.View>
                 )}
 
                 {onBack && (
-                  <TouchableOpacity
+                  <Animated.View
                     style={{
                       ...styles.backContainer,
-                      transform: [
-                        {
-                          translateX: type === 'video' ? this.translateControls : 0
-                        }
-                      ]
+                      opacity: type === 'video' ? this.translateControls : 1,
                     }}
-                    onPress={this.handleBack}
                   >
-                    {svgs[fullscreen ? 'x' : 'arrowLeft']({
-                      width: 18,
-                      height: 18,
-                      fill: '#ffffff',
-                      ...smallPlayerControls
-                    })}
-                  </TouchableOpacity>
+                    {this.state.isControlVisible && (
+                      <TouchableOpacity style={styles.backContainer} onPress={this.handleBack}>
+                        {svgs[fullscreen ? 'x' : 'arrowLeft']({
+                          width: 18,
+                          height: 18,
+                          fill: '#ffffff',
+                          ...smallPlayerControls,
+                        })}
+                      </TouchableOpacity>
+                    )}
+                  </Animated.View>
                 )}
               </TouchableOpacity>
             )}
@@ -1545,20 +1546,14 @@ export default class Video extends React.Component {
                       height: 34,
                       position: 'absolute',
                       right: settingsMode === 'bottom' ? 98 : 49,
-                      transform: [
-                        {
-                          translateX:
-                            type === 'video' ? this.translateControls : 0
-                        }
-                      ]
+                      opacity: type === 'video' ? this.translateControls : 1,
                     }}
                   >
-                    <TouchableOpacity
-                      activeOpacity={1}
-                      onPress={() => AirPlay.startScan()}
-                    >
-                      <AirPlayButton />
-                    </TouchableOpacity>
+                    {this.state.isControlVisible && (
+                      <TouchableOpacity activeOpacity={1} onPress={() => AirPlay.startScan()}>
+                        <AirPlayButton />
+                      </TouchableOpacity>
+                    )}
                   </Animated.View>
                 )}
                 <Animated.View
@@ -1566,21 +1561,19 @@ export default class Video extends React.Component {
                     top: 7,
                     position: 'absolute',
                     right: settingsMode === 'bottom' ? 49 : 10,
-                    transform: [
-                      {
-                        translateX: type === 'video' ? this.translateControls : 0
-                      }
-                    ]
+                    opacity: type === 'video' ? this.translateControls : 1,
                   }}
                 >
-                  <CastButton
-                    style={{
-                      width: 29,
-                      height: 29,
-                      tintColor: 'white',
-                      ...smallPlayerControls
-                    }}
-                  />
+                  {this.state.isControlVisible && (
+                    <CastButton
+                      style={{
+                        width: 29,
+                        height: 29,
+                        tintColor: 'white',
+                        ...smallPlayerControls,
+                      }}
+                    />
+                  )}
                 </Animated.View>
               </>
             )}
@@ -1593,13 +1586,10 @@ export default class Video extends React.Component {
                     top: 7,
                     right: 10,
                     position: 'absolute',
-                    transform: [
-                      {
-                        translateX: type === 'video' ? this.translateControls : 0
-                      }
-                    ]
+                    opacity: type === 'video' ? this.translateControls : 1,
                   }}
                 >
+                {!!isControlVisible && (
                   <TouchableOpacity
                     underlayColor={'transparent'}
                     onPress={() => {
@@ -1610,9 +1600,10 @@ export default class Video extends React.Component {
                       width: 29,
                       height: 29,
                       fill: 'white',
-                      ...smallPlayerControls
+                      ...smallPlayerControls,
                     })}
                   </TouchableOpacity>
+                )}
                 </Animated.View>
               )}
           </View>
@@ -1668,13 +1659,7 @@ export default class Video extends React.Component {
                         ...styles.timerDot,
                         backgroundColor: timerCursorBackground || 'red',
                         transform: [{ translateX: this.translateBlueX }],
-                        opacity:
-                          type === 'video'
-                            ? this.translateControls.interpolate({
-                              outputRange: [0, 1],
-                              inputRange: [-videoW, 0]
-                            })
-                            : 1
+                        opacity: type === 'video' ? this.translateControls : 1,
                       }}
                     />
                   </View>

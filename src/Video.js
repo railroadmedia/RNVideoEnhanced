@@ -781,9 +781,8 @@ export default class Video extends React.Component {
       if (gCasting && !skipActionOnCasting)
         if (paused) this.googleCastClient?.pause();
         else this.googleCastClient?.play();
-      this.setState({ isControlVisible: paused ? true : false });
       this.animateControls(paused ? 1 : 0);
-      return { paused, showPoster };
+      return { paused, showPoster, isControlVisible: paused ? true : false };
     });
   };
 
@@ -1434,15 +1433,15 @@ export default class Video extends React.Component {
                       opacity: type === 'video' ? this.translateControls : 1,
                     }}
                   >
+                    <VideoTimer
+                      live={live}
+                      styles={timerText}
+                      length_in_seconds={mp3Length || length_in_seconds}
+                      ref={r => (this.videoTimer = r)}
+                      maxFontMultiplier={this.props.maxFontMultiplier}
+                    />
                     {!!isControlVisible && (
                       <>
-                        <VideoTimer
-                          live={live}
-                          styles={timerText}
-                          length_in_seconds={mp3Length || length_in_seconds}
-                          ref={r => (this.videoTimer = r)}
-                          maxFontMultiplier={this.props.maxFontMultiplier}
-                        />
                         {!youtubeId && settingsMode !== 'bottom' && connection && !audioOnly && (
                           <TouchableOpacity
                             style={{
@@ -1522,7 +1521,7 @@ export default class Video extends React.Component {
                       opacity: type === 'video' ? this.translateControls : 1,
                     }}
                   >
-                    {this.state.isControlVisible && (
+                    {isControlVisible && (
                       <TouchableOpacity style={styles.backContainer} onPress={this.handleBack}>
                         {svgs[fullscreen ? 'x' : 'arrowLeft']({
                           width: 18,
@@ -1549,7 +1548,7 @@ export default class Video extends React.Component {
                       opacity: type === 'video' ? this.translateControls : 1,
                     }}
                   >
-                    {this.state.isControlVisible && (
+                    {isControlVisible && (
                       <TouchableOpacity activeOpacity={1} onPress={() => AirPlay.startScan()}>
                         <AirPlayButton />
                       </TouchableOpacity>
@@ -1564,7 +1563,7 @@ export default class Video extends React.Component {
                     opacity: type === 'video' ? this.translateControls : 1,
                   }}
                 >
-                  {this.state.isControlVisible && (
+                  {isControlVisible && (
                     <CastButton
                       style={{
                         width: 29,

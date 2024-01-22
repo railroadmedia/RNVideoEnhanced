@@ -427,7 +427,7 @@ export default class Video extends React.Component {
     }
   };
 
-  updateVideoProgress = async () => {
+  updateVideoProgress = async (apiCallDelay) => {
     let {
       youtubeId,
       content: { vimeo_video_id, id, length_in_seconds }
@@ -439,7 +439,8 @@ export default class Video extends React.Component {
       this.state.mp3Length || length_in_seconds,
       cTime,
       secondsPlayed,
-      youtubeId ? 'youtube' : 'vimeo'
+      youtubeId ? 'youtube' : 'vimeo',
+      apiCallDelay,
     );
     secondsPlayed = 0;
   };

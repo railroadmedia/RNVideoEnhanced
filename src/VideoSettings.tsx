@@ -175,7 +175,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
           }}
         >
           {q.height}
-          {q.height === 'Auto' ? ` ${q.actualH}p` : 'p'}
+          {q.height === 'Auto' ? ` ${q?.actualH}p` : 'p'}
         </Text>
         {q.file &&
           q.file.indexOf('http') < 0 &&
@@ -251,16 +251,16 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                         })}
                         <Text style={styles.actionTextBottom}>
                           Video Quality -{' '}
-                          {quality.height === 'Auto' ? `Auto (${quality.actualH}p)` : `${quality.height}p`}
+                          {quality.height === 'Auto' ? `Auto (${quality?.actualH}p)` : `${quality.height}p`}
                         </Text>
                       </TouchableOpacity>
                     ) : (
                       <SettingsOption
-                        title={quality.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality.height}p`}
+                        title={quality.height === 'Auto' ? `Auto ${quality?.actualH}p` : `${quality.height}p`}
                         iconName={'CameraSvg'}
                         data={qualities}
                         onSelect={(item: IQuality) => this.onQualityChange(item)}
-                        itemTitle={item => (item.height === 'Auto' ? `Auto ${item.actualH}p` : `${item.height}p`)}
+                        itemTitle={item => (item.height === 'Auto' ? `Auto ${item?.actualH}p` : `${item.height}p`)}
                         selected={quality}
                       />
                     )}

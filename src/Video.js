@@ -955,7 +955,7 @@ export default class Video extends React.Component {
     if (code === -11855) {
       this.setState(
         ({ vpe }) => {
-          let selectedHeight = vpe?.find(v => v.selected).height;
+          let selectedHeight = vpe?.find(v => v.selected)?.height;
           return {
             vpe: vpe?.filter(
               v => v.height < selectedHeight || v.height === 'Auto'
@@ -964,7 +964,7 @@ export default class Video extends React.Component {
         },
         () => {
           let { vpe } = this.state;
-          this.props.onQualityChange?.(vpe[vpe.length - 2].height);
+          this.props.onQualityChange?.(vpe[vpe.length - 2]?.height);
         }
       );
     } else if (code === -1009 && !this.props.connection) {

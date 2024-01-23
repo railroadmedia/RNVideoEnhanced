@@ -99,7 +99,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
     delete this.prevQuality;
     let { onSaveSettings } = this.props;
     let { rate, quality, captions } = this.state;
-    if (onSaveSettings) onSaveSettings(rate, quality.height, captions);
+    if (onSaveSettings) onSaveSettings(rate, quality?.height, captions);
   };
 
   onCancel = () => {
@@ -141,9 +141,9 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
     ));
 
   renderQualities = (qualities, quality, propStyle) =>
-    qualities.map(q => (
+    qualities?.map(q => (
       <TouchableOpacity
-        key={q.height}
+        key={q?.height}
         style={[
           styles[this.props.settingsMode === 'bottom' ? 'optionBottom' : 'option'],
           {
@@ -154,7 +154,7 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
       >
         {this.props.settingsMode === 'bottom' && (
           <>
-            {this.state.quality.height === q.height ? (
+            {this.state.quality?.height === q?.height ? (
               check({
                 width: 20,
                 height: 20,
@@ -169,13 +169,13 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
           maxFontSizeMultiplier={this.props.maxFontMultiplier}
           style={{
             color:
-              q.height === quality.height ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
+              q?.height === quality?.height ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
             fontFamily: 'OpenSans',
             marginLeft: this.props.settingsMode === 'bottom' ? 10 : 0
           }}
         >
-          {q.height}
-          {q.height === 'Auto' ? ` ${q?.actualH}p` : 'p'}
+          {q?.height}
+          {q?.height === 'Auto' ? ` ${q?.actualH}p` : 'p'}
         </Text>
         {q.file &&
           q.file.indexOf('http') < 0 &&
@@ -251,16 +251,16 @@ export default class VideoSettings extends React.PureComponent<ISettingsProps, I
                         })}
                         <Text style={styles.actionTextBottom}>
                           Video Quality -{' '}
-                          {quality.height === 'Auto' ? `Auto (${quality?.actualH}p)` : `${quality.height}p`}
+                          {quality?.height === 'Auto' ? `Auto (${quality?.actualH}p)` : `${quality?.height}p`}
                         </Text>
                       </TouchableOpacity>
                     ) : (
                       <SettingsOption
-                        title={quality.height === 'Auto' ? `Auto ${quality?.actualH}p` : `${quality.height}p`}
+                        title={quality?.height === 'Auto' ? `Auto ${quality?.actualH}p` : `${quality?.height}p`}
                         iconName={'CameraSvg'}
                         data={qualities}
                         onSelect={(item: IQuality) => this.onQualityChange(item)}
-                        itemTitle={item => (item.height === 'Auto' ? `Auto ${item?.actualH}p` : `${item.height}p`)}
+                        itemTitle={item => (item?.height === 'Auto' ? `Auto ${item?.actualH}p` : `${item?.height}p`)}
                         selected={quality}
                       />
                     )}

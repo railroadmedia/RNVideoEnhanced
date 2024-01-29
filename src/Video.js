@@ -1627,17 +1627,13 @@ export default class Video extends React.Component {
                     bottom: fullscreen
                       ? windowHeight > videoH
                         ? (windowHeight - videoH) / 2
-                        : 20
+                        : 5
                       : 0,
-                    transform: [
-                      {
-                        translateX: fullscreen
-                          ? type === 'video'
-                            ? this.translateControls
-                            : 0
-                          : 0
-                      }
-                    ]
+                    opacity: fullscreen
+                      ? type === "video"
+                        ? this.translateControls
+                        : 1
+                      : 1,
                   }}
                 >
                   <View

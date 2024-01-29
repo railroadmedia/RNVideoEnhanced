@@ -20,9 +20,9 @@ import {
 import { IS_IOS } from './helper';
 
 interface IActionModal {
-  children: ReactNode;
-  translucentStyle: ViewStyle;
-  modalStyle: ViewStyle;
+  children?: ReactNode;
+  translucentStyle?: ViewStyle;
+  modalStyle?: ViewStyle;
 }
 
 const ActionModal = forwardRef<{ toggleModal: (mState?: boolean) => void }, IActionModal>(

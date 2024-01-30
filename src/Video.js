@@ -234,7 +234,7 @@ export default class Video extends React.Component {
       async ({ devices }) => {
         try {
           if (devices[0].portType === 'AirPlay') {
-            this.setState({ isControlVisible: true });
+            this.updateControlVisibility(true);
             this.animateControls(1);
             aCasting = true;
             this.props.onACastingChange?.(true);
@@ -290,14 +290,14 @@ export default class Video extends React.Component {
         videoRefreshing: false,
         vpe: this.filterVideosByResolution(),
         showPoster: false,
-        isControlVisible: this.state.paused ? true : false,
       });
+      this.updateControlVisibility(this.state.paused ? true : false);
       this.animateControls(this.state.paused ? 1 : 0);
     });
 
     this.googleCastSession?.onSessionStarted(({ client }) => {
       this.googleCastClient = client;
-      this.setState({ isControlVisible: true });
+      this.updateControlVisibility(true);
       this.animateControls(1);
       gCasting = true;
       this.props.onGCastingChange?.(true);
@@ -677,8 +677,8 @@ export default class Video extends React.Component {
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(() => {
+          this.updateControlVisibility(this.state.paused ? true : false);
           this.animateControls(this.state.paused ? 1 : 0);
-          this.setState({ isControlVisible: this.state.paused ? true : false });
         }, 3000);
       },
       onPanResponderTerminate: () => {
@@ -692,13 +692,13 @@ export default class Video extends React.Component {
         this.updateVideoProgress();
         clearTimeout(this.controlsTO);
         this.controlsTO = setTimeout(() => {
+          this.updateControlVisibility(this.state.paused ? true : false);
           this.animateControls(this.state.paused ? 1 : 0);
-          this.setState({ isControlVisible: this.state.paused ? true : false });
         }, 3000);
       },
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(this.controlsTO);
-        this.setState({ isControlVisible: true })
+        this.updateControlVisibility(true);
         this.animateControls(1);
         this.seekTime = (locationX / videoW) * (this.state.mp3Length > 0 ? this.state.mp3Length : this.props.content.length_in_seconds);
         if (!isiOS) {
@@ -754,10 +754,10 @@ export default class Video extends React.Component {
         ? 0
         : 1
       : controlsOverwrite;
-    this.setState({ isControlVisible: controlsOverwrite ? true : false });
+    this.updateControlVisibility(controlsOverwrite ? true : false);
     this.controlsTO = setTimeout(() => {
       if (!this.state.paused) {
-        this.setState({ isControlVisible: false });
+        this.updateControlVisibility(false);
         this.animateControls(0);
       }
     }, 3000);
@@ -782,9 +782,16 @@ export default class Video extends React.Component {
         if (paused) this.googleCastClient?.pause();
         else this.googleCastClient?.play();
       this.animateControls(paused ? 1 : 0);
-      return { paused, showPoster, isControlVisible: paused ? true : false };
-    });
+      return { paused, showPoster };
+    },
+    () => this.updateControlVisibility(this.state.paused ? true : false)
+    );
   };
+
+  updateControlVisibility = (updatedValue) => {
+    if ((this.props.content.type === 'play-along' && this.props.listening) || aCasting || gCasting) return;
+    this.setState({ isControlVisible: updatedValue });
+  }
 
   animateControls = (toValue, speed) => {
     if ((this.props.content.type === 'play-along' && this.props.listening) || aCasting || gCasting) return;
@@ -813,7 +820,7 @@ export default class Video extends React.Component {
     if (isTablet) {
       Orientation.unlockAllOrientations();
     }
-    this.setState({ isControlVisible: true });
+    this.updateControlVisibility(true);
     this.animateControls(1, 1);
     this.props.onBack?.();
   };
@@ -913,13 +920,14 @@ export default class Video extends React.Component {
       isTablet ? this.state.tabOrientation : 'PORT',
       !isTablet
     );
-    this.setState({ paused: true, isControlVisible: true }, () => {
+    this.setState({ paused: true }, () => {
       cTime = 0;
       if (this.videoRef) {
         this.videoRef['seek'](0);
       }
       if (!isiOS) this.onProgress({ currentTime: 0 });
       this.googleCastClient?.seek({ position: 0 });
+      this.updateControlVisibility(true);
       this.animateControls(1);
       this.updateBlueX();
       this.videoTimer?.setProgress(0);

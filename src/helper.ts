@@ -51,6 +51,19 @@ export const formatTimer = (seconds: number): IFormattedTime => {
   };
 };
 
+export const formatVideoTime = (seconds: number): string => {
+  if (seconds < 1) {
+    return '0:00';
+  }
+  let h = Math.trunc(seconds / 3600);
+  let m: number | string = Math.trunc((seconds - h * 3600) / 60);
+  let s: number | string = Math.trunc(seconds - m * 60 - h * 3600);
+
+  s = s < 10 ? `0${s}` : `${s}`;
+  m = m < 10 ? (h ? `0${m}` : `${m}`) : `${m}`;
+  return h ? `${h}:${m}:${s}` : `${m}:${s}`;
+};
+
 export const IS_IOS = Platform.OS === 'ios';
 export const PIX_R = PixelRatio.get();
 export const IS_TABLET = DeviceInfo.isTablet();

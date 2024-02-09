@@ -604,7 +604,7 @@ export default class Video extends React.Component {
     if (!isNaN(translate) && isFinite(translate)) this.translateBlueX.setValue(translate);
   }
 
-  getVideoDimensions = () => {
+  getVideoDimensions = (inset) => {
     let width, height;
     let {
       props: { maxWidth, live, type },
@@ -635,11 +635,15 @@ export default class Video extends React.Component {
     let greaterVDim = width < height ? height : width,
       lowerVDim = width < height ? width : height;
 
+    if (fullscreen && isiOS && inset) {
+      this.insets = inset;
+    }
+
     videoW = fullscreen
-      ? (windowHeight * width) / height
+      ? ((isiOS ? windowHeight - (this?.insets?.bottom || 0) : windowHeight) * width) / height
       : maxWidth || windowWidth;
     videoH = fullscreen
-      ? windowHeight
+      ? (isiOS ? windowHeight - (this?.insets?.bottom || 0) : windowHeight)
       : ((maxWidth || windowWidth) / width) * height;
 
     if (videoW > windowWidth) {
@@ -1117,35 +1121,47 @@ export default class Video extends React.Component {
             })}
           </TouchableOpacity>
         )}
-        <View style={[styles.videoContainer, fullscreen ? styles.videoContainerFullscreen : {}]}>
-          <View style={this.getVideoDimensions()}>
-            {!videoRefreshing && (
-              <>
-                {!!youtubeId && !audioOnly ? (
-                  <WebView
-                    originWhitelist={['*']}
-                    androidLayerType={"hardware"}
-                    scalesPageToFit={true}
-                    javaScriptEnabled={true}
-                    domStorageEnabled={false}
-                    mixedContentMode='always'
-                    startInLoadingState={false}
-                    allowsFullscreenVideo={true}
-                    userAgent={(isTablet && isiOS) ? `Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/ 604.1.21 (KHTML, like Gecko) Version/ 12.0 Mobile/17A6278a Safari/602.1.26` : null}
-                    ref={r => (this.webview = r)}
-                    allowsInlineMediaPlayback={true}
-                    onMessage={this.onWebViewMessage}
-                    mediaPlaybackRequiresUserAction={false}
-                    automaticallyAdjustContentInsets={false}
-                    style={styles.webview}
-                    onNavigationStateChange={({ url }) => {
-                      if (url.includes(`www.youtube.com`)) {
-                        this.webview.stopLoading();
-                      }
-                    }}
-                    source={{
-                      baseUrl: 'https://www.musora.com',
-                      html: `
+        <SafeAreaInsetsContext.Consumer>
+          {(insets) => (
+            <>
+              <View
+                style={[
+                  styles.videoContainer,
+                  fullscreen ? styles.videoContainerFullscreen : {},
+                ]}
+              >
+                <View style={this.getVideoDimensions(insets)}>
+                  {!videoRefreshing && (
+                    <>
+                      {!!youtubeId && !audioOnly ? (
+                        <WebView
+                          originWhitelist={["*"]}
+                          androidLayerType={"hardware"}
+                          scalesPageToFit={true}
+                          javaScriptEnabled={true}
+                          domStorageEnabled={false}
+                          mixedContentMode="always"
+                          startInLoadingState={false}
+                          allowsFullscreenVideo={true}
+                          userAgent={
+                            isTablet && isiOS
+                              ? `Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/ 604.1.21 (KHTML, like Gecko) Version/ 12.0 Mobile/17A6278a Safari/602.1.26`
+                              : null
+                          }
+                          ref={(r) => (this.webview = r)}
+                          allowsInlineMediaPlayback={true}
+                          onMessage={this.onWebViewMessage}
+                          mediaPlaybackRequiresUserAction={false}
+                          automaticallyAdjustContentInsets={false}
+                          style={styles.webview}
+                          onNavigationStateChange={({ url }) => {
+                            if (url.includes(`www.youtube.com`)) {
+                              this.webview.stopLoading();
+                            }
+                          }}
+                          source={{
+                            baseUrl: "https://www.musora.com",
+                            html: `
                       <!DOCTYPE html>
                       <html>
                         <head>
@@ -1183,7 +1199,7 @@ export default class Video extends React.Component {
                                   rel: 1,
                                   playsinline: 1,
                                   enablejsapi: 1,
-                                  start: '${autoPlay ? startTime ? startTime : 0 : last_watch_position_in_seconds}',
+                                  start: '${autoPlay ? (startTime ? startTime : 0) : last_watch_position_in_seconds}',
                                   end: '${endTime}',
                                   controls: 1,
                                   fs: 1,
@@ -1220,455 +1236,489 @@ export default class Video extends React.Component {
                           </script>
                         </body>
                       </html>
-                    `}}
-                  />
-                ) : (
-                  <RNVideo
-                    paused={paused}
-                    repeat={repeat}
-                    controls={false}
-                    onEnd={this.onEnd}
-                    resizeMode='cover'
-                    onLoad={this.onLoad}
-                    onError={this.onError}
-                    onBuffer={this.onBuffer}
-                    rate={parseFloat(rate)}
-                    playInBackground={false}
-                    playWhenInactive={true}
-                    audioOnly={audioOnly}
-                    onProgress={this.onProgress}
-                    ignoreSilentSwitch={'ignore'}
-                    progressUpdateInterval={1000}
-                    ref={r => (this.videoRef = r)}
-                    onRemotePlayPause={this.togglePaused}
-                    fullscreen={isiOS ? false : fullscreen}
-                    style={{ width: '100%', height: '100%' }}
-                    onAudioBecomingNoisy={this.onAudioBecomingNoisy}
-                    source={{
-                      uri:
-                        audioOnly
-                          ? mp3s?.find(mp3 => mp3.selected)?.value
-                          : vpe?.find(v => v.selected)?.file
-                    }}
-                    onExternalPlaybackChange={() => {
-                      if (isiOS) AirPlay.startScan();
-                    }}
-                    {...(aCasting || !captions || typeof captions !== 'string'
-                      ? {}
-                      : {
-                        selectedTextTrack: {
-                          type: 'title',
-                          value: captionsHidden ? 'Disabled' : 'English'
-                        },
-                        textTracks:
-                          type === 'video'
-                            ? [
-                              {
-                                language: 'en',
-                                uri:
-                                  'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
-                                title: 'Disabled',
-                                type: TextTrackType.VTT // "text/vtt"
-                              },
-                              {
-                                language: 'en',
-                                uri: captions,
-                                title: 'English',
-                                type: TextTrackType.VTT // "text/vtt"
-                              }
-                            ]
-                            : []
-                      })}
-                  />
-                )}
-              </>
-            )}
-            {live && (
-              <LiveTimer
-                endTime={`${liveData?.live_event_end_time} UTC`}
-                startTime={`${liveData?.live_event_start_time} UTC`}
-                thumbnailUrl={thumbnail_url}
-                visible={showTimer}
-                onEnd={() => {
-                  this.webview?.injectJavaScript(`(function() {
+                    `,
+                          }}
+                        />
+                      ) : (
+                        <RNVideo
+                          paused={paused}
+                          repeat={repeat}
+                          controls={false}
+                          onEnd={this.onEnd}
+                          resizeMode="cover"
+                          onLoad={this.onLoad}
+                          onError={this.onError}
+                          onBuffer={this.onBuffer}
+                          rate={parseFloat(rate)}
+                          playInBackground={false}
+                          playWhenInactive={true}
+                          audioOnly={audioOnly}
+                          onProgress={this.onProgress}
+                          ignoreSilentSwitch={"ignore"}
+                          progressUpdateInterval={1000}
+                          ref={(r) => (this.videoRef = r)}
+                          onRemotePlayPause={this.togglePaused}
+                          fullscreen={isiOS ? false : fullscreen}
+                          style={{ width: "100%", height: "100%" }}
+                          onAudioBecomingNoisy={this.onAudioBecomingNoisy}
+                          source={{
+                            uri: audioOnly
+                              ? mp3s?.find((mp3) => mp3.selected)?.value
+                              : vpe?.find((v) => v.selected)?.file,
+                          }}
+                          onExternalPlaybackChange={() => {
+                            if (isiOS) AirPlay.startScan();
+                          }}
+                          {...(aCasting ||
+                          !captions ||
+                          typeof captions !== "string"
+                            ? {}
+                            : {
+                                selectedTextTrack: {
+                                  type: "title",
+                                  value: captionsHidden
+                                    ? "Disabled"
+                                    : "English",
+                                },
+                                textTracks:
+                                  type === "video"
+                                    ? [
+                                        {
+                                          language: "en",
+                                          uri: "https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt",
+                                          title: "Disabled",
+                                          type: TextTrackType.VTT, // "text/vtt"
+                                        },
+                                        {
+                                          language: "en",
+                                          uri: captions,
+                                          title: "English",
+                                          type: TextTrackType.VTT, // "text/vtt"
+                                        },
+                                      ]
+                                    : [],
+                              })}
+                        />
+                      )}
+                    </>
+                  )}
+                  {live && (
+                    <LiveTimer
+                      endTime={`${liveData?.live_event_end_time} UTC`}
+                      startTime={`${liveData?.live_event_start_time} UTC`}
+                      thumbnailUrl={thumbnail_url}
+                      visible={showTimer}
+                      onEnd={() => {
+                        this.webview?.injectJavaScript(`(function() {
                     window.video.pause();
                   })()`);
-                  this.setState({
-                    liveEnded: true
-                  });
-                  this.props.onEnd?.();
-                }}
-                onStart={() => {
-                  this.props.onStartLive?.();
-                }}
-              />
-            )}
-            {(!youtubeId || audioOnly) && (
-              <TouchableOpacity
-                onPress={this.toggleControls}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  ...styles.controlsContainer
-                }}
-              >
-                {(audioOnly || showPoster) && (
-                  <Image
-                    source={{ uri: `https://www.musora.com/musora-cdn/image/${thumbnail_url}` }}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      position: 'absolute'
-                    }}
-                  />
-                )}
-                {!!isControlVisible && (
-                  <Animated.View
-                    style={{
-                      ...styles.constrolsBackground,
-                      opacity:
-                        type === 'video'
-                          ? this.translateControls.interpolate({
-                              outputRange: [0, 0.5],
-                              inputRange: [0, 1],
-                            })
-                          : 0.5,
-                    }}
-                  />
-                )}
-                
-                {!!buffering && !paused && (
-                  <Animated.View
-                    style={{
-                      position: 'absolute',
-                      alignSelf: 'center',
-                    }}
-                  >
-                    <ActivityIndicator
-                      color='white'
-                      size={'large'}
-                      animating={buffering}
+                        this.setState({
+                          liveEnded: true,
+                        });
+                        this.props.onEnd?.();
+                      }}
+                      onStart={() => {
+                        this.props.onStartLive?.();
+                      }}
                     />
-                  </Animated.View>
-                )}
-                {!youtubeId && (
-                  <View style={{
-                    width: '100%',
-                    height: '100%',
-                    ...styles.controlsContainer,
-                  }}>
-                    <DoubleTapArea
-                      styles={styles.leftDoubleTap}
-                      onDoubleTap={() => this.onSeek((cTime -= 10))}
-                      onSingleTap={this.toggleControls}
-                    />
-                    <DoubleTapArea
-                      styles={styles.rightDoubleTap}
-                      onDoubleTap={() => this.onSeek((cTime += 10))}
-                      onSingleTap={this.toggleControls}
-                    />
-                  </View>
-                )}
-                {showControls && (
-                  <>
-                    <Animated.View
+                  )}
+                  {(!youtubeId || audioOnly) && (
+                    <TouchableOpacity
+                      onPress={this.toggleControls}
                       style={{
-                        flexDirection: 'row',
-                        opacity: type === 'video' ? this.translateControls : 1,
+                        width: "100%",
+                        height: "100%",
+                        ...styles.controlsContainer,
                       }}
                     >
-                      <DoubleTapArea
-                        styles={{ width: '43%', alignItems: 'center' }}
-                        onDoubleTap={() => this.onSeek((cTime -= 10))}
-                      >
-                        {goToPreviousLesson && isControlVisible && (
-                          <TouchableOpacity
-                            onPress={goToPreviousLesson}
-                            style={{
-                              flex: 1,
-                              alignItems: 'center',
-                              opacity: hasPrevious ? 1 : 0.5,
-                            }}
-                            disabled={!hasPrevious}
-                          >
-                            {svgs.prevLesson({
-                              ...iconStyle,
-                              ...largePlayerControls
-                            })}
-                          </TouchableOpacity>
-                        )}
-                      </DoubleTapArea>
-                      {isControlVisible && (
-                        <TouchableOpacity
-                          onPress={this.togglePaused}
-                          style={{ flex: 1, alignItems: 'center' }}
-                        >
-                          {svgs[paused ? 'playSvg' : 'pause']({
-                            ...iconStyle,
-                            ...largePlayerControls,
-                          })}
-                        </TouchableOpacity>
+                      {(audioOnly || showPoster) && (
+                        <Image
+                          source={{
+                            uri: `https://www.musora.com/musora-cdn/image/${thumbnail_url}`,
+                          }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            position: "absolute",
+                          }}
+                        />
                       )}
-                      <DoubleTapArea
-                        styles={{ width: '43%', alignItems: 'center' }}
-                        onDoubleTap={() => this.onSeek((cTime += 10))}
-                      >
-                        {goToNextLesson && isControlVisible && (
-                          <TouchableOpacity
-                            onPress={goToNextLesson}
+                      {!!isControlVisible && (
+                        <Animated.View
+                          style={{
+                            ...styles.constrolsBackground,
+                            opacity:
+                              type === "video"
+                                ? this.translateControls.interpolate({
+                                    outputRange: [0, 0.5],
+                                    inputRange: [0, 1],
+                                  })
+                                : 0.5,
+                          }}
+                        />
+                      )}
+
+                      {!!buffering && !paused && (
+                        <Animated.View
+                          style={{
+                            position: "absolute",
+                            alignSelf: "center",
+                          }}
+                        >
+                          <ActivityIndicator
+                            color="white"
+                            size={"large"}
+                            animating={buffering}
+                          />
+                        </Animated.View>
+                      )}
+                      {!youtubeId && (
+                        <View
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            ...styles.controlsContainer,
+                          }}
+                        >
+                          <DoubleTapArea
+                            styles={styles.leftDoubleTap}
+                            onDoubleTap={() => this.onSeek((cTime -= 10))}
+                            onSingleTap={this.toggleControls}
+                          />
+                          <DoubleTapArea
+                            styles={styles.rightDoubleTap}
+                            onDoubleTap={() => this.onSeek((cTime += 10))}
+                            onSingleTap={this.toggleControls}
+                          />
+                        </View>
+                      )}
+                      {showControls && (
+                        <>
+                          <Animated.View
                             style={{
-                              flex: 1,
-                              alignItems: 'center',
-                              opacity: hasNext ? 1 : 0.5
+                              flexDirection: "row",
+                              opacity:
+                                type === "video" ? this.translateControls : 1,
                             }}
-                            disabled={!hasNext}
                           >
-                            {svgs.prevLesson({
-                              ...{ ...iconStyle, ...largePlayerControls },
-                              style: { transform: [{ rotate: '180deg' }] }
-                            })}
-                          </TouchableOpacity>
-                        )}
-                      </DoubleTapArea>
-                    </Animated.View>
-                  </>
-                )}
-                {(!gCasting || (gCasting && this.googleCastClient)) && (
-                  <Animated.View
-                    style={{
-                      bottom: fullscreen ? 30 + 25 : 11,
-                      ...styles.bottomControlsContainer,
-                      opacity: type === 'video' ? this.translateControls : 1,
-                    }}
-                  >
-                    <VideoTimer
-                      live={live}
-                      styles={timerText}
-                      length_in_seconds={mp3Length || length_in_seconds}
-                      ref={r => (this.videoTimer = r)}
-                      maxFontMultiplier={this.props.maxFontMultiplier}
-                    />
-                    {!!isControlVisible && (
-                      <>
-                        {!youtubeId && settingsMode !== 'bottom' && connection && !audioOnly && (
-                          <TouchableOpacity
+                            <DoubleTapArea
+                              styles={{ width: "43%", alignItems: "center" }}
+                              onDoubleTap={() => this.onSeek((cTime -= 10))}
+                            >
+                              {goToPreviousLesson && isControlVisible && (
+                                <TouchableOpacity
+                                  onPress={goToPreviousLesson}
+                                  style={{
+                                    flex: 1,
+                                    alignItems: "center",
+                                    opacity: hasPrevious ? 1 : 0.5,
+                                  }}
+                                  disabled={!hasPrevious}
+                                >
+                                  {svgs.prevLesson({
+                                    ...iconStyle,
+                                    ...largePlayerControls,
+                                  })}
+                                </TouchableOpacity>
+                              )}
+                            </DoubleTapArea>
+                            {isControlVisible && (
+                              <TouchableOpacity
+                                onPress={this.togglePaused}
+                                style={{ flex: 1, alignItems: "center" }}
+                              >
+                                {svgs[paused ? "playSvg" : "pause"]({
+                                  ...iconStyle,
+                                  ...largePlayerControls,
+                                })}
+                              </TouchableOpacity>
+                            )}
+                            <DoubleTapArea
+                              styles={{ width: "43%", alignItems: "center" }}
+                              onDoubleTap={() => this.onSeek((cTime += 10))}
+                            >
+                              {goToNextLesson && isControlVisible && (
+                                <TouchableOpacity
+                                  onPress={goToNextLesson}
+                                  style={{
+                                    flex: 1,
+                                    alignItems: "center",
+                                    opacity: hasNext ? 1 : 0.5,
+                                  }}
+                                  disabled={!hasNext}
+                                >
+                                  {svgs.prevLesson({
+                                    ...{ ...iconStyle, ...largePlayerControls },
+                                    style: {
+                                      transform: [{ rotate: "180deg" }],
+                                    },
+                                  })}
+                                </TouchableOpacity>
+                              )}
+                            </DoubleTapArea>
+                          </Animated.View>
+                        </>
+                      )}
+                      {(!gCasting || (gCasting && this.googleCastClient)) && (
+                        <Animated.View
+                          style={{
+                            bottom: fullscreen ? 30 + 25 : 11,
+                            ...styles.bottomControlsContainer,
+                            opacity:
+                              type === "video" ? this.translateControls : 1,
+                          }}
+                        >
+                          <VideoTimer
+                            live={live}
+                            styles={timerText}
+                            length_in_seconds={mp3Length || length_in_seconds}
+                            ref={(r) => (this.videoTimer = r)}
+                            maxFontMultiplier={this.props.maxFontMultiplier}
+                          />
+                          {!!isControlVisible && (
+                            <>
+                              {!youtubeId &&
+                                settingsMode !== "bottom" &&
+                                connection &&
+                                !audioOnly && (
+                                  <TouchableOpacity
+                                    style={{
+                                      padding: 10,
+                                    }}
+                                    underlayColor={"transparent"}
+                                    onPress={() => {
+                                      this.videoSettings.toggle();
+                                    }}
+                                  >
+                                    {svgs.videoQuality({
+                                      width: 20,
+                                      height: 20,
+                                      fill: "white",
+                                      ...smallPlayerControls,
+                                    })}
+                                  </TouchableOpacity>
+                                )}
+                              {!audioOnly && onFullscreen && (
+                                <TouchableOpacity
+                                  style={{ padding: 10 }}
+                                  underlayColor={"transparent"}
+                                  onPress={() => {
+                                    this.orientationListener(
+                                      this.state.fullscreen
+                                        ? isTablet
+                                          ? orientation.includes("PORT")
+                                            ? PORTRAIT
+                                            : orientation
+                                          : PORTRAIT
+                                        : isTablet
+                                          ? tabOrientation
+                                          : LANDSCAPE_LEFT,
+                                      true
+                                    );
+                                  }}
+                                >
+                                  {svgs.fullScreen({
+                                    width: 20,
+                                    height: 20,
+                                    fill: "white",
+                                    ...smallPlayerControls,
+                                  })}
+                                </TouchableOpacity>
+                              )}
+                              {audioOnly && (
+                                <TouchableOpacity
+                                  style={styles.mp3TogglerContainer}
+                                  onPress={() =>
+                                    this.mp3ActionModal.toggleModal()
+                                  }
+                                >
+                                  <Text
+                                    maxFontSizeMultiplier={
+                                      this.props.maxFontMultiplier
+                                    }
+                                    style={{
+                                      ...styles.mp3TogglerText,
+                                      color: mp3TogglerTextColor || "white",
+                                    }}
+                                  >
+                                    {this.formatMP3Name(
+                                      mp3s.find((mp3) => mp3.selected).key
+                                    )}
+                                  </Text>
+                                  {svgs.arrowDown({
+                                    height: 20,
+                                    width: 20,
+                                    fill: "#ffffff",
+                                    ...smallPlayerControls,
+                                  })}
+                                </TouchableOpacity>
+                              )}
+                            </>
+                          )}
+                        </Animated.View>
+                      )}
+
+                      {onBack && (
+                        <Animated.View
+                          style={{
+                            ...styles.backContainer,
+                            opacity:
+                              type === "video" ? this.translateControls : 1,
+                          }}
+                        >
+                          {isControlVisible && (
+                            <TouchableOpacity
+                              style={styles.backContainer}
+                              onPress={this.handleBack}
+                            >
+                              {svgs[fullscreen ? "x" : "arrowLeft"]({
+                                width: 18,
+                                height: 18,
+                                fill: "#ffffff",
+                                ...smallPlayerControls,
+                              })}
+                            </TouchableOpacity>
+                          )}
+                        </Animated.View>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  {!youtubeId && showCastingOptions && (
+                    <>
+                      {isiOS && (
+                        <Animated.View
+                          style={{
+                            top: 4.5,
+                            width: 66,
+                            height: 34,
+                            position: "absolute",
+                            right: settingsMode === "bottom" ? 98 : 49,
+                            opacity:
+                              type === "video" ? this.translateControls : 1,
+                          }}
+                        >
+                          {isControlVisible && (
+                            <TouchableOpacity
+                              activeOpacity={1}
+                              onPress={() => AirPlay.startScan()}
+                            >
+                              <AirPlayButton />
+                            </TouchableOpacity>
+                          )}
+                        </Animated.View>
+                      )}
+                      <Animated.View
+                        style={{
+                          top: 7,
+                          position: "absolute",
+                          right: settingsMode === "bottom" ? 49 : 10,
+                          opacity:
+                            type === "video" ? this.translateControls : 1,
+                        }}
+                      >
+                        {isControlVisible && (
+                          <CastButton
                             style={{
-                              padding: 10,
+                              width: 29,
+                              height: 29,
+                              tintColor: "white",
+                              ...smallPlayerControls,
                             }}
-                            underlayColor={'transparent'}
+                          />
+                        )}
+                      </Animated.View>
+                    </>
+                  )}
+                  {!youtubeId &&
+                    settingsMode === "bottom" &&
+                    connection &&
+                    !audioOnly && (
+                      <Animated.View
+                        style={{
+                          top: 7,
+                          right: 10,
+                          position: "absolute",
+                          opacity:
+                            type === "video" ? this.translateControls : 1,
+                        }}
+                      >
+                        {!!isControlVisible && (
+                          <TouchableOpacity
+                            underlayColor={"transparent"}
                             onPress={() => {
                               this.videoSettings.toggle();
                             }}
                           >
-                            {svgs.videoQuality({
-                              width: 20,
-                              height: 20,
-                              fill: 'white',
+                            {svgs.menu({
+                              width: 29,
+                              height: 29,
+                              fill: "white",
                               ...smallPlayerControls,
                             })}
                           </TouchableOpacity>
                         )}
-                        {!audioOnly && onFullscreen && (
-                          <TouchableOpacity
-                            style={{ padding: 10 }}
-                            underlayColor={'transparent'}
-                            onPress={() => {
-                              this.orientationListener(
-                                this.state.fullscreen
-                                  ? isTablet
-                                    ? orientation.includes('PORT')
-                                      ? PORTRAIT
-                                      : orientation
-                                    : PORTRAIT
-                                  : isTablet
-                                  ? tabOrientation
-                                  : LANDSCAPE_LEFT,
-                                true
-                              );
-                            }}
-                          >
-                            {svgs.fullScreen({
-                              width: 20,
-                              height: 20,
-                              fill: 'white',
-                              ...smallPlayerControls,
-                            })}
-                          </TouchableOpacity>
-                        )}
-                        {audioOnly && (
-                          <TouchableOpacity
-                            style={styles.mp3TogglerContainer}
-                            onPress={() => this.mp3ActionModal.toggleModal()}
-                          >
-                            <Text
-                              maxFontSizeMultiplier={this.props.maxFontMultiplier}
-                              style={{
-                                ...styles.mp3TogglerText,
-                                color: mp3TogglerTextColor || 'white',
-                              }}
-                            >
-                              {this.formatMP3Name(mp3s.find(mp3 => mp3.selected).key)}
-                            </Text>
-                            {svgs.arrowDown({
-                              height: 20,
-                              width: 20,
-                              fill: '#ffffff',
-                              ...smallPlayerControls,
-                            })}
-                          </TouchableOpacity>
-                        )}
-                      </>
+                      </Animated.View>
                     )}
-                  </Animated.View>
-                )}
-
-                {onBack && (
+                </View>
+              </View>
+              {(!youtubeId || audioOnly) &&
+                showControls &&
+                (!gCasting || (gCasting && this.googleCastClient)) && (
                   <Animated.View
+                    onLayout={({
+                      nativeEvent: {
+                        layout: { x },
+                      },
+                    }) =>
+                      (this.progressBarPositionX =
+                        fullscreen && insets.left > 0 && isiOS
+                          ? insets.left + x
+                          : x)
+                    }
+                    {...this.pResponder()}
                     style={{
-                      ...styles.backContainer,
-                      opacity: type === 'video' ? this.translateControls : 1,
+                      ...this.getVideoDimensions(insets),
+                      ...styles.timerContainer,
+                      position: fullscreen ? "absolute" : "relative",
+                      bottom: fullscreen
+                        ? windowHeight > videoH
+                          ? (windowHeight - videoH) / 2
+                          : 0
+                        : 0,
+                      opacity: fullscreen
+                        ? type === "video"
+                          ? this.translateControls
+                          : 1
+                        : 1,
                     }}
                   >
-                    {isControlVisible && (
-                      <TouchableOpacity style={styles.backContainer} onPress={this.handleBack}>
-                        {svgs[fullscreen ? 'x' : 'arrowLeft']({
-                          width: 18,
-                          height: 18,
-                          fill: '#ffffff',
-                          ...smallPlayerControls,
-                        })}
-                      </TouchableOpacity>
-                    )}
+                    <View
+                      style={{
+                        ...styles.timerGrey,
+                        backgroundColor:
+                          afterTimerCursorBackground || "#2F3334",
+                      }}
+                    >
+                      <Animated.View
+                        style={{
+                          ...styles.timerBlue,
+                          transform: [{ translateX: this.translateBlueX }],
+                          backgroundColor: beforeTimerCursorBackground || "red",
+                        }}
+                      />
+                      <Animated.View
+                        style={{
+                          ...styles.timerDot,
+                          backgroundColor: timerCursorBackground || "red",
+                          transform: [{ translateX: this.translateBlueX }],
+                          opacity:
+                            type === "video" ? this.translateControls : 1,
+                        }}
+                      />
+                    </View>
+                    <View style={styles.timerCover} />
                   </Animated.View>
                 )}
-              </TouchableOpacity>
-            )}
-            {!youtubeId && showCastingOptions && (
-              <>
-                {isiOS && (
-                  <Animated.View
-                    style={{
-                      top: 4.5,
-                      width: 66,
-                      height: 34,
-                      position: 'absolute',
-                      right: settingsMode === 'bottom' ? 98 : 49,
-                      opacity: type === 'video' ? this.translateControls : 1,
-                    }}
-                  >
-                    {isControlVisible && (
-                      <TouchableOpacity activeOpacity={1} onPress={() => AirPlay.startScan()}>
-                        <AirPlayButton />
-                      </TouchableOpacity>
-                    )}
-                  </Animated.View>
-                )}
-                <Animated.View
-                  style={{
-                    top: 7,
-                    position: 'absolute',
-                    right: settingsMode === 'bottom' ? 49 : 10,
-                    opacity: type === 'video' ? this.translateControls : 1,
-                  }}
-                >
-                  {isControlVisible && (
-                    <CastButton
-                      style={{
-                        width: 29,
-                        height: 29,
-                        tintColor: 'white',
-                        ...smallPlayerControls,
-                      }}
-                    />
-                  )}
-                </Animated.View>
-              </>
-            )}
-            {!youtubeId &&
-              settingsMode === 'bottom' &&
-              connection &&
-              !audioOnly && (
-                <Animated.View
-                  style={{
-                    top: 7,
-                    right: 10,
-                    position: 'absolute',
-                    opacity: type === 'video' ? this.translateControls : 1,
-                  }}
-                >
-                {!!isControlVisible && (
-                  <TouchableOpacity
-                    underlayColor={'transparent'}
-                    onPress={() => {
-                      this.videoSettings.toggle();
-                    }}
-                  >
-                    {svgs.menu({
-                      width: 29,
-                      height: 29,
-                      fill: 'white',
-                      ...smallPlayerControls,
-                    })}
-                  </TouchableOpacity>
-                )}
-                </Animated.View>
-              )}
-          </View>
-        </View>
-        <SafeAreaInsetsContext.Consumer>
-          {(insets) => (
-            <>
-              {(!youtubeId || audioOnly) && showControls && (!gCasting || (gCasting && this.googleCastClient)) && (
-                <Animated.View
-                  onLayout={({
-                    nativeEvent: {
-                      layout: { x },
-                    },
-                  }) =>
-                    this.progressBarPositionX = (fullscreen && insets.left > 0 && isiOS) ? insets.left + x : x
-                  }
-                  {...this.pResponder()}
-                  style={{
-                    ...this.getVideoDimensions(),
-                    ...styles.timerContainer,
-                    position: fullscreen ? 'absolute' : 'relative',
-                    bottom: fullscreen
-                      ? windowHeight > videoH
-                        ? (windowHeight - videoH) / 2
-                        : 5
-                      : 0,
-                    opacity: fullscreen
-                      ? type === "video"
-                        ? this.translateControls
-                        : 1
-                      : 1,
-                  }}
-                >
-                  <View
-                    style={{
-                      ...styles.timerGrey,
-                      backgroundColor: afterTimerCursorBackground || '#2F3334'
-                    }}
-                  >
-                    <Animated.View
-                      style={{
-                        ...styles.timerBlue,
-                        transform: [{ translateX: this.translateBlueX }],
-                        backgroundColor: beforeTimerCursorBackground || 'red'
-                      }}
-                    />
-                    <Animated.View
-                      style={{
-                        ...styles.timerDot,
-                        backgroundColor: timerCursorBackground || 'red',
-                        transform: [{ translateX: this.translateBlueX }],
-                        opacity: type === 'video' ? this.translateControls : 1,
-                      }}
-                    />
-                  </View>
-                  <View style={styles.timerCover} />
-                </Animated.View>
-              )}
             </>
           )}
         </SafeAreaInsetsContext.Consumer>

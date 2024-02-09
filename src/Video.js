@@ -1683,7 +1683,7 @@ export default class Video extends React.Component {
                       bottom: fullscreen
                         ? windowHeight > videoH
                           ? (windowHeight - videoH) / 2
-                          : 0
+                          : 5
                         : 0,
                       opacity: fullscreen
                         ? type === "video"

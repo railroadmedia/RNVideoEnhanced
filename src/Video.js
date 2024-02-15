@@ -551,7 +551,7 @@ export default class Video extends React.Component {
     } = this;
 
     if (q === 'Auto') {
-      recommendedVideoQuality = vpe?.find(v => !v?.file.includes('http'));
+      recommendedVideoQuality = vpe?.find(v => !v?.file?.includes('http'));
       if (!recommendedVideoQuality) {
         let networkSpeed = await networkSpeedService.getNetworkSpeed(
           vpe[0]?.file,
@@ -560,8 +560,8 @@ export default class Video extends React.Component {
         );
         if (networkSpeed.aborted) return;
         recommendedVideoQuality = Object.create(vpe)
-          .sort((i, j) => (i.height < j.height ? 1 : -1))
-          .find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
+          ?.sort((i, j) => (i.height < j.height ? 1 : -1))
+          ?.find(rsv => rsv.height <= networkSpeed.recommendedVideoQuality);
       }
     }
     let newVPE = {
@@ -1542,7 +1542,7 @@ export default class Video extends React.Component {
                                     }}
                                   >
                                     {this.formatMP3Name(
-                                      mp3s.find((mp3) => mp3.selected).key
+                                      mp3s?.find((mp3) => mp3.selected).key
                                     )}
                                   </Text>
                                   {svgs.arrowDown({

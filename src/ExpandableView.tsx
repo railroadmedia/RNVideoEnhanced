@@ -1,12 +1,3 @@
-/*
-
-* props: title, expandableContStyle, titleStyle, iconColor,maxFontMultiplier
-* title: the text next to the expandable/collapsable icon
-* expandableContStyle: style for container
-* titleStyle: style for title
-* iconColor: color for arrow icon
-*/
-
 import React, {
   FunctionComponent,
   ReactElement,
@@ -16,7 +7,6 @@ import React, {
   useState,
 } from 'react';
 import { View, Text, TouchableOpacity, TextStyle, ViewStyle, StyleSheet } from 'react-native';
-
 import { arrowUp, arrowDown } from './img/svgs';
 
 interface IExpandableView {

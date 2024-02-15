@@ -1,4 +1,5 @@
 export interface IContent {
+  signal: any;
   id: number;
   isLive?: boolean;
   type: string;

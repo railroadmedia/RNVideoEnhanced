@@ -1,13 +1,3 @@
-/*
-
-* modalStyle, translucentStyle
-* modalStyle: width and height of modal
-* this component eliminates the need of a refference in the parent
-  component (ref={r => this.reference = r}), for opening a modal with no
-  position restraints relative to its parent
-
-*/
-
 import React, { ReactNode, forwardRef, useImperativeHandle, useState } from 'react';
 import {
   View,
@@ -43,7 +33,7 @@ const ActionModal = forwardRef<{ toggleModal: (mState?: boolean) => void }, IAct
         visible={modalVisible}
         onRequestClose={() => toggleModal()}
         supportedOrientations={['portrait', 'landscape']}
-        animationType='slide'
+        animationType={'slide'}
       >
         <TouchableOpacity
           testID='modalBackground'

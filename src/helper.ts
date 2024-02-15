@@ -1,4 +1,4 @@
-import { PixelRatio, Platform } from 'react-native';
+import { Dimensions, PixelRatio, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import type { IContent, IMp3 } from './entity';
 
@@ -67,3 +67,5 @@ export const formatVideoTime = (seconds: number): string => {
 export const IS_IOS = Platform.OS === 'ios';
 export const PIX_R = PixelRatio.get();
 export const IS_TABLET = DeviceInfo.isTablet();
+export const WINDOW_WIDTH = Dimensions.get('screen').width;
+export const WINDOW_HEIGHT = Dimensions.get('screen').height;

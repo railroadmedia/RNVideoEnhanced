@@ -1,5 +1,4 @@
 import React, { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
-
 import { StyleSheet, Text, TextStyle } from 'react-native';
 import { formatVideoTime } from './helper';
 

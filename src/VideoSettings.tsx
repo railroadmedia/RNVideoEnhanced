@@ -115,7 +115,7 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
     toggle(false);
     delete prevQuality.current; // delete
     if (onSaveSettings) {
-      onSaveSettings(rate, quality.height, captions);
+      onSaveSettings(rate, quality?.height, captions);
     }
   };
 
@@ -161,9 +161,9 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
     ));
 
   const renderQualities = (qualities: IVpe[], quality: IVpe) =>
-    qualities.map(q => (
+    qualities?.map(q => (
       <TouchableOpacity
-        key={q.height}
+        key={q?.height}
         style={[
           styles[settingsMode === 'bottom' ? 'optionBottom' : 'option'],
           {
@@ -174,7 +174,7 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
       >
         {settingsMode === 'bottom' && (
           <>
-            {quality?.height === q.height ? (
+            {quality?.height === q?.height ? (
               check({
                 width: 20,
                 height: 20,
@@ -189,15 +189,15 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
           maxFontSizeMultiplier={maxFontMultiplier}
           style={{
             color:
-              q.height === quality.height
+              q?.height === quality?.height
                 ? propStyle?.selectedOptionTextColor
                 : propStyle?.unselectedOptionTextColor,
             fontFamily: 'OpenSans',
             marginLeft: settingsMode === 'bottom' ? 10 : 0,
           }}
         >
-          {q.height}
-          {q.height === 'Auto' ? ` ${q?.actualH}p` : 'p'}
+          {q?.height}
+          {q?.height === 'Auto' ? ` ${q?.actualH}p` : 'p'}
         </Text>
         {q.file &&
           q.file.indexOf('http') < 0 &&
@@ -273,18 +273,15 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
                         fill: 'black',
                       })}
                       <Text style={styles.actionTextBottom}>
-                        Video Quality -{' '}
-                        {quality.height === 'Auto'
-                          ? `Auto (${quality.actualH}p)`
-                          : `${quality.height}p`}
+                        {`Video Quality - ${quality?.height === 'Auto' ? `Auto (${quality?.actualH}p)` : `${quality?.height}p`}`}
                       </Text>
                     </TouchableOpacity>
                   ) : (
                     <SettingsOption
                       title={
-                        quality.height === 'Auto'
+                        quality?.height === 'Auto'
                           ? `Auto ${quality.actualH}p`
-                          : `${quality.height}p`
+                          : `${quality?.height}p`
                       }
                       iconName={'CameraSvg'}
                       data={qualities}
@@ -307,7 +304,7 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
                             fill: 'black',
                           })}
                           <Text style={styles.actionTextBottom}>
-                            Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
+                            {`Playback Speed - ${rate === '1.0' ? 'Normal' : `${rate}X`}`}
                           </Text>
                         </TouchableOpacity>
                       ) : (
@@ -331,7 +328,7 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
                             height: 20,
                             fill: 'black',
                           })}
-                          <Text style={styles.actionTextBottom}>Captions</Text>
+                          <Text style={styles.actionTextBottom}>{'Captions'}</Text>
                         </TouchableOpacity>
                       ) : (
                         <SettingsOption

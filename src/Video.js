@@ -944,23 +944,25 @@ export default class Video extends React.Component {
 
   onSeek = time => {
     time = parseFloat(time);
-    let fullLength = parseFloat(this.state.mp3Length || this.props.content.length_in_seconds);
-    if (time < 0) time = 0;
-    else if (time > fullLength) time = fullLength;
+    if (!isNaN(time)) {
+      let fullLength = parseFloat(this.state.mp3Length || this.props.content.length_in_seconds);
+      if (time < 0) time = 0;
+      else if (time > fullLength) time = fullLength;
 
-    if (this.state.showPoster){
-      this.setState({showPoster: gCasting ? true : false});
-    } else if (gCasting) {
-      this.setState({showPoster: true})
+      if (this.state.showPoster){
+        this.setState({showPoster: gCasting ? true : false});
+      } else if (gCasting) {
+        this.setState({showPoster: true})
+      }
+      if (this.videoRef) {
+        this.videoRef['seek'](time);
+      }
+      if (this.webview) {
+        this.webview.injectJavaScript(`seekTo(${time})`);
+      }
+      if (!isiOS || gCasting) this.onProgress({ currentTime: time });
+      this.googleCastClient?.seek({ position: parseFloat(time || 0) });
     }
-    if (this.videoRef) {
-      this.videoRef['seek'](time);
-    }
-    if (this.webview) {
-      this.webview.injectJavaScript(`seekTo(${time})`);
-    }
-    if (!isiOS || gCasting) this.onProgress({ currentTime: time });
-    this.googleCastClient?.seek({ position: parseFloat(time || 0) });
   };
 
   onError = ({ error: { code } }) => {

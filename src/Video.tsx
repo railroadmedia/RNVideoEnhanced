@@ -40,7 +40,11 @@ import RNVideo, {
   OnProgressData,
   TextTrackType,
 } from 'react-native-video';
-import GoogleCast, { CastButton, RemoteMediaClient } from 'react-native-google-cast';
+import GoogleCast, {
+  CastButton,
+  MediaLoadRequest,
+  RemoteMediaClient,
+} from 'react-native-google-cast';
 import PrefersHomeIndicatorAutoHidden from 'react-native-home-indicator';
 
 import ActionModal from './ActionModal';
@@ -72,11 +76,6 @@ let offlinePath: string;
 let quality: string | number = 'Auto';
 
 interface IVideo {
-  maxFontMultiplier?: number;
-  showCastingOptions: undefined;
-  orientation: any;
-  aCasting: any;
-  offlinePath: boolean;
   onPlayerReady?: () => void;
   youtubeId?: string;
   content: IContent;
@@ -112,7 +111,7 @@ interface IVideo {
   orientationIsLocked?: boolean;
   repeat: boolean;
   onUpdateVideoProgress?: (
-    videoId: number | string | undefined,
+    videoId: number | string,
     id: number,
     lengthInSec: number,
     currentTime: number,
@@ -140,9 +139,14 @@ interface IVideo {
       reloadLesson: { color: string; background: string };
     };
   };
-  maxWidth: number;
-  onOrientationChange: (o: any) => void;
-  onQualityChange: (qual?: string | number) => void;
+  maxWidth?: number;
+  onOrientationChange?: (o: any) => void;
+  onQualityChange?: (qual?: string | number) => void;
+  maxFontMultiplier?: number;
+  showCastingOptions?: boolean;
+  orientation?: string;
+  aCasting?: boolean;
+  offlinePath?: string;
 }
 
 const Video = forwardRef<
@@ -503,7 +507,7 @@ const Video = forwardRef<
           ]);
         }
 
-        const castOptions = {
+        const castOptions: MediaLoadRequest = {
           mediaInfo: {
             contentUrl:
               (type === 'video'
@@ -522,7 +526,7 @@ const Video = forwardRef<
           playbackRate: parseFloat(rate),
           startTime: Math.round(time || cTime.current || 0),
         };
-        if (captions) {
+        if (captions && castOptions?.mediaInfo) {
           castOptions.mediaInfo.mediaTracks = [
             {
               id: 1, // assign a unique numeric ID
@@ -569,7 +573,7 @@ const Video = forwardRef<
     onUpdateVideoProgress?.(
       youtubeId || content?.vimeo_video_id,
       content?.id,
-      mp3Length || content?.length_in_seconds,
+      mp3Length || content?.length_in_seconds || 0,
       cTime.current,
       secondsPlayed,
       youtubeId ? 'youtube' : 'vimeo',
@@ -662,12 +666,11 @@ const Video = forwardRef<
     return vpeTemp;
   };
 
-  const updateBlueX = (): void => {
+  const updateBlueX = useCallback((): void => {
     if (!translateBlueX.current) {
       return;
     }
-    const { length_in_seconds } = content;
-    const secLength = mp3Length > 0 ? mp3Length : length_in_seconds;
+    const secLength = mp3Length > 0 ? mp3Length : content?.length_in_seconds;
     const translate =
       cTime.current !== undefined && !!secLength
         ? (cTime.current * videoW) / secLength - videoW
@@ -676,7 +679,7 @@ const Video = forwardRef<
     if (!isNaN(translate) && isFinite(translate)) {
       translateBlueX.current.setValue(translate);
     }
-  };
+  }, [content?.length_in_seconds, mp3Length]);
 
   const onSeek = (time: string | number): void => {
     time = parseFloat(time as string);
@@ -716,7 +719,7 @@ const Video = forwardRef<
     })()`);
   };
 
-  const getVideoDimensions = (): {
+  const getVideoDimensions = useCallback((): {
     width: number | string;
     height?: number | string;
     aspectRatio?: number;
@@ -772,7 +775,18 @@ const Video = forwardRef<
     }
     updateBlueX();
     return { width: videoW, height: videoH };
-  };
+  }, [
+    content?.video_playback_endpoints,
+    fullscreen,
+    insets?.bottom,
+    live,
+    maxWidth,
+    type,
+    updateBlueX,
+    wHeight,
+    wWidth,
+    youtubeId,
+  ]);
 
   const onWebViewMessage = ({ nativeEvent: { data } }: WebViewMessageEvent): void => {
     const parsedData = JSON.parse(data);
@@ -1106,7 +1120,7 @@ const Video = forwardRef<
         if (!IS_IOS) {
           onProgress({ currentTime: seekTime.current });
         }
-        googleCastClient.current?.seek({ position: parseFloat(seekTime.current) });
+        googleCastClient.current?.seek({ position: seekTime.current });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
       onPanResponderMove: (_, { moveX }) => {

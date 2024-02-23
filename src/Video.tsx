@@ -917,14 +917,14 @@ const Video = forwardRef<
     if (videoTimerRef.current) {
       videoTimerRef.current?.setProgress(currentTime);
     }
-    if (!!endTime && endTime === parseInt(currentTime, 10)) {
+    if (!!endTime && endTime === Math.floor(currentTime)) {
       onEnd?.();
     }
-    if (mp3Length > 0 && mp3Length === parseInt(currentTime, 10)) {
+    if (mp3Length > 0 && mp3Length === Math.floor(currentTime)) {
       onEndVideo();
     } else if (
       content?.length_in_seconds &&
-      content?.length_in_seconds === parseInt(currentTime, 10)
+      content?.length_in_seconds === Math.floor(currentTime)
     ) {
       onEndVideo();
     }

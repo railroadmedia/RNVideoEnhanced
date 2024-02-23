@@ -51,7 +51,7 @@ const ExpandableView: FunctionComponent<IExpandableView> = props => {
         break;
       }
     }
-  }, []);
+  }, [processType]);
 
   const toggleView = useCallback(() => {
     switch (processType) {

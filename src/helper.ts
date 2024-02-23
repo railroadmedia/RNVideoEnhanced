@@ -3,34 +3,35 @@ import DeviceInfo from 'react-native-device-info';
 import type { IContent, IMp3 } from './entity';
 
 export const getMP3Array = (lesson: IContent): IMp3[] => {
-  let mp3s: IMp3[] = [];
-  if (lesson.mp3_no_drums_no_click_url)
+  const mp3s: IMp3[] = [];
+  if (lesson.mp3_no_drums_no_click_url) {
     mp3s.push({
       id: 'mp3_no_drums_no_click_url',
       key: 'mp3_no_drums_no_click_url',
       value: lesson.mp3_no_drums_no_click_url,
     });
-  if (lesson.mp3_no_drums_yes_click_url)
+  }
+  if (lesson.mp3_no_drums_yes_click_url) {
     mp3s.push({
       id: 'mp3_no_drums_yes_click_url',
       key: 'mp3_no_drums_yes_click_url',
       value: lesson.mp3_no_drums_yes_click_url,
     });
-
-  if (lesson.mp3_yes_drums_no_click_url)
+  }
+  if (lesson.mp3_yes_drums_no_click_url) {
     mp3s.push({
       id: 'mp3_yes_drums_no_click_url',
       key: 'mp3_yes_drums_no_click_url',
       value: lesson.mp3_yes_drums_no_click_url,
     });
-
-  if (lesson.mp3_yes_drums_yes_click_url)
+  }
+  if (lesson.mp3_yes_drums_yes_click_url) {
     mp3s.push({
       id: 'mp3_yes_drums_yes_click_url',
       key: 'mp3_yes_drums_yes_click_url',
       value: lesson.mp3_yes_drums_yes_click_url,
     });
-
+  }
   return mp3s;
 };
 
@@ -55,7 +56,7 @@ export const formatVideoTime = (seconds: number): string => {
   if (seconds < 1) {
     return '0:00';
   }
-  let h = Math.trunc(seconds / 3600);
+  const h = Math.trunc(seconds / 3600);
   let m: number | string = Math.trunc((seconds - h * 3600) / 60);
   let s: number | string = Math.trunc(seconds - m * 60 - h * 3600);
 

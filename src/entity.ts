@@ -23,11 +23,11 @@ export interface IContent {
     id: number;
     mobile_app_url: string;
   };
-  video_playback_endpoints?: {
+  video_playback_endpoints?: Array<{
     file: string;
     height: number;
     width: number;
-  }[];
+  }>;
   last_watch_position_in_seconds?: number;
 }
 

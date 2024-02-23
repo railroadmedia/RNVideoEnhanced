@@ -17,7 +17,7 @@ const VideoTimer = forwardRef<{ setProgress: (time: number) => void }, IVideoTim
       setProgress,
     }));
 
-    const setProgress = (sec: number) => {
+    const setProgress = (sec: number): void => {
       setProgressState(formatVideoTime(sec));
     };
 

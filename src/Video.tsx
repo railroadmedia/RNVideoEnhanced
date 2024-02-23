@@ -1,4 +1,12 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -13,10 +21,13 @@ import {
   TextStyle,
   GestureResponderHandlers,
   useWindowDimensions,
+  LayoutChangeEvent,
 } from 'react-native';
+
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import WebView, { WebViewMessageEvent } from 'react-native-webview';
+import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 import Orientation, {
   LANDSCAPE_LEFT,
   LANDSCAPE_RIGHT,
@@ -39,10 +50,12 @@ import AnimatedCustomAlert from './AnimatedCustomAlert';
 import DoubleTapArea from './DoubleTapArea';
 import networkSpeedService from './services/networkSpeed.service';
 import LiveTimer from './LiveTimer';
+
 import { svgs } from './img/svgs';
 import { IS_IOS, IS_TABLET, PIX_R, getMP3Array } from './helper';
 import type { IContent, IMp3, IVpe } from './entity';
 import type ISvg from './img/ISvg';
+import Mp3Option from 'RNVideoEnhanced/src/Mp3Option';
 const { AirPlay, AirPlayButton, AirPlayListener } = require('react-native-airplay-ios');
 
 const iconStyle = { width: 40, height: 40, fill: 'white' };
@@ -59,11 +72,6 @@ let offlinePath: string;
 let quality: string | number = 'Auto';
 
 interface IVideo {
-  maxWidth: number;
-  settingsMode?: 'bottom';
-  onOrientationChange: (o: any) => unknown;
-  onStartLive: () => unknown;
-  onQualityChange: (qual?: string | number) => unknown;
   maxFontMultiplier?: number;
   showCastingOptions: undefined;
   orientation: any;
@@ -124,10 +132,6 @@ interface IVideo {
     containerStyle?: ViewStyle;
     timerCursorBackground: string;
     beforeTimerCursorBackground: string;
-    settings: {
-      cancel: TextStyle;
-      downloadIcon: ViewStyle;
-    };
     alert: {
       titleTextColor: string;
       subtitleTextColor: string;
@@ -136,6 +140,9 @@ interface IVideo {
       reloadLesson: { color: string; background: string };
     };
   };
+  maxWidth: number;
+  onOrientationChange: (o: any) => void;
+  onQualityChange: (qual?: string | number) => void;
 }
 
 const Video = forwardRef<
@@ -161,13 +168,13 @@ const Video = forwardRef<
     liveData,
     maxFontMultiplier,
     onBack,
+    onStart,
     onEnd,
     onFullscreen,
     onGCastingChange,
     onACastingChange,
     onPlayerReady,
     onRefresh,
-    onStart,
     onUpdateVideoProgress,
     orientationIsLocked,
     styles: propStyles,
@@ -176,7 +183,8 @@ const Video = forwardRef<
     youtubeId,
 
     maxWidth,
-    settingsMode,
+    onOrientationChange,
+    onQualityChange,
   } = props;
   quality = props?.quality || quality;
   aCasting = props?.aCasting || aCasting;
@@ -200,7 +208,7 @@ const Video = forwardRef<
   const [liveEnded, setLiveEnded] = useState<boolean>(false);
   const [buffering, setBuffering] = useState<boolean>(true);
   const [mp3Length, setMp3Length] = useState<number>(0);
-  const [mp3s, setMp3s] = useState<IMp3[]>();
+  const [mp3s, setMp3s] = useState<IMp3[]>([]);
   const [vpe, setVpe] = useState<IVpe[] | undefined>();
   const [fullscreen, setFullscreen] = useState<boolean>();
   const [showPoster, setShowPoster] = useState(true);
@@ -218,6 +226,7 @@ const Video = forwardRef<
   const progressBarPositionX = useRef<number>(0);
 
   const translateControls = useRef<any>(new Animated.Value(1));
+  const translateControlsRef = useRef<number>();
   const translateBlueX = useRef(new Animated.Value(-videoW + 11));
   const googleCastClient = useRef<RemoteMediaClient>();
   const controlsTO = useRef<NodeJS.Timeout | undefined>();
@@ -227,8 +236,26 @@ const Video = forwardRef<
   const videoSettingsRef = useRef<React.ElementRef<typeof VideoSettings>>(null);
   const mp3ActionModalRef = useRef<React.ElementRef<typeof ActionModal>>(null);
   const alertRef = useRef<React.ElementRef<typeof AnimatedCustomAlert>>(null);
-
   const endVideoFlagRef = useRef<boolean>(false);
+
+  const minsToStart = (startDate: string): number =>
+    Math.ceil((Date.parse(startDate) - Date.now()) / (1000 * 60));
+
+  const hasPrevious =
+    disablePrevious !== undefined
+      ? !disablePrevious
+      : content?.previous_lesson &&
+        (content?.previous_lesson.id || content?.previous_lesson.mobile_app_url);
+  const hasNext =
+    disableNext !== undefined
+      ? !disableNext
+      : content?.next_lesson && (content?.next_lesson.id || content?.next_lesson.mobile_app_url);
+  const audioOnly = content?.type === 'play-along' && listening;
+  const minsToStartValue = minsToStart(liveData?.live_event_start_time_in_timezone || '');
+  const showTimer =
+    (!!liveData && !liveData?.isLive) ||
+    liveEnded ||
+    (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
 
   useEffect(() => {
     getVideoDimensions();
@@ -239,7 +266,6 @@ const Video = forwardRef<
 
     translateBlueX.current?.setOffset(-11); // Offsets half the timer dot width so its centered.
 
-    setMp3s(getMP3Array(content));
     if (!youtubeId) {
       setVpe(filterVideosByResolution());
     }
@@ -250,17 +276,8 @@ const Video = forwardRef<
     setShowCastingOptions(
       props?.showCastingOptions !== undefined ? props?.showCastingOptions : true
     );
-    try {
-      setMp3s(m => {
-        const updatedMp3s = m && [...m];
-        if (updatedMp3s?.[0]) {
-          updatedMp3s[0].selected = true;
-        }
-        return updatedMp3s;
-      });
-    } catch (e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    content,
     props?.aCasting,
     props?.autoPlay,
     props?.offlinePath,
@@ -328,23 +345,30 @@ const Video = forwardRef<
       }
       Orientation.removeDeviceOrientationListener(orientationListener);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!connection && !youtubeId) {
       selectQuality('Auto');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection, youtubeId]);
 
   useEffect(() => {
     cTime.current = autoPlay ? 0 : content?.last_watch_position_in_seconds || 0;
     playPressedFirstTime = true;
     secondsPlayed = 0;
-    setMp3s(getMP3Array(content));
 
+    const updatedMp3s = getMP3Array(content);
+    if (updatedMp3s?.[0]) {
+      updatedMp3s[0].selected = true;
+    }
+    setMp3s(updatedMp3s);
     if (!youtubeId) {
       setVpe(filterVideosByResolution());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content?.id]);
 
   useImperativeHandle(ref, () => ({
@@ -358,7 +382,7 @@ const Video = forwardRef<
       return;
     }
     const { captions, signal, video_playback_endpoints } = content;
-    const aListener = AirPlayListener.addListener('deviceConnected', async ({ devices }: any) => {
+    AirPlayListener.addListener('deviceConnected', async ({ devices }: any) => {
       try {
         if (devices[0]?.portType === 'AirPlay') {
           animateControls(1);
@@ -443,100 +467,103 @@ const Video = forwardRef<
     });
   };
 
-  const gCastMedia = async (time?: number): Promise<void> => {
-    const { title, signal, captions, description, video_playback_endpoints, length_in_seconds } =
-      content;
-    const svpe = vpe?.find(v => v?.selected);
-    try {
-      const networkSpeed = await networkSpeedService.getNetworkSpeed(
-        vpe?.[0]?.file,
-        offlinePath,
-        signal
-      );
-      if (networkSpeed.aborted) {
-        return;
-      }
-      setPaused(false);
-      setVideoRefreshing(true);
-      if (video_playback_endpoints) {
-        setVpe([
-          ...video_playback_endpoints?.map(v => ({
-            ...v,
-            selected: v?.height === svpe?.height,
-          })),
-          {
-            height: 'Auto',
-            selected: svpe?.height === 'Auto',
-            actualH: networkSpeed.recommendedVideoQuality,
-            file: Object.create(video_playback_endpoints)
-              ?.sort((i: { height: number }, j: { height: number }) =>
-                i?.height < j?.height ? 1 : -1
-              )
-              ?.find((v: { height: number }) => v?.height <= networkSpeed.recommendedVideoQuality)
-              ?.file,
-          },
-        ]);
-      }
-
-      const castOptions = {
-        mediaInfo: {
-          contentUrl:
-            (type === 'video'
-              ? !!vpe?.find(v => v.selected)?.originalFile
-                ? vpe?.find(v => v.selected)?.originalFile
-                : vpe?.find(v => v.selected)?.file
-              : mp3s?.find(mp3 => mp3.selected)?.value) || '',
-          metadata: {
-            type: 'movie',
-            studio: 'Drumeo',
-            title: title || '',
-            subtitle: description || '',
-          },
-          streamDuration: mp3Length || length_in_seconds,
-        },
-        playbackRate: parseFloat(rate),
-        startTime: Math.round(time || cTime.current || 0),
-      };
-      if (captions) {
-        castOptions.mediaInfo.mediaTracks = [
-          {
-            id: 1, // assign a unique numeric ID
-            type: 'text',
-            subtype: 'subtitles',
-            name: 'English Subtitle',
-            contentId: captions,
-            language: 'en-US',
-          },
-        ];
-      }
-      googleCastClient.current?.loadMedia(castOptions);
-      if (captions) {
-        if (!captionsHidden) {
-          googleCastClient.current?.onMediaPlaybackStarted(s => {
-            if (s?.playerState === 'playing') {
-              googleCastClient.current?.setActiveTrackIds([1]);
-              googleCastClient.current?.setTextTrackStyle({
-                backgroundColor: '#00000000',
-                edgeType: 'outline',
-                edgeColor: '#000000FF',
-                fontFamily: 'OpenSans',
-              });
-            }
-          });
-        } else {
-          googleCastClient.current?.onMediaPlaybackStarted(s => {
-            if (s?.playerState === 'playing') {
-              googleCastClient.current?.setActiveTrackIds([]);
-            }
-          });
+  const gCastMedia = useCallback(
+    async (time?: number): Promise<void> => {
+      const { title, signal, captions, description, video_playback_endpoints, length_in_seconds } =
+        content;
+      const svpe = vpe?.find(v => v?.selected);
+      try {
+        const networkSpeed = await networkSpeedService.getNetworkSpeed(
+          vpe?.[0]?.file,
+          offlinePath,
+          signal
+        );
+        if (networkSpeed.aborted) {
+          return;
         }
+        setPaused(false);
+        setVideoRefreshing(true);
+        if (video_playback_endpoints) {
+          setVpe([
+            ...video_playback_endpoints?.map(v => ({
+              ...v,
+              selected: v?.height === svpe?.height,
+            })),
+            {
+              height: 'Auto',
+              selected: svpe?.height === 'Auto',
+              actualH: networkSpeed.recommendedVideoQuality,
+              file: Object.create(video_playback_endpoints)
+                ?.sort((i: { height: number }, j: { height: number }) =>
+                  i?.height < j?.height ? 1 : -1
+                )
+                ?.find((v: { height: number }) => v?.height <= networkSpeed.recommendedVideoQuality)
+                ?.file,
+            },
+          ]);
+        }
+
+        const castOptions = {
+          mediaInfo: {
+            contentUrl:
+              (type === 'video'
+                ? !!vpe?.find(v => v.selected)?.originalFile
+                  ? vpe?.find(v => v.selected)?.originalFile
+                  : vpe?.find(v => v.selected)?.file
+                : mp3s?.find(mp3 => mp3.selected)?.value) || '',
+            metadata: {
+              type: 'movie',
+              studio: 'Drumeo',
+              title: title || '',
+              subtitle: description || '',
+            },
+            streamDuration: mp3Length || length_in_seconds,
+          },
+          playbackRate: parseFloat(rate),
+          startTime: Math.round(time || cTime.current || 0),
+        };
+        if (captions) {
+          castOptions.mediaInfo.mediaTracks = [
+            {
+              id: 1, // assign a unique numeric ID
+              type: 'text',
+              subtype: 'subtitles',
+              name: 'English Subtitle',
+              contentId: captions,
+              language: 'en-US',
+            },
+          ];
+        }
+        googleCastClient.current?.loadMedia(castOptions);
+        if (captions) {
+          if (!captionsHidden) {
+            googleCastClient.current?.onMediaPlaybackStarted(s => {
+              if (s?.playerState === 'playing') {
+                googleCastClient.current?.setActiveTrackIds([1]);
+                googleCastClient.current?.setTextTrackStyle({
+                  backgroundColor: '#00000000',
+                  edgeType: 'outline',
+                  edgeColor: '#000000FF',
+                  fontFamily: 'OpenSans',
+                });
+              }
+            });
+          } else {
+            googleCastClient.current?.onMediaPlaybackStarted(s => {
+              if (s?.playerState === 'playing') {
+                googleCastClient.current?.setActiveTrackIds([]);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        gCasting = false;
+        onGCastingChange?.(false);
+        googleCastSession?.endCurrentSession();
       }
-    } catch (e) {
-      gCasting = false;
-      onGCastingChange?.(false);
-      googleCastSession?.endCurrentSession();
-    }
-  };
+    },
+    [captionsHidden, content, googleCastSession, mp3Length, mp3s, onGCastingChange, rate, type, vpe]
+  );
 
   const updateVideoProgress = async (apiCallDelay?: number): Promise<void> => {
     onUpdateVideoProgress?.(
@@ -555,6 +582,7 @@ const Video = forwardRef<
     if (orientationIsLocked) {
       return;
     }
+
     orientation = o.includes('UPSIDE') ? PORTRAIT : o;
 
     if (o.includes('UNKNOWN') || o.includes('FACE') || o.includes('UPSIDE')) {
@@ -573,10 +601,9 @@ const Video = forwardRef<
         Orientation.lockToPortrait();
       }
     }
-
     const fs = !IS_TABLET || live ? isLandscape : force ? !fullscreen : fullscreen;
 
-    props.onOrientationChange?.(o);
+    onOrientationChange?.(o);
     if (mp3Length > 0) {
       if (Math.trunc(cTime.current) !== mp3Length) {
         onProgress({ currentTime: cTime.current || 0 });
@@ -588,9 +615,12 @@ const Video = forwardRef<
     }
     onFullscreen?.(!!fs);
 
-    setTabOrientation(
-      o.includes('LEFT') ? LANDSCAPE_LEFT : o.includes('RIGHT') ? LANDSCAPE_RIGHT : PORTRAIT
-    );
+    if (IS_TABLET) {
+      setTabOrientation(
+        o.includes('LEFT') ? LANDSCAPE_LEFT : o.includes('RIGHT') ? LANDSCAPE_RIGHT : PORTRAIT
+      );
+    }
+
     setFullscreen(fs);
   };
 
@@ -598,7 +628,6 @@ const Video = forwardRef<
     let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
       ...v,
     }));
-
     if (!aCasting) {
       vpeTemp = vpeTemp?.filter(v =>
         wWidth < wHeight
@@ -633,59 +662,6 @@ const Video = forwardRef<
     return vpeTemp;
   };
 
-  const selectQuality = async (
-    q: string | number,
-    skipRender?: boolean
-  ): Promise<IVpe[] | undefined> => {
-    let recommendedVideoQuality: IVpe | undefined;
-
-    if (q === 'Auto') {
-      recommendedVideoQuality = vpe?.find(v => !v?.file?.includes('http'));
-      if (!recommendedVideoQuality) {
-        const networkSpeed = await networkSpeedService.getNetworkSpeed(
-          vpe?.[0]?.file,
-          offlinePath,
-          content?.signal
-        );
-        if (networkSpeed?.aborted) {
-          return;
-        }
-        recommendedVideoQuality = Object.create(vpe || [])
-          .sort((i: IVpe, j: IVpe) => (i?.height < j?.height ? 1 : -1))
-          .find((rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality);
-      }
-    }
-    let newVPE = aCasting
-      ? vpe?.map(v => ({
-          ...v,
-          selected: v?.height === q,
-        }))
-      : vpe?.map(v => ({
-          ...v,
-          selected: v?.height === q,
-          file: q === 'Auto' && v?.height === 'Auto' ? recommendedVideoQuality?.file : v?.file,
-          actualH:
-            q === 'Auto' && v?.height === 'Auto'
-              ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
-              : v?.height === 'Auto'
-                ? v?.actualH
-                : v?.height,
-        }));
-    if (!newVPE?.find(v => v.selected)) {
-      newVPE = newVPE?.map(v => ({
-        ...v,
-        selected: v?.height === 720,
-      }));
-    }
-    if (skipRender) {
-      return newVPE;
-    } else {
-      setVideoRefreshing(gCasting);
-      setVpe(newVPE);
-      return;
-    }
-  };
-
   const updateBlueX = (): void => {
     if (!translateBlueX.current) {
       return;
@@ -700,6 +676,44 @@ const Video = forwardRef<
     if (!isNaN(translate) && isFinite(translate)) {
       translateBlueX.current.setValue(translate);
     }
+  };
+
+  const onSeek = (time: string | number): void => {
+    time = parseFloat(time as string);
+    if (!isNaN(time)) {
+      const fullLength = mp3Length || content.length_in_seconds;
+      if (time < 0) {
+        time = 0;
+      } else if (time > fullLength) {
+        time = fullLength;
+      }
+
+      if (showPoster) {
+        setShowPoster(gCasting ? true : false);
+      } else if (gCasting) {
+        setShowPoster(true);
+      }
+      if (videoRef.current) {
+        videoRef.current?.seek?.(time);
+      }
+      if (webViewRef.current) {
+        webViewRef.current?.injectJavaScript(`seekTo(${time})`);
+      }
+      if (!IS_IOS || gCasting) {
+        onProgress({ currentTime: time });
+      }
+      googleCastClient.current?.seek({ position: time || 0 });
+    }
+  };
+
+  const handleLiveBack = (): void => {
+    onBack?.();
+  };
+
+  const handleYtBack = (): void => {
+    webViewRef.current?.injectJavaScript(`(function() {
+      onBack();
+    })()`);
   };
 
   const getVideoDimensions = (): {
@@ -760,71 +774,130 @@ const Video = forwardRef<
     return { width: videoW, height: videoH };
   };
 
-  const pResponder = (): GestureResponderHandlers =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderTerminationRequest: () => true,
-      onStartShouldSetPanResponderCapture: () => false,
-      onPanResponderRelease: () => {
-        delete seeking.current;
-        if (videoPlayStatus.current) {
-          togglePaused();
+  const onWebViewMessage = ({ nativeEvent: { data } }: WebViewMessageEvent): void => {
+    const parsedData = JSON.parse(data);
+
+    switch (parsedData.eventType) {
+      case 'playerReady':
+        if (props?.autoPlay && webViewRef.current) {
+          webViewRef.current?.injectJavaScript(`playVideo()`);
         }
-        delete videoPlayStatus.current;
-        onSeek(seekTime.current);
-        cTime.current = seekTime.current;
-        updateVideoProgress();
-        clearTimeout(controlsTO.current);
-        controlsTO.current = setTimeout(() => {
-          animateControls(paused ? 1 : 0);
-        }, 3000);
-      },
-      onPanResponderTerminate: () => {
-        delete seeking.current;
-        if (videoPlayStatus.current) {
-          togglePaused();
+        onPlayerReady?.();
+        break;
+      case 'playerStateChange':
+        cTime.current = parsedData.data?.target?.playerInfo?.currentTime;
+        if (parsedData.data?.data === 1) {
+          startPlaySec = cTime.current;
         }
-        delete videoPlayStatus.current;
-        onSeek(seekTime.current);
-        cTime.current = seekTime.current;
-        updateVideoProgress();
-        clearTimeout(controlsTO.current);
-        controlsTO.current = setTimeout(() => {
-          animateControls(paused ? 1 : 0);
-        }, 3000);
-      },
-      onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
-        clearTimeout(controlsTO.current);
-        animateControls(1);
-        seekTime.current =
-          (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
-        if (!IS_IOS) {
-          onProgress({ currentTime: seekTime.current });
+        if (parsedData.data?.data === 2) {
+          endPlaySec = cTime.current;
+          secondsPlayed = endPlaySec - startPlaySec;
+          if (secondsPlayed > 0) {
+            updateVideoProgress();
+          }
         }
-        googleCastClient.current?.seek({ position: parseFloat(seekTime.current) });
-        return Math.abs(dx) > 2 || Math.abs(dy) > 2;
-      },
-      onPanResponderMove: (_, { moveX }) => {
-        seeking.current = true;
-        if (!paused) {
-          videoPlayStatus.current = true;
-          togglePaused();
+        if (parsedData.data?.data === 0) {
+          onEndVideo();
         }
-        moveX = moveX - progressBarPositionX.current;
-        const translate = moveX - videoW;
-        if (moveX < 0 || translate > 0) {
-          return;
-        }
-        translateBlueX.current.setValue(translate);
-        seekTime.current =
-          (moveX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
-        if (!IS_IOS) {
-          onProgress({ currentTime: seekTime.current });
-        }
-        videoTimerRef.current?.setProgress(seekTime.current);
-      },
-    }).panHandlers;
+        break;
+      case 'back':
+        cTime.current = parsedData.currentTime;
+        endPlaySec = cTime.current;
+        secondsPlayed = endPlaySec - startPlaySec;
+        handleBack();
+        break;
+    }
+  };
+
+  const onNavigationStateChange = ({ url }: WebViewNavigation): void => {
+    if (url.includes(`www.youtube.com`)) {
+      webViewRef.current?.stopLoading();
+    }
+  };
+
+  const onEndVideo = (): void => {
+    updateVideoProgress();
+    if (autoPlay) {
+      goToNextLesson?.();
+      return;
+    }
+    orientationListener(tabOrientation || 'PORT', !IS_TABLET);
+    endVideoFlagRef.current = true;
+    setPaused(true);
+  };
+
+  useEffect(() => {
+    if (!autoPlay && paused && endVideoFlagRef.current) {
+      cTime.current = 0;
+      if (!IS_IOS) {
+        onProgress({ currentTime: 0 });
+      }
+      googleCastClient.current?.seek({ position: 0 });
+      animateControls(1);
+      updateBlueX();
+      videoTimerRef.current?.setProgress(0);
+      if (videoRef.current) {
+        videoRef.current?.seek?.(0);
+      }
+      endVideoFlagRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused]);
+
+  const onLoad = (videoDetails?: OnLoadData): void => {
+    if (youtubeId && listening && videoDetails?.duration) {
+      setMp3Length(videoDetails?.duration);
+    }
+    if (videoRef.current) {
+      videoRef.current?.seek?.(
+        autoPlay ? startTime || 0 : cTime.current || content?.last_watch_position_in_seconds || 0
+      );
+      onPlayerReady?.();
+    }
+    if (!IS_IOS || youtubeId) {
+      onProgress({
+        currentTime: autoPlay
+          ? startTime || 0
+          : cTime.current || content?.last_watch_position_in_seconds || 0,
+      });
+    }
+    const position = autoPlay
+      ? startTime || 0
+      : cTime.current || content?.last_watch_position_in_seconds || 0;
+    googleCastClient.current?.seek({
+      position: position,
+    });
+    setBuffering(false);
+    if (autoPlay) {
+      toggleControls();
+      togglePaused(false, false);
+    }
+  };
+
+  const onError = ({ error }: LoadError): void => {
+    const { code } = error;
+
+    if (code === -11855) {
+      const selectedHeight = vpe?.find(v => v?.selected)?.height;
+      const newVpe = vpe?.filter(v => v?.height < (selectedHeight || -1) || v?.height === 'Auto'); // check selectedHeight
+      setVpe(newVpe);
+
+      props?.onQualityChange?.(newVpe?.[newVpe?.length - 2]?.height);
+    } else if (code === -1009 && !connection) {
+      onLoad?.();
+    } else {
+      alertRef.current?.toggle(
+        `We're sorry, there was an issue loading this video, try reloading the lesson.`,
+        `If the problem persists please contact support.`
+      );
+    }
+  };
+
+  const onBuffer = ({ isBuffering }: OnBufferData): void => {
+    if (!aCasting && !gCasting && !youtubeId) {
+      setBuffering(isBuffering);
+    }
+  };
 
   const onProgress = ({ currentTime }: OnProgressData | { currentTime: number }): void => {
     if (currentTime === undefined) {
@@ -861,7 +934,7 @@ const Video = forwardRef<
     clearTimeout(controlsTO.current);
     controlsOverwrite =
       controlsOverwrite === undefined
-        ? translateControls.current?._value
+        ? translateControlsRef.current
           ? false
           : true
         : controlsOverwrite;
@@ -876,8 +949,26 @@ const Video = forwardRef<
     });
   };
 
+  const animateControls = useCallback(
+    (toValue?: number, speed?: number): void => {
+      if ((content.type === 'play-along' && listening) || aCasting || gCasting) {
+        return;
+      }
+      const updateValue = toValue !== undefined ? toValue : paused ? 1 : 0;
+      Animated.timing(translateControls.current, {
+        toValue: updateValue,
+        duration: speed || 100,
+        useNativeDriver: true,
+      }).start();
+      translateControlsRef.current = updateValue;
+      setIsControlVisible(updateValue === 1 ? true : false);
+    },
+    [paused, listening, content?.type]
+  );
+
   const togglePaused = (pausedOverwrite?: boolean, skipActionOnCasting?: boolean): void => {
     const pausedState = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
+
     let showPosterState = showPoster;
     if (gCasting) {
       showPosterState = true;
@@ -900,23 +991,47 @@ const Video = forwardRef<
     setShowPoster(showPosterState);
   };
 
-  const animateControls = (toValue: number, speed?: number): void => {
-    if ((content.type === 'play-along' && listening) || aCasting || gCasting) {
-      return;
+  const onAudioBecomingNoisy = (): void => {
+    if (!paused) {
+      togglePaused();
     }
-
-    Animated.timing(translateControls.current, {
-      toValue,
-      duration: speed || 100,
-      useNativeDriver: true,
-    }).start();
-    translateControls.current._value = toValue;
-    setIsControlVisible(toValue === 1 ? true : false);
   };
 
-  const handleLiveBack = (): void => {
-    onBack?.();
+  const onExternalPlaybackChange = (): void => {
+    if (IS_IOS) {
+      AirPlay.startScan();
+    }
   };
+
+  const onStartLiveTimer = (): void => onStart?.();
+
+  const onEndLiveTimer = (): void => {
+    webViewRef.current?.injectJavaScript(`(function() {
+        window.video.pause();
+      })()`);
+    setLiveEnded(true);
+    onEnd?.();
+  };
+
+  const onDoubleTapBackward = (): void => onSeek((cTime.current -= 10));
+  const onDoubleTapForward = (): void => onSeek((cTime.current += 10));
+
+  const onPressVideoSettings = (): void => videoSettingsRef.current?.toggle();
+
+  const onPressFullScreen = (): void => {
+    orientationListener(
+      fullscreen
+        ? IS_TABLET
+          ? orientation.includes('PORT')
+            ? PORTRAIT
+            : orientation
+          : PORTRAIT
+        : tabOrientation || LANDSCAPE_LEFT,
+      true
+    );
+  };
+
+  const onPressMp3Toggler = (): void => mp3ActionModalRef.current?.toggleModal();
 
   const handleBack = (): (() => void) | undefined => {
     if (fullscreen) {
@@ -933,62 +1048,178 @@ const Video = forwardRef<
     onBack?.();
   };
 
-  const handleYtBack = (): void => {
-    webViewRef.current?.injectJavaScript(`(function() {
-      onBack();
-    })()`);
+  const onPressAirPlay = (): void => AirPlay.startScan();
+
+  const onTimerLayout = (event: LayoutChangeEvent): void => {
+    const {
+      nativeEvent: {
+        layout: { x },
+      },
+    } = event;
+    progressBarPositionX.current =
+      fullscreen && (insets?.left || 0) > 0 && IS_IOS ? (insets?.left || 0) + x : x;
   };
 
-  const onLoad = (videoDetails?: OnLoadData): void => {
-    if (youtubeId && listening && videoDetails?.duration) {
-      setMp3Length(videoDetails?.duration);
-    }
-    if (videoRef.current) {
-      videoRef.current?.seek?.(
-        autoPlay ? startTime || 0 : cTime.current || content?.last_watch_position_in_seconds || 0
-      );
-      onPlayerReady?.();
-    }
-    if (!IS_IOS || youtubeId) {
-      onProgress({
-        currentTime: autoPlay
-          ? startTime || 0
-          : cTime.current || content?.last_watch_position_in_seconds || 0,
-      });
-    }
-    const position = autoPlay
-      ? startTime || 0
-      : cTime.current || content?.last_watch_position_in_seconds || 0;
-    googleCastClient.current?.seek({
-      position: position,
-    });
-    setBuffering(false);
-    if (autoPlay) {
-      toggleControls();
-      togglePaused(false, false);
-    }
-  };
+  const pResponder = (): GestureResponderHandlers =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderTerminationRequest: () => true,
+      onStartShouldSetPanResponderCapture: () => false,
+      onPanResponderRelease: () => {
+        delete seeking.current;
+        let updatePauseState = paused;
+        if (videoPlayStatus.current) {
+          updatePauseState = !paused;
+          togglePaused();
+        }
+        delete videoPlayStatus.current;
+        onSeek(seekTime.current);
+        cTime.current = seekTime.current;
+        updateVideoProgress();
+        clearTimeout(controlsTO.current);
+        controlsTO.current = setTimeout(() => {
+          animateControls(updatePauseState ? 1 : 0);
+        }, 3000);
+      },
+      onPanResponderTerminate: () => {
+        delete seeking.current;
+        let updatePauseState = paused;
+        if (videoPlayStatus.current) {
+          updatePauseState = !paused;
+          togglePaused(updatePauseState);
+        }
+        delete videoPlayStatus.current;
+        onSeek(seekTime.current);
+        cTime.current = seekTime.current;
+        updateVideoProgress();
+        clearTimeout(controlsTO.current);
+        controlsTO.current = setTimeout(() => {
+          animateControls(updatePauseState ? 1 : 0);
+        }, 3000);
+      },
+      onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
+        clearTimeout(controlsTO.current);
+        animateControls(1);
+        seekTime.current =
+          (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
+        if (!IS_IOS) {
+          onProgress({ currentTime: seekTime.current });
+        }
+        googleCastClient.current?.seek({ position: parseFloat(seekTime.current) });
+        return Math.abs(dx) > 2 || Math.abs(dy) > 2;
+      },
+      onPanResponderMove: (_, { moveX }) => {
+        seeking.current = true;
+        if (!paused) {
+          videoPlayStatus.current = true;
+          togglePaused();
+        }
+        moveX = moveX - progressBarPositionX.current;
+        const translate = moveX - videoW;
+        if (moveX < 0 || translate > 0) {
+          return;
+        }
+        translateBlueX.current.setValue(translate);
+        seekTime.current =
+          (moveX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
+        if (!IS_IOS) {
+          onProgress({ currentTime: seekTime.current });
+        }
+        videoTimerRef.current?.setProgress(seekTime.current);
+      },
+    }).panHandlers;
 
-  const onBuffer = ({ isBuffering }: OnBufferData): void => {
-    if (!aCasting && !gCasting && !youtubeId) {
-      setBuffering(isBuffering);
-    }
-  };
-
-  const onSaveSettings = (newRate: string, qual: string | number, captions: string): void => {
-    setRate(newRate);
-    setCaptionsHidden(captions === 'Off');
-
-    selectQuality(qual, true).then(v => {
-      setVpe(v);
-      setBuffering(true);
-      quality = qual;
-      props?.onQualityChange?.(qual);
-      if (gCasting) {
-        gCastMedia();
+  const selectQuality = useCallback(
+    async (q: string | number, skipRender?: boolean): Promise<IVpe[] | undefined> => {
+      let recommendedVideoQuality: IVpe | undefined;
+      if (q === 'Auto') {
+        recommendedVideoQuality = vpe?.find(v => !v?.file?.includes('http'));
+        if (!recommendedVideoQuality) {
+          const networkSpeed = await networkSpeedService.getNetworkSpeed(
+            vpe?.[0]?.file,
+            offlinePath,
+            content?.signal
+          );
+          if (networkSpeed?.aborted) {
+            return;
+          }
+          recommendedVideoQuality = Object.create(vpe || [])
+            .sort((i: IVpe, j: IVpe) => (i?.height < j?.height ? 1 : -1))
+            .find((rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality);
+        }
       }
-    });
-  };
+      let newVPE = aCasting
+        ? vpe?.map(v => ({
+            ...v,
+            selected: v?.height === q,
+          }))
+        : vpe?.map(v => ({
+            ...v,
+            selected: v?.height === q,
+            file: q === 'Auto' && v?.height === 'Auto' ? recommendedVideoQuality?.file : v?.file,
+            actualH:
+              q === 'Auto' && v?.height === 'Auto'
+                ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
+                : v?.height === 'Auto'
+                  ? v?.actualH
+                  : v?.height,
+          }));
+      if (!newVPE?.find(v => v.selected)) {
+        newVPE = newVPE?.map(v => ({
+          ...v,
+          selected: v?.height === 720,
+        }));
+      }
+      if (skipRender) {
+        return newVPE;
+      } else {
+        setVideoRefreshing(gCasting);
+        setVpe(newVPE);
+        return;
+      }
+    },
+    [vpe, content?.signal]
+  );
+
+  const onSaveSettings = useCallback(
+    (newRate: string, qual: string | number, captions: string): void => {
+      setRate(newRate);
+      setCaptionsHidden(captions === 'Off');
+      selectQuality(qual, true).then(v => {
+        setBuffering(true);
+        setTimeout(() => {
+          setVpe(v);
+          quality = qual;
+          onQualityChange?.(qual);
+          if (gCasting) {
+            gCastMedia();
+          }
+        }, 100);
+      });
+    },
+    [gCastMedia, onQualityChange, selectQuality]
+  );
+
+  const renderVideoSettings = useMemo(
+    () => (
+      <>
+        {!youtubeId && connection && vpe && (
+          <VideoSettings
+            qualities={vpe?.sort((i, j) =>
+              i?.height < j?.height || j?.height === 'Auto' ? 1 : -1
+            )}
+            showRate={!aCasting}
+            ref={videoSettingsRef}
+            onSaveSettings={onSaveSettings}
+            maxFontMultiplier={maxFontMultiplier}
+            showCaptions={!!content?.captions && !aCasting}
+          />
+        )}
+      </>
+    ),
+    [youtubeId, connection, vpe, content?.captions, onSaveSettings, maxFontMultiplier]
+  );
 
   const formatMP3Name = (mp3?: string): string | undefined => {
     switch (mp3) {
@@ -1003,133 +1234,45 @@ const Video = forwardRef<
     }
   };
 
-  const selectMp3 = (selectedMp3: IMp3): void => {
-    if (mp3ActionModalRef.current) {
-      mp3ActionModalRef.current?.toggleModal();
-    }
-    setMp3s(
-      mp3s?.map(mp3 => ({
-        ...mp3,
-        selected: mp3.id === selectedMp3.id,
-      }))
-    );
-    if (gCasting) {
-      gCastMedia();
-    }
-  };
-
-  const onEndVideo = (): void => {
-    updateVideoProgress();
-    if (autoPlay) {
-      goToNextLesson?.();
-      return;
-    }
-    orientationListener(tabOrientation || 'PORT', !IS_TABLET);
-    endVideoFlagRef.current = true;
-    setPaused(true);
-  };
-
-  useEffect(() => {
-    if (!autoPlay && paused && endVideoFlagRef.current) {
-      cTime.current = 0;
-      if (!IS_IOS) {
-        onProgress({ currentTime: 0 });
+  const selectMp3 = useCallback(
+    (selectedMp3: IMp3): void => {
+      if (mp3ActionModalRef.current) {
+        mp3ActionModalRef.current?.toggleModal();
       }
-      googleCastClient.current?.seek({ position: 0 });
-      animateControls(1);
-      updateBlueX();
-      videoTimerRef.current?.setProgress(0);
-      if (videoRef.current) {
-        videoRef.current?.seek?.(0);
-      }
-      endVideoFlagRef.current = false;
-    }
-  }, [paused]);
-
-  const onAudioBecomingNoisy = (): void => {
-    if (!paused) {
-      togglePaused();
-    }
-  };
-
-  const onSeek = (time: string | number): void => {
-    time = parseFloat(time as string);
-    const fullLength = mp3Length || content.length_in_seconds;
-    if (time < 0) {
-      time = 0;
-    } else if (time > fullLength) {
-      time = fullLength;
-    }
-
-    if (showPoster) {
-      setShowPoster(gCasting ? true : false);
-    } else if (gCasting) {
-      setShowPoster(true);
-    }
-    if (videoRef.current) {
-      videoRef.current?.seek?.(time);
-    }
-    if (webViewRef.current) {
-      webViewRef.current?.injectJavaScript(`seekTo(${time})`);
-    }
-    if (!IS_IOS || gCasting) {
-      onProgress({ currentTime: time });
-    }
-    googleCastClient.current?.seek({ position: time || 0 });
-  };
-
-  const onError = ({ error }: LoadError): void => {
-    const { code } = error;
-    if (code === -11855) {
-      const selectedHeight = vpe?.find(v => v?.selected)?.height;
-      const newVpe = vpe?.filter(v => v?.height < (selectedHeight || -1) || v?.height === 'Auto'); // check selectedHeight
-      setVpe(newVpe);
-
-      props?.onQualityChange?.(newVpe?.[newVpe?.length - 2]?.height);
-    } else if (code === -1009 && !connection) {
-      onLoad?.();
-    } else {
-      alertRef.current?.toggle(
-        `We're sorry, there was an issue loading this video, try reloading the lesson.`,
-        `If the problem persists please contact support.`
+      setMp3s(
+        mp3s?.map(mp3 => ({
+          ...mp3,
+          selected: mp3.id === selectedMp3.id,
+        }))
       );
-    }
-  };
+      if (gCasting) {
+        gCastMedia();
+      }
+    },
+    [mp3s, gCastMedia]
+  );
 
-  const onWebViewMessage = ({ nativeEvent: { data } }: WebViewMessageEvent): void => {
-    const parsedData = JSON.parse(data);
-
-    switch (parsedData.eventType) {
-      case 'playerReady':
-        if (props?.autoPlay && webViewRef.current) {
-          webViewRef.current?.injectJavaScript(`playVideo()`);
-        }
-        onPlayerReady?.();
-        break;
-      case 'playerStateChange':
-        cTime.current = parsedData.data?.target?.playerInfo?.currentTime;
-        if (parsedData.data?.data === 1) {
-          startPlaySec = cTime.current;
-        }
-        if (parsedData.data?.data === 2) {
-          endPlaySec = cTime.current;
-          secondsPlayed = endPlaySec - startPlaySec;
-          if (secondsPlayed > 0) {
-            updateVideoProgress();
-          }
-        }
-        if (parsedData.data?.data === 0) {
-          onEndVideo();
-        }
-        break;
-      case 'back':
-        cTime.current = parsedData.currentTime;
-        endPlaySec = cTime.current;
-        secondsPlayed = endPlaySec - startPlaySec;
-        handleBack();
-        break;
-    }
-  };
+  const renderMp3ActionModal = useMemo(
+    () => (
+      <>
+        {audioOnly && (
+          <ActionModal modalStyle={styles.mp3OptionsContainer} ref={mp3ActionModalRef}>
+            {mp3s?.map(mp3 => (
+              <Mp3Option
+                key={mp3.id}
+                mp3={mp3}
+                selectMp3={selectMp3}
+                formatMP3Name={formatMP3Name}
+                styles={propStyles?.mp3ListPopup}
+                maxFontMultiplier={maxFontMultiplier}
+              />
+            ))}
+          </ActionModal>
+        )}
+      </>
+    ),
+    [audioOnly, mp3s, propStyles?.mp3ListPopup, maxFontMultiplier, selectMp3]
+  );
 
   const onPressReload = (): void => {
     alertRef.current?.toggle();
@@ -1141,25 +1284,6 @@ const Video = forwardRef<
     toSupport?.();
   };
 
-  const minsToStart = (startDate: string): number =>
-    Math.ceil((Date.parse(startDate) - Date.now()) / (1000 * 60));
-
-  const hasPrevious =
-    disablePrevious !== undefined
-      ? !disablePrevious
-      : content?.previous_lesson &&
-        (content?.previous_lesson.id || content?.previous_lesson.mobile_app_url);
-  const hasNext =
-    disableNext !== undefined
-      ? !disableNext
-      : content?.next_lesson && (content?.next_lesson.id || content?.next_lesson.mobile_app_url);
-  const audioOnly = content?.type === 'play-along' && listening;
-  const minsToStartValue = minsToStart(liveData?.live_event_start_time_in_timezone || '');
-  const showTimer =
-    (!!liveData && !liveData?.isLive) ||
-    liveEnded ||
-    (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
-
   return (
     <SafeAreaView
       edges={fullscreen && !live ? ['top', 'bottom'] : ['top']}
@@ -1168,7 +1292,7 @@ const Video = forwardRef<
       {!maxWidth && <View style={styles.maxWidth} />}
       {(!!liveData || (!!youtubeId && !audioOnly && !fullscreen)) && onBack && (
         <TouchableOpacity
-          style={{ zIndex: 5, padding: 10, alignSelf: 'flex-start' }}
+          style={styles.backBtn}
           onPress={!!liveData ? handleLiveBack : handleYtBack}
         >
           {svgs.arrowLeft({
@@ -1203,11 +1327,7 @@ const Video = forwardRef<
                   mediaPlaybackRequiresUserAction={false}
                   automaticallyAdjustContentInsets={false}
                   style={styles.webview}
-                  onNavigationStateChange={({ url }) => {
-                    if (url.includes(`www.youtube.com`)) {
-                      webViewRef.current?.stopLoading();
-                    }
-                  }}
+                  onNavigationStateChange={onNavigationStateChange}
                   source={{
                     baseUrl: 'https://www.musora.com',
                     html: `
@@ -1315,18 +1435,14 @@ const Video = forwardRef<
                     ref={videoRef}
                     onRemotePlayPause={togglePaused}
                     fullscreen={IS_IOS ? false : fullscreen}
-                    style={{ width: '100%', height: '100%' }}
+                    style={styles.videoStyles}
                     onAudioBecomingNoisy={onAudioBecomingNoisy}
                     source={{
                       uri: audioOnly
-                        ? mp3s?.find(mp3 => mp3.selected)?.value
-                        : vpe?.find(v => v.selected)?.file,
+                        ? mp3s?.find(mp3 => mp3?.selected)?.value
+                        : vpe?.find(v => v?.selected)?.file,
                     }}
-                    onExternalPlaybackChange={() => {
-                      if (IS_IOS) {
-                        AirPlay.startScan();
-                      }
-                    }}
+                    onExternalPlaybackChange={onExternalPlaybackChange}
                     {...(aCasting || !content?.captions || typeof content?.captions !== 'string'
                       ? {}
                       : {
@@ -1363,37 +1479,18 @@ const Video = forwardRef<
               startTime={`${liveData?.live_event_start_time} UTC`}
               thumbnailUrl={content?.thumbnail_url}
               visible={!!showTimer}
-              onEnd={() => {
-                webViewRef.current?.injectJavaScript(`(function() {
-                    window.video.pause();
-                  })()`);
-                setLiveEnded(true);
-                onEnd?.();
-              }}
-              onStart={() => {
-                props.onStartLive?.();
-              }}
+              onStart={onStartLiveTimer}
+              onEnd={onEndLiveTimer}
             />
           )}
           {(!youtubeId || audioOnly) && (
-            <TouchableOpacity
-              onPress={() => toggleControls()}
-              style={{
-                width: '100%',
-                height: '100%',
-                ...styles.controlsContainer,
-              }}
-            >
+            <TouchableOpacity onPress={() => toggleControls()} style={styles.controlsContainer}>
               {(audioOnly || showPoster) && (
                 <Image
                   source={{
                     uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url}`,
                   }}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    position: 'absolute',
-                  }}
+                  style={styles.imgBackground}
                 />
               )}
               {!!isControlVisible && (
@@ -1410,106 +1507,81 @@ const Video = forwardRef<
                   }}
                 />
               )}
-
               {!!buffering && !paused && (
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    alignSelf: 'center',
-                  }}
-                >
-                  <ActivityIndicator color='white' size={'large'} animating={buffering} />
+                <Animated.View style={styles.actIndicatorView}>
+                  <ActivityIndicator color={'white'} size={'large'} animating={buffering} />
                 </Animated.View>
               )}
               {!youtubeId && (
-                <View
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    ...styles.controlsContainer,
-                  }}
-                >
+                <View style={styles.controlsContainer}>
                   <DoubleTapArea
                     styles={styles.leftDoubleTap}
-                    onDoubleTap={() => onSeek((cTime.current -= 10))}
+                    onDoubleTap={onDoubleTapBackward}
                     onSingleTap={toggleControls}
                   />
                   <DoubleTapArea
                     styles={styles.rightDoubleTap}
-                    onDoubleTap={() => onSeek((cTime.current += 10))}
+                    onDoubleTap={onDoubleTapForward}
                     onSingleTap={toggleControls}
                   />
                 </View>
               )}
               {showControls && (
-                <>
-                  <Animated.View
-                    style={{
-                      flexDirection: 'row',
-                      opacity: type === 'video' ? translateControls.current : 1,
-                    }}
-                  >
-                    <DoubleTapArea
-                      styles={{ width: '43%', alignItems: 'center' }}
-                      onDoubleTap={() => onSeek((cTime.current -= 10))}
-                    >
-                      {goToPreviousLesson && isControlVisible && (
-                        <TouchableOpacity
-                          onPress={goToPreviousLesson}
-                          style={{
-                            flex: 1,
-                            alignItems: 'center',
-                            opacity: hasPrevious ? 1 : 0.5,
-                          }}
-                          disabled={!hasPrevious}
-                        >
-                          {svgs.prevLesson({
-                            ...iconStyle,
-                            ...propStyles?.largePlayerControls,
-                          })}
-                        </TouchableOpacity>
-                      )}
-                    </DoubleTapArea>
-                    {isControlVisible && (
+                <Animated.View
+                  style={{
+                    flexDirection: 'row',
+                    opacity: type === 'video' ? translateControls.current : 1,
+                  }}
+                >
+                  <DoubleTapArea styles={styles.doubleTapArea} onDoubleTap={onDoubleTapBackward}>
+                    {goToPreviousLesson && isControlVisible && (
                       <TouchableOpacity
-                        onPress={() => togglePaused()}
-                        style={{ flex: 1, alignItems: 'center' }}
+                        onPress={goToPreviousLesson}
+                        style={{
+                          ...styles.changeLessonBtn,
+                          opacity: hasPrevious ? 1 : 0.5,
+                        }}
+                        disabled={!hasPrevious}
                       >
-                        {svgs[paused ? 'playSvg' : 'pause']({
+                        {svgs.prevLesson({
                           ...iconStyle,
                           ...propStyles?.largePlayerControls,
                         })}
                       </TouchableOpacity>
                     )}
-                    <DoubleTapArea
-                      styles={{ width: '43%', alignItems: 'center' }}
-                      onDoubleTap={() => onSeek((cTime.current += 10))}
-                    >
-                      {goToNextLesson && isControlVisible && (
-                        <TouchableOpacity
-                          onPress={goToNextLesson}
-                          style={{
-                            flex: 1,
-                            alignItems: 'center',
-                            opacity: hasNext ? 1 : 0.5,
-                          }}
-                          disabled={!hasNext}
-                        >
-                          {svgs.prevLesson({
-                            ...{ ...iconStyle, ...propStyles?.largePlayerControls },
-                            style: { transform: [{ rotate: '180deg' }] },
-                          })}
-                        </TouchableOpacity>
-                      )}
-                    </DoubleTapArea>
-                  </Animated.View>
-                </>
+                  </DoubleTapArea>
+                  {isControlVisible && (
+                    <TouchableOpacity onPress={() => togglePaused()} style={styles.pausedBtn}>
+                      {svgs[paused ? 'playSvg' : 'pause']({
+                        ...iconStyle,
+                        ...propStyles?.largePlayerControls,
+                      })}
+                    </TouchableOpacity>
+                  )}
+                  <DoubleTapArea styles={styles.doubleTapArea} onDoubleTap={onDoubleTapForward}>
+                    {goToNextLesson && isControlVisible && (
+                      <TouchableOpacity
+                        onPress={goToNextLesson}
+                        style={{
+                          ...styles.changeLessonBtn,
+                          opacity: hasNext ? 1 : 0.5,
+                        }}
+                        disabled={!hasNext}
+                      >
+                        {svgs.prevLesson({
+                          ...{ ...iconStyle, ...propStyles?.largePlayerControls },
+                          style: styles.prevLessonIcon,
+                        })}
+                      </TouchableOpacity>
+                    )}
+                  </DoubleTapArea>
+                </Animated.View>
               )}
               {(!gCasting || (gCasting && googleCastClient.current)) && (
                 <Animated.View
                   style={{
-                    bottom: fullscreen ? 30 + 25 : 11,
                     ...styles.bottomControlsContainer,
+                    bottom: fullscreen ? 30 + 25 : 11,
                     opacity: type === 'video' ? translateControls.current : 1,
                   }}
                 >
@@ -1522,14 +1594,10 @@ const Video = forwardRef<
                   />
                   {!!isControlVisible && (
                     <>
-                      {!youtubeId && settingsMode !== 'bottom' && connection && !audioOnly && (
+                      {!youtubeId && connection && !audioOnly && (
                         <TouchableOpacity
-                          style={{
-                            padding: 10,
-                          }}
-                          onPress={() => {
-                            videoSettingsRef.current?.toggle();
-                          }}
+                          style={styles.fullscreenBtn}
+                          onPress={onPressVideoSettings}
                         >
                           {svgs.videoQuality({
                             width: 20,
@@ -1540,21 +1608,7 @@ const Video = forwardRef<
                         </TouchableOpacity>
                       )}
                       {!audioOnly && onFullscreen && (
-                        <TouchableOpacity
-                          style={{ padding: 10 }}
-                          onPress={() => {
-                            orientationListener(
-                              fullscreen
-                                ? IS_TABLET
-                                  ? orientation.includes('PORT')
-                                    ? PORTRAIT
-                                    : orientation
-                                  : PORTRAIT
-                                : tabOrientation || LANDSCAPE_LEFT,
-                              true
-                            );
-                          }}
-                        >
+                        <TouchableOpacity style={styles.fullscreenBtn} onPress={onPressFullScreen}>
                           {svgs.fullScreen({
                             width: 20,
                             height: 20,
@@ -1566,7 +1620,7 @@ const Video = forwardRef<
                       {audioOnly && (
                         <TouchableOpacity
                           style={styles.mp3TogglerContainer}
-                          onPress={() => mp3ActionModalRef.current?.toggleModal()}
+                          onPress={onPressMp3Toggler}
                         >
                           <Text
                             maxFontSizeMultiplier={maxFontMultiplier}
@@ -1597,7 +1651,7 @@ const Video = forwardRef<
                     opacity: type === 'video' ? translateControls.current : 1,
                   }}
                 >
-                  {isControlVisible && (
+                  {!!isControlVisible && (
                     <TouchableOpacity style={styles.backContainer} onPress={handleBack}>
                       {svgs[fullscreen ? 'x' : 'arrowLeft']({
                         width: 18,
@@ -1616,16 +1670,13 @@ const Video = forwardRef<
               {IS_IOS && (
                 <Animated.View
                   style={{
-                    top: 4.5,
-                    width: 66,
-                    height: 34,
-                    position: 'absolute',
-                    right: settingsMode === 'bottom' ? 98 : 49,
+                    ...styles.airPlayContainer,
+                    right: 49,
                     opacity: type === 'video' ? translateControls.current : 1,
                   }}
                 >
-                  {isControlVisible && (
-                    <TouchableOpacity activeOpacity={1} onPress={() => AirPlay.startScan()}>
+                  {!!isControlVisible && (
+                    <TouchableOpacity activeOpacity={1} onPress={onPressAirPlay}>
                       <AirPlayButton />
                     </TouchableOpacity>
                   )}
@@ -1633,64 +1684,25 @@ const Video = forwardRef<
               )}
               <Animated.View
                 style={{
-                  top: 7,
-                  position: 'absolute',
-                  right: settingsMode === 'bottom' ? 49 : 10,
+                  ...styles.castBtnContainer,
+                  right: 10,
                   opacity: type === 'video' ? translateControls.current : 1,
                 }}
               >
-                {isControlVisible && (
-                  <CastButton
-                    style={{
-                      width: 29,
-                      height: 29,
-                      tintColor: 'white',
-                      ...propStyles?.smallPlayerControls,
-                    }}
-                  />
+                {!!isControlVisible && (
+                  <CastButton style={[styles.castBtn, propStyles?.smallPlayerControls]} />
                 )}
               </Animated.View>
             </>
           )}
-          {!youtubeId && settingsMode === 'bottom' && connection && !audioOnly && (
-            <Animated.View
-              style={{
-                top: 7,
-                right: 10,
-                position: 'absolute',
-                opacity: type === 'video' ? translateControls.current : 1,
-              }}
-            >
-              {!!isControlVisible && (
-                <TouchableOpacity
-                  onPress={() => {
-                    videoSettingsRef.current?.toggle();
-                  }}
-                >
-                  {svgs.menu({
-                    width: 29,
-                    height: 29,
-                    fill: 'white',
-                    ...propStyles?.smallPlayerControls,
-                  })}
-                </TouchableOpacity>
-              )}
-            </Animated.View>
-          )}
         </View>
       </View>
+
       {(!youtubeId || audioOnly) &&
         showControls &&
         (!gCasting || (gCasting && googleCastClient.current)) && (
           <Animated.View
-            onLayout={({
-              nativeEvent: {
-                layout: { x },
-              },
-            }) =>
-              (progressBarPositionX.current =
-                fullscreen && (insets?.left || 0) > 0 && IS_IOS ? (insets?.left || 0) + x : x)
-            }
+            onLayout={onTimerLayout}
             {...pResponder()}
             style={{
               ...getVideoDimensions(),
@@ -1725,56 +1737,10 @@ const Video = forwardRef<
             <View style={styles.timerCover} />
           </Animated.View>
         )}
+
       {fullscreen && <PrefersHomeIndicatorAutoHidden />}
-      {!youtubeId && connection && vpe && (
-        <VideoSettings
-          qualities={vpe?.sort((i, j) => (i?.height < j?.height || j?.height === 'Auto' ? 1 : -1))}
-          styles={propStyles?.settings}
-          settingsMode={settingsMode}
-          showRate={!aCasting}
-          ref={videoSettingsRef}
-          onSaveSettings={onSaveSettings}
-          maxFontMultiplier={maxFontMultiplier}
-          showCaptions={!!content?.captions && !aCasting}
-        />
-      )}
-      {audioOnly && (
-        <ActionModal modalStyle={{ width: '80%' }} ref={mp3ActionModalRef}>
-          {mp3s?.map(mp3 => (
-            <TouchableOpacity
-              key={mp3.id}
-              onPress={() => selectMp3(mp3)}
-              style={{
-                ...styles.mp3OptionContainer,
-                backgroundColor: propStyles?.mp3ListPopup?.background || '#F7F9FC',
-                borderBottomColor: propStyles?.mp3ListPopup?.borderBottomColor || '#E1E6EB',
-              }}
-            >
-              <Text
-                maxFontSizeMultiplier={maxFontMultiplier}
-                style={{
-                  ...styles.mp3OptionText,
-                  color: mp3.selected
-                    ? propStyles?.mp3ListPopup?.selectedTextColor || 'blue'
-                    : propStyles?.mp3ListPopup?.unselectedTextColor || 'black',
-                }}
-              >
-                {formatMP3Name(mp3.key)}
-              </Text>
-              {mp3.selected && (
-                <View style={{ marginRight: 10 }}>
-                  {svgs.check({
-                    width: 23,
-                    height: 23,
-                    fill: 'black',
-                    ...propStyles?.mp3ListPopup?.checkIcon,
-                  })}
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ActionModal>
-      )}
+      {renderVideoSettings}
+      {renderMp3ActionModal}
       <AnimatedCustomAlert
         styles={propStyles?.alert}
         ref={alertRef}
@@ -1814,11 +1780,117 @@ const Video = forwardRef<
 });
 
 const styles = StyleSheet.create({
-  videoBackgorund: {
+  fullscreenSafeArea: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'black',
+    alignItems: 'center',
+  },
+  maxWidth: {
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    position: 'absolute',
+  },
+  backBtn: {
+    zIndex: 5,
+    padding: 10,
+    alignSelf: 'flex-start',
+  },
+  videoContainer: {
+    overflow: 'hidden',
+    backgroundColor: 'black',
+    alignItems: 'stretch',
+  },
+  videoContainerFullscreen: {
+    top: 0,
     width: '100%',
     height: '100%',
     position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webview: {
+    width: '100%',
+    alignSelf: 'stretch',
     backgroundColor: 'black',
+  },
+  videoStyles: {
+    width: '100%',
+    height: '100%',
+  },
+  controlsContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imgBackground: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  constrolsBackground: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    justifyContent: 'center',
+    backgroundColor: 'black',
+  },
+  actIndicatorView: {
+    position: 'absolute',
+    alignSelf: 'center',
+  },
+  leftDoubleTap: {
+    flex: 1,
+    position: 'absolute',
+    left: 0,
+    width: '40%',
+    height: '100%',
+  },
+  rightDoubleTap: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'absolute',
+    right: 0,
+    width: '40%',
+    height: '100%',
+  },
+  pausedBtn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  doubleTapArea: {
+    width: '43%',
+    alignItems: 'center',
+  },
+  changeLessonBtn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  prevLessonIcon: {
+    transform: [{ rotate: '180deg' }],
+  },
+  bottomControlsContainer: {
+    width: '100%',
+    position: 'absolute',
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  fullscreenBtn: {
+    padding: 10,
+  },
+  mp3TogglerContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  mp3TogglerText: {
+    fontSize: 12,
+    fontFamily: 'OpenSans',
   },
   backContainer: {
     top: 0,
@@ -1827,10 +1899,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
   },
-  controlsContainer: {
+  airPlayContainer: {
+    top: 4.5,
+    width: 66,
+    height: 34,
     position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  castBtnContainer: {
+    top: 7,
+    position: 'absolute',
+  },
+  castBtn: {
+    width: 29,
+    height: 29,
+    tintColor: 'white',
+  },
+  menuBtnContainer: {
+    top: 7,
+    right: 10,
+    position: 'absolute',
   },
   timerContainer: {
     height: 29,
@@ -1862,95 +1949,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'transparent',
   },
-  constrolsBackground: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    justifyContent: 'center',
-    backgroundColor: 'black',
-  },
-  bottomControlsContainer: {
-    width: '100%',
-    position: 'absolute',
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  mp3TogglerContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  mp3TogglerText: {
-    fontSize: 12,
-    fontFamily: 'OpenSans',
-  },
-  mp3OptionContainer: {
-    padding: 10,
-    alignItems: 'center',
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-  },
-  mp3OptionText: {
-    flex: 1,
-    fontSize: 10,
-    paddingLeft: 13,
-    fontFamily: 'OpenSans',
-  },
-  leftDoubleTap: {
-    flex: 1,
-    position: 'absolute',
-    left: 0,
-    width: '40%',
-    height: '100%',
-  },
-  rightDoubleTap: {
-    flex: 1,
-    alignItems: 'center',
-    position: 'absolute',
-    right: 0,
-    width: '40%',
-    height: '100%',
-  },
-  fullscreenSafeArea: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'black',
-    alignItems: 'center',
-  },
-  maxWidth: {
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    position: 'absolute',
-  },
-  videoContainer: {
-    overflow: 'hidden',
-    backgroundColor: 'black',
-    alignItems: 'stretch',
-  },
-  videoContainerFullscreen: {
-    top: 0,
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  webview: {
-    width: '100%',
-    alignSelf: 'stretch',
-    backgroundColor: 'black',
-  },
-  contactSupportBtn: {
-    padding: 15,
-  },
-  contactSupportText: {
-    fontSize: 12,
-    textAlign: 'center',
-    fontFamily: 'OpenSans',
-    textDecorationLine: 'underline',
+  mp3OptionsContainer: {
+    width: '80%',
   },
   reloadLessonBtn: {
     marginTop: 10,
@@ -1961,6 +1961,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     fontFamily: 'OpenSans-Bold',
+  },
+  contactSupportBtn: {
+    padding: 15,
+  },
+  contactSupportText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontFamily: 'OpenSans',
+    textDecorationLine: 'underline',
   },
 });
 

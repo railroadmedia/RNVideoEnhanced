@@ -1570,7 +1570,6 @@ export default class Video extends React.Component {
                         >
                           {isControlVisible && (
                             <TouchableOpacity
-                              style={styles.backContainer}
                               onPress={this.handleBack}
                             >
                               {svgs[fullscreen ? "x" : "arrowLeft"]({
@@ -1846,11 +1845,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'black'
   },
   backContainer: {
-    top: 0,
-    left: 0,
-    padding: 15,
+    top: 10,
+    left: 10,
     position: 'absolute',
-    justifyContent: 'center'
+    height: 38,
+    width: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#00101D',
   },
   controlsContainer: {
     position: 'absolute',

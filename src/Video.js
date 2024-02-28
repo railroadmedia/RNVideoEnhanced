@@ -1077,6 +1077,7 @@ export default class Video extends React.Component {
           afterTimerCursorBackground,
           beforeTimerCursorBackground,
           iconColor,
+          backButtonContainerColor,
         },
         content: {
           captions,
@@ -1113,13 +1114,13 @@ export default class Video extends React.Component {
         )}
         {(!!liveData || (!!youtubeId && !audioOnly && !fullscreen) ) && onBack && (
           <TouchableOpacity
-            style={{ zIndex:5, padding: 10, alignSelf: 'flex-start' }}
+            style={[styles.backContainerYt, { backgroundColor: backButtonContainerColor }]}
             onPress={!!liveData ? this.handleLiveBack : this.handleYtBack}
           >
             {svgs.arrowLeft({
               width: 18,
               height: 18,
-              fill: fullscreen ? 'white' : iconColor || 'white'
+              fill: 'white'
             })}
           </TouchableOpacity>
         )}
@@ -1844,6 +1845,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'black'
   },
+  backContainerYt:{
+    zIndex: 5,
+    padding: 10,
+    alignSelf: 'flex-start',
+    height: 38,
+    width: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#002039',
+    marginLeft: 10,
+    marginBottom: 10
+  },
   backContainer: {
     top: 10,
     left: 10,
@@ -1853,7 +1867,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#00101D',
+    backgroundColor: '#081825',
   },
   controlsContainer: {
     position: 'absolute',

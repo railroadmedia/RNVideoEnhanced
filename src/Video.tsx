@@ -59,7 +59,7 @@ import { svgs } from './img/svgs';
 import { IS_IOS, IS_TABLET, PIX_R, getMP3Array } from './helper';
 import type { IContent, IMp3, IVpe } from './entity';
 import type ISvg from './img/ISvg';
-import Mp3Option from 'RNVideoEnhanced/src/Mp3Option';
+import Mp3Option from './Mp3Option';
 const { AirPlay, AirPlayButton, AirPlayListener } = require('react-native-airplay-ios');
 
 const iconStyle = { width: 40, height: 40, fill: 'white' };
@@ -1201,7 +1201,9 @@ const Video = forwardRef<
       setRate(newRate);
       setCaptionsHidden(captions === 'Off');
       selectQuality(qual, true).then(v => {
-        setBuffering(true);
+        if (JSON.stringify(vpe) !== JSON.stringify(v)) {
+          setBuffering(true);
+        }
         setTimeout(() => {
           setVpe(v);
           quality = qual;
@@ -1212,7 +1214,7 @@ const Video = forwardRef<
         }, 100);
       });
     },
-    [gCastMedia, onQualityChange, selectQuality]
+    [gCastMedia, onQualityChange, selectQuality, vpe]
   );
 
   const renderVideoSettings = useMemo(

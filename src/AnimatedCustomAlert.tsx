@@ -13,14 +13,14 @@ interface IAnimatedCustomAlert {
   additionalTextBtn?: ReactElement;
   onClose?: () => void;
   maxFontMultiplier?: number;
-  styles: { background: string; subtitleTextColor: string; titleTextColor: string };
+  themeColors: { background: string; text: string };
 }
 
 const AnimatedCustomAlert = forwardRef<
   { toggle: (titleText?: string, messageText?: string) => void },
   IAnimatedCustomAlert
 >((props, ref) => {
-  const { onClose, additionalBtn, additionalTextBtn, maxFontMultiplier, styles: propStyle } = props;
+  const { onClose, additionalBtn, additionalTextBtn, maxFontMultiplier, themeColors } = props;
   const [visible, setVisible] = useState(false);
   const title = useRef<string | undefined>('');
   const message = useRef<string | undefined>('');
@@ -70,29 +70,21 @@ const AnimatedCustomAlert = forwardRef<
             {
               marginHorizontal: 50,
               opacity: opacity.current,
-              backgroundColor: propStyle?.background || 'white',
+              backgroundColor: themeColors?.background || 'white',
             },
           ]}
         >
           <Text
             maxFontSizeMultiplier={maxFontMultiplier}
             testID='alertTitle'
-            style={[
-              styles.mediumTitle,
-              styles.text,
-              { color: propStyle?.titleTextColor || 'black' },
-            ]}
+            style={[styles.mediumTitle, styles.text, { color: themeColors?.text || 'black' }]}
           >
             {title.current}
           </Text>
           <Text
             maxFontSizeMultiplier={maxFontMultiplier}
             testID='alertMessage'
-            style={[
-              styles.mediumText,
-              styles.text,
-              { color: propStyle?.subtitleTextColor || 'black' },
-            ]}
+            style={[styles.mediumText, styles.text, { color: themeColors?.text || 'black' }]}
           >
             {message.current}
           </Text>

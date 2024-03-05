@@ -7,12 +7,12 @@ interface IMp3Option {
   mp3: IMp3;
   selectMp3: (selectedMp3: IMp3) => void;
   formatMP3Name: (mp3?: string) => string | undefined;
-  styles: any;
   maxFontMultiplier?: number;
+  primaryColor?: string;
 }
 
 const Mp3Option: React.FunctionComponent<IMp3Option> = props => {
-  const { mp3, selectMp3, formatMP3Name, styles: propStyles, maxFontMultiplier } = props;
+  const { mp3, selectMp3, formatMP3Name, maxFontMultiplier, primaryColor } = props;
 
   const onPressMp3Option = useCallback(() => selectMp3(mp3), [selectMp3, mp3]);
 
@@ -22,17 +22,15 @@ const Mp3Option: React.FunctionComponent<IMp3Option> = props => {
       onPress={onPressMp3Option}
       style={{
         ...styles.mp3OptionContainer,
-        backgroundColor: propStyles?.background || '#F7F9FC',
-        borderBottomColor: propStyles?.borderBottomColor || '#E1E6EB',
+        backgroundColor: '#F7F9FC',
+        borderBottomColor: '#E1E6EB',
       }}
     >
       <Text
         maxFontSizeMultiplier={maxFontMultiplier}
         style={{
           ...styles.mp3OptionText,
-          color: mp3?.selected
-            ? propStyles?.selectedTextColor || 'blue'
-            : propStyles?.unselectedTextColor || 'black',
+          color: mp3?.selected ? primaryColor || 'blue' : 'black',
         }}
       >
         {formatMP3Name(mp3?.key)}
@@ -43,7 +41,6 @@ const Mp3Option: React.FunctionComponent<IMp3Option> = props => {
             width: 23,
             height: 23,
             fill: 'black',
-            ...propStyles?.mp3ListPopup?.checkIcon,
           })}
         </View>
       )}

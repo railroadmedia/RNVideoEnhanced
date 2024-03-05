@@ -17,8 +17,6 @@ import {
   PanResponder,
   TouchableOpacity,
   ActivityIndicator,
-  ViewStyle,
-  TextStyle,
   GestureResponderHandlers,
   useWindowDimensions,
   LayoutChangeEvent,
@@ -57,8 +55,7 @@ import LiveTimer from './LiveTimer';
 
 import { svgs } from './img/svgs';
 import { IS_IOS, IS_TABLET, PIX_R, getMP3Array } from './helper';
-import type { IContent, IMp3, IVpe } from './entity';
-import type ISvg from './img/ISvg';
+import type { IMp3, IVideo, IVpe } from './entity';
 import Mp3Option from './Mp3Option';
 const { AirPlay, AirPlayButton, AirPlayListener } = require('react-native-airplay-ios');
 
@@ -74,80 +71,6 @@ let gCasting: boolean;
 let orientation: string;
 let offlinePath: string;
 let quality: string | number = 'Auto';
-
-interface IVideo {
-  onPlayerReady?: () => void;
-  youtubeId?: string;
-  content: IContent;
-  type: 'audio' | 'video';
-  toSupport: () => void;
-  onBack?: () => void;
-  connection: boolean | null;
-  goToNextLesson?: () => void;
-  goToPreviousLesson?: () => void;
-  disableNext?: boolean;
-  disablePrevious?: boolean;
-  autoPlay?: boolean;
-  live: boolean;
-  liveData?: {
-    isLive?: boolean;
-    live_event_end_time?: string;
-    live_event_start_time?: string;
-    live_event_end_time_in_timezone?: string;
-    live_event_start_time_in_timezone?: string;
-  };
-  startTime?: number;
-  endTime?: number;
-  onStart?: () => void;
-  quality?: number;
-  onEnd?: () => void;
-  onGCastingChange?: (casting: boolean) => void;
-  onACastingChange?: (casting?: boolean) => void;
-  gCasting?: boolean;
-  onRefresh: () => void;
-  showControls: boolean;
-  paused: boolean;
-  onFullscreen?: (isFullscreen: boolean) => void;
-  orientationIsLocked?: boolean;
-  repeat: boolean;
-  onUpdateVideoProgress?: (
-    videoId: number | string,
-    id: number,
-    lengthInSec: number,
-    currentTime: number,
-    secondsPlayed: number,
-    mediaCategory: string,
-    apiCallDelay?: number
-  ) => void;
-  listening?: boolean;
-  styles: {
-    mp3ListPopup?: any;
-    afterTimerCursorBackground?: string;
-    mp3TogglerTextColor?: string;
-    smallPlayerControls?: ISvg;
-    timerText?: { left: TextStyle; right: TextStyle } | undefined;
-    largePlayerControls?: ISvg;
-    iconColor: string;
-    containerStyle?: ViewStyle;
-    timerCursorBackground: string;
-    beforeTimerCursorBackground: string;
-    alert: {
-      titleTextColor: string;
-      subtitleTextColor: string;
-      background: string;
-      contactSupport: TextStyle;
-      reloadLesson: { color: string; background: string };
-    };
-  };
-  maxWidth?: number;
-  onOrientationChange?: (o: any) => void;
-  onQualityChange?: (qual?: string | number) => void;
-  maxFontMultiplier?: number;
-  showCastingOptions?: boolean;
-  orientation?: string;
-  aCasting?: boolean;
-  offlinePath?: string;
-}
 
 const Video = forwardRef<
   {
@@ -181,11 +104,11 @@ const Video = forwardRef<
     onRefresh,
     onUpdateVideoProgress,
     orientationIsLocked,
-    styles: propStyles,
+    primaryColor,
+    themeColors,
     toSupport,
     type,
     youtubeId,
-
     maxWidth,
     onOrientationChange,
     onQualityChange,
@@ -393,8 +316,8 @@ const Video = forwardRef<
           aCasting = true;
           onACastingChange?.(true);
           const svpe = vpe?.find(v => v?.selected);
-          const networkSpeed = await networkSpeedService.getNetworkSpeed(
-            vpe?.[0]?.file,
+          const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
+            vpe?.[0]?.file || '',
             offlinePath,
             signal
           );
@@ -477,8 +400,8 @@ const Video = forwardRef<
         content;
       const svpe = vpe?.find(v => v?.selected);
       try {
-        const networkSpeed = await networkSpeedService.getNetworkSpeed(
-          vpe?.[0]?.file,
+        const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
+          vpe?.[0]?.file || '',
           offlinePath,
           signal
         );
@@ -1150,8 +1073,8 @@ const Video = forwardRef<
       if (q === 'Auto') {
         recommendedVideoQuality = vpe?.find(v => !v?.file?.includes('http'));
         if (!recommendedVideoQuality) {
-          const networkSpeed = await networkSpeedService.getNetworkSpeed(
-            vpe?.[0]?.file,
+          const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
+            vpe?.[0]?.file || '',
             offlinePath,
             content?.signal
           );
@@ -1279,26 +1202,54 @@ const Video = forwardRef<
                 mp3={mp3}
                 selectMp3={selectMp3}
                 formatMP3Name={formatMP3Name}
-                styles={propStyles?.mp3ListPopup}
                 maxFontMultiplier={maxFontMultiplier}
+                primaryColor={primaryColor}
               />
             ))}
           </ActionModal>
         )}
       </>
     ),
-    [audioOnly, mp3s, propStyles?.mp3ListPopup, maxFontMultiplier, selectMp3]
+    [audioOnly, mp3s, maxFontMultiplier, selectMp3, primaryColor]
   );
 
-  const onPressReload = (): void => {
+  const onPressReload = useCallback((): void => {
     alertRef.current?.toggle();
     onRefresh();
-  };
+  }, [onRefresh]);
 
-  const onPressSupport = (): void => {
+  const onPressSupport = useCallback((): void => {
     alertRef.current?.toggle();
     toSupport?.();
-  };
+  }, [toSupport]);
+
+  const alertButton = useMemo(
+    () => (
+      <TouchableOpacity
+        style={[styles.reloadLessonBtn, { backgroundColor: primaryColor || 'black' }]}
+        onPress={onPressReload}
+      >
+        <Text maxFontSizeMultiplier={maxFontMultiplier} style={styles.reloadLessonText}>
+          {'RELOAD LESSON'}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [maxFontMultiplier, onPressReload, primaryColor]
+  );
+
+  const alertTextButtton = useMemo(
+    () => (
+      <TouchableOpacity style={styles.contactSupportBtn} onPress={onPressSupport}>
+        <Text
+          maxFontSizeMultiplier={maxFontMultiplier}
+          style={[styles.contactSupportText, { color: themeColors.text }]}
+        >
+          {'CONTACT SUPPORT'}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [maxFontMultiplier, themeColors.text, onPressSupport]
+  );
 
   return (
     <SafeAreaView
@@ -1314,7 +1265,7 @@ const Video = forwardRef<
           {svgs.arrowLeft({
             width: 18,
             height: 18,
-            fill: fullscreen ? 'white' : propStyles?.iconColor || 'white',
+            fill: fullscreen ? 'white' : themeColors.text || 'white',
           })}
         </TouchableOpacity>
       )}
@@ -1449,7 +1400,6 @@ const Video = forwardRef<
                     ignoreSilentSwitch={'ignore'}
                     progressUpdateInterval={1000}
                     ref={videoRef}
-                    onRemotePlayPause={togglePaused}
                     fullscreen={IS_IOS ? false : fullscreen}
                     style={styles.videoStyles}
                     onAudioBecomingNoisy={onAudioBecomingNoisy}
@@ -1559,19 +1509,13 @@ const Video = forwardRef<
                         }}
                         disabled={!hasPrevious}
                       >
-                        {svgs.prevLesson({
-                          ...iconStyle,
-                          ...propStyles?.largePlayerControls,
-                        })}
+                        {svgs.prevLesson(iconStyle)}
                       </TouchableOpacity>
                     )}
                   </DoubleTapArea>
                   {isControlVisible && (
                     <TouchableOpacity onPress={() => togglePaused()} style={styles.pausedBtn}>
-                      {svgs[paused ? 'playSvg' : 'pause']({
-                        ...iconStyle,
-                        ...propStyles?.largePlayerControls,
-                      })}
+                      {svgs[paused ? 'playSvg' : 'pause'](iconStyle)}
                     </TouchableOpacity>
                   )}
                   <DoubleTapArea styles={styles.doubleTapArea} onDoubleTap={onDoubleTapForward}>
@@ -1585,7 +1529,7 @@ const Video = forwardRef<
                         disabled={!hasNext}
                       >
                         {svgs.prevLesson({
-                          ...{ ...iconStyle, ...propStyles?.largePlayerControls },
+                          ...iconStyle,
                           style: styles.prevLessonIcon,
                         })}
                       </TouchableOpacity>
@@ -1603,7 +1547,6 @@ const Video = forwardRef<
                 >
                   <VideoTimer
                     live={live}
-                    styles={propStyles?.timerText}
                     length_in_seconds={mp3Length || content?.length_in_seconds}
                     ref={videoTimerRef}
                     maxFontMultiplier={maxFontMultiplier}
@@ -1619,7 +1562,6 @@ const Video = forwardRef<
                             width: 20,
                             height: 20,
                             fill: 'white',
-                            ...propStyles?.smallPlayerControls,
                           })}
                         </TouchableOpacity>
                       )}
@@ -1629,7 +1571,6 @@ const Video = forwardRef<
                             width: 20,
                             height: 20,
                             fill: 'white',
-                            ...propStyles?.smallPlayerControls,
                           })}
                         </TouchableOpacity>
                       )}
@@ -1642,7 +1583,7 @@ const Video = forwardRef<
                             maxFontSizeMultiplier={maxFontMultiplier}
                             style={{
                               ...styles.mp3TogglerText,
-                              color: propStyles?.mp3TogglerTextColor || 'white',
+                              color: 'white',
                             }}
                           >
                             {formatMP3Name(mp3s?.find(mp3 => mp3?.selected)?.key)}
@@ -1651,7 +1592,6 @@ const Video = forwardRef<
                             height: 20,
                             width: 20,
                             fill: '#ffffff',
-                            ...propStyles?.smallPlayerControls,
                           })}
                         </TouchableOpacity>
                       )}
@@ -1673,7 +1613,6 @@ const Video = forwardRef<
                         width: 18,
                         height: 18,
                         fill: '#ffffff',
-                        ...propStyles?.smallPlayerControls,
                       })}
                     </TouchableOpacity>
                   )}
@@ -1705,9 +1644,7 @@ const Video = forwardRef<
                   opacity: type === 'video' ? translateControls.current : 1,
                 }}
               >
-                {!!isControlVisible && (
-                  <CastButton style={[styles.castBtn, propStyles?.smallPlayerControls]} />
-                )}
+                {!!isControlVisible && <CastButton style={styles.castBtn} />}
               </Animated.View>
             </>
           )}
@@ -1731,20 +1668,20 @@ const Video = forwardRef<
             <View
               style={{
                 ...styles.timerGrey,
-                backgroundColor: propStyles?.afterTimerCursorBackground || '#2F3334',
+                backgroundColor: '#2F3334',
               }}
             >
               <Animated.View
                 style={{
                   ...styles.timerBlue,
                   transform: [{ translateX: translateBlueX.current }],
-                  backgroundColor: propStyles?.beforeTimerCursorBackground || 'red',
+                  backgroundColor: primaryColor || 'red',
                 }}
               />
               <Animated.View
                 style={{
                   ...styles.timerDot,
-                  backgroundColor: propStyles?.timerCursorBackground || 'red',
+                  backgroundColor: primaryColor || 'red',
                   transform: [{ translateX: translateBlueX.current }],
                   opacity: type === 'video' ? translateControls.current : 1,
                 }}
@@ -1758,38 +1695,11 @@ const Video = forwardRef<
       {renderVideoSettings}
       {renderMp3ActionModal}
       <AnimatedCustomAlert
-        styles={propStyles?.alert}
+        themeColors={themeColors}
         ref={alertRef}
         maxFontMultiplier={maxFontMultiplier}
-        additionalBtn={
-          <TouchableOpacity
-            style={[
-              styles.reloadLessonBtn,
-              { backgroundColor: propStyles?.alert?.reloadLesson?.background || 'black' },
-            ]}
-            onPress={onPressReload}
-          >
-            <Text
-              maxFontSizeMultiplier={maxFontMultiplier}
-              style={[
-                styles.reloadLessonText,
-                { color: propStyles?.alert?.reloadLesson?.color || 'white' },
-              ]}
-            >
-              {'RELOAD LESSON'}
-            </Text>
-          </TouchableOpacity>
-        }
-        additionalTextBtn={
-          <TouchableOpacity style={styles.contactSupportBtn} onPress={onPressSupport}>
-            <Text
-              maxFontSizeMultiplier={maxFontMultiplier}
-              style={[styles.contactSupportText, propStyles?.alert?.contactSupport]}
-            >
-              {'CONTACT SUPPORT'}
-            </Text>
-          </TouchableOpacity>
-        }
+        additionalBtn={alertButton}
+        additionalTextBtn={alertTextButtton}
       />
     </SafeAreaView>
   );
@@ -1977,6 +1887,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     fontFamily: 'OpenSans-Bold',
+    color: 'white',
   },
   contactSupportBtn: {
     padding: 15,

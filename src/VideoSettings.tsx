@@ -1,374 +1,217 @@
-/* props: maxFontMultiplier */
-
-import React from 'react';
-
-import { View, Text, Modal, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Orientation from 'react-native-orientation-locker';
 
 import SettingsOption from './SettingsOptions';
+import type { IVpe } from './entity';
 
-import { download, videoQuality, speed, check } from './img/svgs';
-
-interface ISettingsProps {
-  qualities: any;
+interface IVideoSettings {
+  qualities: IVpe[];
   onSaveSettings: (rate: string, quality: any, captions: string) => void;
   maxFontMultiplier?: number;
-  styles: any;
-  settingsMode?: string;
   showRate: boolean;
   showCaptions: boolean;
-  modalComponent: React.ReactElement;
-}
-type H = number | string;
-interface IQuality {
-  height: H;
-  actualH: number;
 }
 
-interface ISettingsState {
-  rate: string;
-  captions: string;
-  subSettings: string;
-  modalVisible: boolean;
-  quality: IQuality;
-  isLandscape: boolean;
-}
+const rates = ['0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'];
 
-export default class VideoSettings extends React.PureComponent<ISettingsProps, ISettingsState> {
-  state = {
-    rate: '1.0',
-    captions: 'Off',
-    subSettings: '',
-    modalVisible: false,
-    quality: {
-      height: 'Auto',
-      actualH: 0
+const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props, ref) => {
+  const { qualities, showRate, showCaptions, onSaveSettings, maxFontMultiplier } = props;
+
+  const [rate, setRate] = useState('1.0');
+  const [captions, setCaptions] = useState('Off');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [quality, setQuality] = useState<IVpe>({
+    height: 'Auto',
+    actualH: 0,
+  });
+  const [isLandscape, setIsLandscape] = useState(false);
+  const prevQuality = useRef<IVpe | undefined>();
+
+  useImperativeHandle(ref, () => ({
+    toggle,
+  }));
+
+  useEffect(() => {
+    const updateQ = qualities?.find(q => q?.selected);
+    if (updateQ) {
+      setQuality(updateQ);
+    }
+  }, [qualities]);
+
+  useEffect(() => {
+    const orientationListener = (orientation: string | string[]): void => {
+      setIsLandscape(orientation.includes('LANDSCAPE'));
+    };
+    Orientation.getOrientation(orientationListener);
+    Orientation.addDeviceOrientationListener(orientationListener);
+
+    return () => {
+      Orientation.removeDeviceOrientationListener(orientationListener);
+    };
+  }, []);
+
+  const toggle = useCallback(
+    (mVisible?: boolean): void => {
+      const updateVisibility = typeof mVisible === 'boolean' ? mVisible : !modalVisible;
+      if (updateVisibility) {
+        prevQuality.current = quality;
+      } else {
+        delete prevQuality.current;
+      }
+      setModalVisible(updateVisibility);
+      const updateQ = qualities.find(q => q.selected);
+      if (updateQ) {
+        setQuality(updateQ);
+      }
     },
-    isLandscape: false
+    [modalVisible, qualities, quality]
+  );
+
+  const onQualityChange = (updateQuality: IVpe): void => setQuality(updateQuality);
+
+  const onRateChange = (newRate: string): void => setRate(newRate);
+
+  const onCaptionsChange = (newCaptions: string): void => setCaptions(newCaptions);
+
+  const onSave = useCallback((): void => {
+    toggle(false);
+    if (onSaveSettings) {
+      onSaveSettings(rate, quality?.height, captions);
+    }
+  }, [rate, quality?.height, captions, onSaveSettings, toggle]);
+
+  const onCancel = (): void => {
+    if (prevQuality.current) {
+      setQuality(prevQuality.current);
+    }
+    delete prevQuality.current;
+    setModalVisible(false);
   };
 
-  constructor(props) {
-    super(props);
-    this.state.quality = props.qualities.find(q => q.selected);
-  }
-
-  componentDidMount = () => {
-    Orientation.getOrientation(this.orientationListener);
-    Orientation.addDeviceOrientationListener(this.orientationListener);
-  };
-
-  orientationListener = orientation => {
-    this.setState(() => ({ isLandscape: orientation.includes('LANDSCAPE') }));
-  };
-
-  onRequestClose = () => {};
-
-  prevQuality?: IQuality = undefined;
-
-  toggle = modalVisible =>
-    this.setState(state => {
-      modalVisible = modalVisible === 'boolean' ? modalVisible : !state.modalVisible;
-      if (modalVisible) this.prevQuality = state.quality;
-      else delete this.prevQuality;
-      return {
-        modalVisible,
-        subSettings: '',
-        quality: this.props.qualities.find(q => q.selected)
-      };
-    });
-
-  onQualityChange = quality =>
-    this.setState({ quality }, () => {
-      if (this.state.subSettings) this.onSave();
-    });
-
-  onRateChange = rate =>
-    this.setState({ rate }, () => {
-      if (this.state.subSettings) this.onSave();
-    });
-
-  onCaptionsChange = captions =>
-    this.setState({ captions }, () => {
-      if (this.state.subSettings) this.onSave();
-    });
-
-  onSave = () => {
-    this.toggle(false);
-    delete this.prevQuality;
-    let { onSaveSettings } = this.props;
-    let { rate, quality, captions } = this.state;
-    if (onSaveSettings) onSaveSettings(rate, quality?.height, captions);
-  };
-
-  onCancel = () => {
-    if (this.prevQuality) this.setState({ quality: this.prevQuality });
-    delete this.prevQuality;
-    this.toggle(false);
-  };
-
-  toggleRate = () => this.setState({ subSettings: 'rate' });
-
-  toggleQuality = () => this.setState({ subSettings: 'quality' });
-
-  toggleCaptions = () => this.setState({ subSettings: 'captions' });
-
-  rates = ['0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'];
-
-  renderRate = (rate, propStyle) =>
-    this.rates.map(s => (
+  return (
+    <Modal
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={onCancel}
+      supportedOrientations={['portrait', 'landscape']}
+      animationType={'none'}
+    >
+      <LinearGradient
+        style={styles.gradient}
+        colors={['rgba(0, 12, 23, 0.69)', 'rgba(0, 12, 23, 1)']}
+      />
       <TouchableOpacity
-        key={s}
-        style={[
-          styles.option,
-          {
-            borderColor: propStyle?.optionsBorderColor
-          }
-        ]}
-        onPress={() => this.onRateChange(s)}
+        style={styles.modalBackground}
+        onPress={onCancel}
+        accessible={Platform.OS === 'ios' ? false : true}
       >
-        <Text
-          maxFontSizeMultiplier={this.props.maxFontMultiplier}
-          style={{
-            color: s === rate ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
-            fontFamily: s === rate ? 'OpenSans-Bold' : 'OpenSans'
-          }}
-        >
-          {s}X
-        </Text>
-      </TouchableOpacity>
-    ));
-
-  renderQualities = (qualities, quality, propStyle) =>
-    qualities?.map(q => (
-      <TouchableOpacity
-        key={q?.height}
-        style={[
-          styles[this.props.settingsMode === 'bottom' ? 'optionBottom' : 'option'],
-          {
-            borderColor: propStyle?.optionsBorderColor
-          }
-        ]}
-        onPress={() => this.onQualityChange(q)}
-      >
-        {this.props.settingsMode === 'bottom' && (
-          <>
-            {this.state.quality?.height === q?.height ? (
-              check({
-                width: 20,
-                height: 20,
-                fill: 'black'
-              })
-            ) : (
-              <View style={{ width: 20 }} />
-            )}
-          </>
-        )}
-        <Text
-          maxFontSizeMultiplier={this.props.maxFontMultiplier}
-          style={{
-            color:
-              q?.height === quality?.height ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
-            fontFamily: 'OpenSans',
-            marginLeft: this.props.settingsMode === 'bottom' ? 10 : 0
-          }}
-        >
-          {q?.height}
-          {q?.height === 'Auto' ? ` ${q?.actualH}p` : 'p'}
-        </Text>
-        {q.file &&
-          q.file.indexOf('http') < 0 &&
-          download({
-            width: 20,
-            height: 20,
-            fill: 'black',
-            ...propStyle?.downloadIcon
-          })}
-      </TouchableOpacity>
-    ));
-
-  renderCaptions = (captions, propStyle) =>
-    ['On', 'Off'].map(c => (
-      <TouchableOpacity
-        key={c}
-        style={[
-          styles.option,
-          {
-            borderColor: propStyle?.optionsBorderColor
-          }
-        ]}
-        onPress={() => this.onCaptionsChange(c)}
-      >
-        <Text
-          maxFontSizeMultiplier={this.props.maxFontMultiplier}
-          style={{
-            color: c === captions ? propStyle?.selectedOptionTextColor : propStyle?.unselectedOptionTextColor,
-            fontFamily: c === captions ? 'OpenSans-Bold' : 'OpenSans'
-          }}
-        >
-          {c}
-        </Text>
-      </TouchableOpacity>
-    ));
-
-  render() {
-    let {
-      state: { rate, quality, captions, subSettings, modalVisible, isLandscape },
-      props: { showRate, qualities, showCaptions, settingsMode, styles: propStyle }
-    } = this;
-    return (
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={this.onRequestClose}
-        supportedOrientations={['portrait', 'landscape']}
-        animationType={'none'}
-      >
-        <LinearGradient style={styles.gradient} colors={['rgba(0, 12, 23, 0.69)', 'rgba(0, 12, 23, 1)']} />
-        <TouchableOpacity
-          style={styles.modalBackground}
-          onPress={this.onCancel}
-          accessible={Platform.OS === 'ios' ? false : true}
-        >
-          <SafeAreaView style={[styles.modalContent]}>
-            <ScrollView style={{ transform: [{ scaleY: -1 }] }}>
-              <View style={{ transform: [{ scaleY: -1 }] }}>
-                {subSettings === 'quality' ? (
-                  this.renderQualities(qualities, quality, propStyle)
-                ) : subSettings === 'rate' ? (
-                  this.renderRate(rate, propStyle)
-                ) : subSettings === 'captions' ? (
-                  this.renderCaptions(captions, propStyle)
-                ) : (
-                  <>
-                    {settingsMode === 'bottom' ? (
-                      <TouchableOpacity style={styles.actionBottom} onPress={this.toggleQuality}>
-                        {videoQuality({
-                          width: 20,
-                          height: 20,
-                          fill: 'black'
-                        })}
-                        <Text style={styles.actionTextBottom}>
-                          Video Quality -{' '}
-                          {quality?.height === 'Auto' ? `Auto (${quality?.actualH}p)` : `${quality?.height}p`}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <SettingsOption
-                        title={quality?.height === 'Auto' ? `Auto ${quality?.actualH}p` : `${quality?.height}p`}
-                        iconName={'CameraSvg'}
-                        data={qualities}
-                        onSelect={(item: IQuality) => this.onQualityChange(item)}
-                        itemTitle={item => (item?.height === 'Auto' ? `Auto ${item?.actualH}p` : `${item?.height}p`)}
-                        selected={quality}
-                      />
-                    )}
-                    {showRate && (
-                      <>
-                        {settingsMode === 'bottom' ? (
-                          <TouchableOpacity onPress={this.toggleRate} style={styles.actionBottom}>
-                            {speed({
-                              width: 20,
-                              height: 20,
-                              fill: 'black'
-                            })}
-                            <Text style={styles.actionTextBottom}>
-                              Playback Speed - {rate === '1.0' ? 'Normal' : `${rate}X`}
-                            </Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <SettingsOption
-                            title={`${rate}X`}
-                            iconName={'RateSvg'}
-                            data={this.rates}
-                            onSelect={item => this.onRateChange(item)}
-                            itemTitle={item => `${item}X`}
-                            selected={rate}
-                          />
-                        )}
-                      </>
-                    )}
-                    {showCaptions && (
-                      <>
-                        {settingsMode === 'bottom' ? (
-                          <TouchableOpacity onPress={this.toggleCaptions} style={styles.actionBottom}>
-                            {speed({
-                              width: 20,
-                              height: 20,
-                              fill: 'black'
-                            })}
-                            <Text style={styles.actionTextBottom}>Captions</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <SettingsOption
-                            title={`Captions ${captions}`}
-                            data={['On', 'Off']}
-                            iconName={'CaptionsSvg'}
-                            itemTitle={item => item}
-                            onSelect={item => this.onCaptionsChange(item)}
-                            selected={captions}
-                          />
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              onPress={this.onSave}
-              style={[
-                styles.action,
-                {
-                  marginTop: isLandscape ? 10 : 50,
-                  marginBottom: isLandscape ? 10 : 70
+        <SafeAreaView style={styles.modalContent}>
+          <ScrollView style={styles.scrollView}>
+            <View style={styles.scrollView}>
+              <SettingsOption
+                title={
+                  quality?.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality?.height}p`
                 }
-              ]}
-            >
-              <Text maxFontSizeMultiplier={this.props.maxFontMultiplier} style={styles.actionText}>
-                SAVE
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={this.onCancel}>
-              <Text style={styles.cancelBtnText}>Close</Text>
-            </TouchableOpacity>
-          </SafeAreaView>
-        </TouchableOpacity>
-      </Modal>
-    );
-  }
-}
+                iconName={'CameraSvg'}
+                data={qualities}
+                onSelect={item => onQualityChange(item as IVpe)}
+                itemTitle={item =>
+                  (item as IVpe)?.height === 'Auto'
+                    ? `Auto ${(item as IVpe)?.actualH}p`
+                    : `${(item as IVpe)?.height}p`
+                }
+                selected={quality}
+              />
+              {showRate && (
+                <SettingsOption
+                  title={`${rate}X`}
+                  iconName={'RateSvg'}
+                  data={rates}
+                  onSelect={item => onRateChange(item as string)}
+                  itemTitle={item => `${item}X`}
+                  selected={rate}
+                />
+              )}
+              {showCaptions && (
+                <SettingsOption
+                  title={`Captions ${captions}`}
+                  data={['On', 'Off']}
+                  iconName={'CaptionsSvg'}
+                  itemTitle={item => item as string}
+                  onSelect={item => onCaptionsChange(item as string)}
+                  selected={captions}
+                />
+              )}
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity
+            onPress={onSave}
+            style={[
+              styles.action,
+              {
+                marginTop: isLandscape ? 10 : 50,
+                marginBottom: isLandscape ? 10 : 70,
+              },
+            ]}
+          >
+            <Text maxFontSizeMultiplier={maxFontMultiplier} style={styles.actionText}>
+              {'SAVE'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onCancel}>
+            <Text style={styles.cancelBtnText}>{'Close'}</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
 
 const styles = StyleSheet.create({
+  gradient: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    zIndex: 0,
+  },
   modalBackground: {
-    flex: 1
-  },
-  modalBackgroundBottom: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,.5)'
   },
-  scrollContainer: {
-    margin: 20,
-    maxHeight: '80%',
-    borderRadius: 20,
-    overflow: 'hidden'
+  modalContent: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  scrollContainerBottom: {},
-  option: {
-    padding: 10,
-    borderWidth: 0.5,
-    flexDirection: 'row',
-    paddingHorizontal: 30,
-    fontFamily: 'OpenSans-Bold'
+  scrollView: {
+    transform: [{ scaleY: -1 }],
   },
-  optionBottom: {
+  actionBottom: {
     padding: 15,
-    borderWidth: 0.5,
+    alignItems: 'center',
     flexDirection: 'row',
-    fontFamily: 'OpenSans-Bold'
+  },
+  actionTextBottom: {
+    marginLeft: 10,
+    fontFamily: 'OpenSans',
   },
   action: {
     paddingHorizontal: 50,
@@ -379,33 +222,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignSelf: 'center',
     justifyContent: 'center',
-    alignItems: 'center'
-  },
-  actionBottom: {
-    padding: 15,
     alignItems: 'center',
-    flexDirection: 'row'
   },
   actionText: {
     textAlign: 'center',
     fontFamily: 'BebasNeue',
     color: 'white',
-    fontSize: 18
-  },
-  actionTextBottom: {
-    marginLeft: 10,
-    fontFamily: 'OpenSans'
-  },
-  gradient: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    top: 0,
-    zIndex: 0
-  },
-  modalContent: {
-    flex: 1,
-    justifyContent: 'center'
+    fontSize: 18,
   },
   cancelBtnText: {
     fontSize: 18,
@@ -413,6 +236,15 @@ const styles = StyleSheet.create({
     padding: 10,
     alignSelf: 'center',
     textAlign: 'center',
-    fontFamily: 'OpenSans-Bold'
-  }
+    fontFamily: 'OpenSans-Bold',
+  },
+  option: {
+    padding: 10,
+    borderWidth: 0.5,
+    flexDirection: 'row',
+    paddingHorizontal: 30,
+    fontFamily: 'OpenSans-Bold',
+  },
 });
+
+export default VideoSettings;

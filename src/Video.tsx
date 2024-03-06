@@ -1400,6 +1400,7 @@ const Video = forwardRef<
                     ignoreSilentSwitch={'ignore'}
                     progressUpdateInterval={1000}
                     ref={videoRef}
+                    onRemotePlayPause={togglePaused}
                     fullscreen={IS_IOS ? false : fullscreen}
                     style={styles.videoStyles}
                     onAudioBecomingNoisy={onAudioBecomingNoisy}

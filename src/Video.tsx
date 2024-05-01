@@ -164,6 +164,8 @@ const Video = forwardRef<
   const mp3ActionModalRef = useRef<React.ElementRef<typeof ActionModal>>(null);
   const alertRef = useRef<React.ElementRef<typeof AnimatedCustomAlert>>(null);
   const endVideoFlagRef = useRef<boolean>(false);
+  const eventListnerRef = useRef<boolean>(false);
+  const gcastRef = useRef<{ value: boolean; time?: number }>({ value: false });
 
   const minsToStart = (startDate: string): number =>
     Math.ceil((Date.parse(startDate) - Date.now()) / (1000 * 60));
@@ -219,6 +221,10 @@ const Video = forwardRef<
   ]);
 
   useEffect(() => {
+    if (eventListnerRef.current || vpe === undefined) {
+      return;
+    }
+    eventListnerRef.current = true;
     if (!youtubeId) {
       if (gCasting) {
         setShowControls(false);
@@ -273,7 +279,7 @@ const Video = forwardRef<
       Orientation.removeDeviceOrientationListener(orientationListener);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [vpe]);
 
   useEffect(() => {
     if (!connection && !youtubeId) {
@@ -394,11 +400,80 @@ const Video = forwardRef<
     });
   };
 
+  useEffect(() => {
+    if (!gcastRef.current?.value) {
+      return;
+    }
+    try {
+      const { title, captions, description, length_in_seconds } = content;
+
+      const castOptions: MediaLoadRequest = {
+        mediaInfo: {
+          contentUrl:
+            (type === 'video'
+              ? !!vpe?.find(v => v.selected)?.originalFile
+                ? vpe?.find(v => v.selected)?.originalFile
+                : vpe?.find(v => v.selected)?.file
+              : mp3s?.find(mp3 => mp3.selected)?.value) || '',
+          metadata: {
+            type: 'movie',
+            studio: 'Drumeo',
+            title: title || '',
+            subtitle: description || '',
+          },
+          streamDuration: Number(mp3Length || length_in_seconds),
+        },
+        playbackRate: parseFloat(rate),
+        startTime: Math.round(cTime.current || 0),
+      };
+
+      if (captions && castOptions?.mediaInfo) {
+        castOptions.mediaInfo.mediaTracks = [
+          {
+            id: 1, // assign a unique numeric ID
+            type: 'text',
+            subtype: 'subtitles',
+            name: 'English Subtitle',
+            contentId: captions,
+            language: 'en-US',
+          },
+        ];
+      }
+      googleCastClient.current?.loadMedia(castOptions);
+      if (captions) {
+        if (!captionsHidden) {
+          googleCastClient.current?.onMediaPlaybackStarted(s => {
+            if (s?.playerState === 'playing') {
+              googleCastClient.current?.setActiveTrackIds([1]);
+              googleCastClient.current?.setTextTrackStyle({
+                backgroundColor: '#00000000',
+                edgeType: 'outline',
+                edgeColor: '#000000FF',
+                fontFamily: 'OpenSans',
+              });
+            }
+          });
+        } else {
+          googleCastClient.current?.onMediaPlaybackStarted(s => {
+            if (s?.playerState === 'playing') {
+              googleCastClient.current?.setActiveTrackIds([]);
+            }
+          });
+        }
+      }
+      gcastRef.current = { value: false, time: undefined };
+    } catch (e) {
+      gCasting = false;
+      onGCastingChange?.(false);
+      googleCastSession?.endCurrentSession();
+    }
+  }, [videoRefreshing]);
+
   const gCastMedia = useCallback(
     async (time?: number): Promise<void> => {
-      const { title, signal, captions, description, video_playback_endpoints, length_in_seconds } =
-        content;
+      const { signal, video_playback_endpoints } = content;
       const svpe = vpe?.find(v => v?.selected);
+
       try {
         const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
           vpe?.[0]?.file || '',
@@ -408,6 +483,8 @@ const Video = forwardRef<
         if (networkSpeed.aborted) {
           return;
         }
+        gcastRef.current = { value: true, time };
+
         setPaused(false);
         setVideoRefreshing(true);
         if (video_playback_endpoints) {
@@ -428,60 +505,6 @@ const Video = forwardRef<
                 ?.file,
             },
           ]);
-        }
-
-        const castOptions: MediaLoadRequest = {
-          mediaInfo: {
-            contentUrl:
-              (type === 'video'
-                ? !!vpe?.find(v => v.selected)?.originalFile
-                  ? vpe?.find(v => v.selected)?.originalFile
-                  : vpe?.find(v => v.selected)?.file
-                : mp3s?.find(mp3 => mp3.selected)?.value) || '',
-            metadata: {
-              type: 'movie',
-              studio: 'Drumeo',
-              title: title || '',
-              subtitle: description || '',
-            },
-            streamDuration: mp3Length || length_in_seconds,
-          },
-          playbackRate: parseFloat(rate),
-          startTime: Math.round(time || cTime.current || 0),
-        };
-        if (captions && castOptions?.mediaInfo) {
-          castOptions.mediaInfo.mediaTracks = [
-            {
-              id: 1, // assign a unique numeric ID
-              type: 'text',
-              subtype: 'subtitles',
-              name: 'English Subtitle',
-              contentId: captions,
-              language: 'en-US',
-            },
-          ];
-        }
-        googleCastClient.current?.loadMedia(castOptions);
-        if (captions) {
-          if (!captionsHidden) {
-            googleCastClient.current?.onMediaPlaybackStarted(s => {
-              if (s?.playerState === 'playing') {
-                googleCastClient.current?.setActiveTrackIds([1]);
-                googleCastClient.current?.setTextTrackStyle({
-                  backgroundColor: '#00000000',
-                  edgeType: 'outline',
-                  edgeColor: '#000000FF',
-                  fontFamily: 'OpenSans',
-                });
-              }
-            });
-          } else {
-            googleCastClient.current?.onMediaPlaybackStarted(s => {
-              if (s?.playerState === 'playing') {
-                googleCastClient.current?.setActiveTrackIds([]);
-              }
-            });
-          }
         }
       } catch (e) {
         gCasting = false;

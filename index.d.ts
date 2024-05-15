@@ -48,6 +48,7 @@ declare module "RNVideoEnhanced" {
 		) => void;
 		onPlayerReady?: () => void;
 		styles: {
+			backButtonContainerColor?: string;
 			iconColor: string;
 			containerStyle?: ViewStyle;
 			timerCursorBackground: string;

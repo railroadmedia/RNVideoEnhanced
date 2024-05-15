@@ -1002,11 +1002,11 @@ export default class Video extends React.Component {
         this.props.onPlayerReady?.();
         break;
       case 'playerStateChange':
-        cTime = parsedData.data?.target?.playerInfo?.currentTime;
-        if (parsedData.data?.data === 1) {
+        cTime = parsedData.data?.target?.v?.currentTime;
+        if (parsedData.data?.data === 1 && !!cTime) {
           startPlaySec = cTime;
         }
-        if (parsedData.data?.data === 2) {
+        if (parsedData.data?.data === 2 && !!cTime) {
           endPlaySec = cTime;
           secondsPlayed = endPlaySec - startPlaySec;
           if (secondsPlayed > 0) {

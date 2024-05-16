@@ -1157,10 +1157,8 @@ export default class Video extends React.Component {
                           mediaPlaybackRequiresUserAction={false}
                           automaticallyAdjustContentInsets={false}
                           style={styles.webview}
-                          onNavigationStateChange={({ url }) => {
-                            if (url.includes(`www.youtube.com`)) {
-                              this.webview.stopLoading();
-                            }
+                          onShouldStartLoadWithRequest={({ url }) => {
+                             return url.startsWith("https://www.musora.com") || url.includes("youtube.com/embed")
                           }}
                           source={{
                             baseUrl: "https://www.musora.com",

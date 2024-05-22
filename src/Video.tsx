@@ -111,6 +111,9 @@ const Video = forwardRef<
     maxWidth,
     onOrientationChange,
     onQualityChange,
+    styles: {
+      backButtonContainerColor,
+    },
   } = props;
   quality = props?.quality || quality;
   aCasting = props?.aCasting || aCasting;
@@ -1267,13 +1270,13 @@ const Video = forwardRef<
       {!maxWidth && <View style={styles.maxWidth} />}
       {(!!liveData || (!!youtubeId && !audioOnly && !fullscreen)) && onBack && (
         <TouchableOpacity
-          style={styles.backBtn}
+          style={[styles.backBtn, { backgroundColor: backButtonContainerColor }]}
           onPress={!!liveData ? handleLiveBack : handleYtBack}
         >
           {svgs.arrowLeft({
             width: 18,
             height: 18,
-            fill: fullscreen ? 'white' : themeColors.text || 'white',
+            fill: 'white',
           })}
         </TouchableOpacity>
       )}
@@ -1617,7 +1620,7 @@ const Video = forwardRef<
                   }}
                 >
                   {!!isControlVisible && (
-                    <TouchableOpacity style={styles.backContainer} onPress={handleBack}>
+                    <TouchableOpacity onPress={handleBack}>
                       {svgs[fullscreen ? 'x' : 'arrowLeft']({
                         width: 18,
                         height: 18,
@@ -1731,6 +1734,14 @@ const styles = StyleSheet.create({
     zIndex: 5,
     padding: 10,
     alignSelf: 'flex-start',
+    height: 38,
+    width: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#002039',
+    marginLeft: 10,
+    marginBottom: 10
   },
   videoContainer: {
     overflow: 'hidden',
@@ -1827,11 +1838,15 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans',
   },
   backContainer: {
-    top: 0,
-    left: 0,
-    padding: 15,
+    top: 10,
+    left: 10,
     position: 'absolute',
+    height: 38,
+    width: 38,
+    borderRadius: 19,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#081825',
   },
   airPlayContainer: {
     top: 4.5,

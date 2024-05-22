@@ -56,6 +56,9 @@ export interface IVideo {
   orientation?: string;
   aCasting?: boolean;
   offlinePath?: string;
+  styles: {
+    backButtonContainerColor?: string;
+  }
 }
 
 export interface IContent {

@@ -727,11 +727,11 @@ const Video = forwardRef<
         onPlayerReady?.();
         break;
       case 'playerStateChange':
-        cTime.current = parsedData.data?.target?.playerInfo?.currentTime;
-        if (parsedData.data?.data === 1) {
+        cTime.current = parsedData.data?.target?.v?.currentTime;
+        if (parsedData.data?.data === 1 && !!cTime.current) {
           startPlaySec = cTime.current;
         }
-        if (parsedData.data?.data === 2) {
+        if (parsedData.data?.data === 2 && !!cTime.current) {
           endPlaySec = cTime.current;
           secondsPlayed = endPlaySec - startPlaySec;
           if (secondsPlayed > 0) {

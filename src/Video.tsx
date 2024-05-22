@@ -751,10 +751,8 @@ const Video = forwardRef<
     }
   };
 
-  const onNavigationStateChange = ({ url }: WebViewNavigation): void => {
-    if (url.includes(`www.youtube.com`)) {
-      webViewRef.current?.stopLoading();
-    }
+  const onShouldStartLoadWithRequest = ({ url }: WebViewNavigation): boolean => {
+    return url.startsWith("https://www.musora.com") || url.includes("youtube.com/embed")
   };
 
   const onEndVideo = (): void => {
@@ -1305,7 +1303,7 @@ const Video = forwardRef<
                   mediaPlaybackRequiresUserAction={false}
                   automaticallyAdjustContentInsets={false}
                   style={styles.webview}
-                  onNavigationStateChange={onNavigationStateChange}
+                  onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
                   source={{
                     baseUrl: 'https://www.musora.com',
                     html: `

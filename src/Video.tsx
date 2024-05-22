@@ -42,6 +42,7 @@ import GoogleCast, {
   CastButton,
   MediaLoadRequest,
   RemoteMediaClient,
+  useCastState,
 } from 'react-native-google-cast';
 import PrefersHomeIndicatorAutoHidden from 'react-native-home-indicator';
 
@@ -67,7 +68,6 @@ let endPlaySec = 0;
 let videoW: number;
 let videoH: number;
 let aCasting: boolean | undefined;
-let gCasting: boolean;
 let orientation: string;
 let offlinePath: string;
 let quality: string | number = 'Auto';
@@ -98,7 +98,6 @@ const Video = forwardRef<
     onStart,
     onEnd,
     onFullscreen,
-    onGCastingChange,
     onACastingChange,
     onPlayerReady,
     onRefresh,
@@ -115,13 +114,14 @@ const Video = forwardRef<
   } = props;
   quality = props?.quality || quality;
   aCasting = props?.aCasting || aCasting;
-  gCasting = props?.aCasting || gCasting;
   orientation = props?.orientation || orientation;
   offlinePath =
     props?.offlinePath || IS_IOS
       ? ReactNativeBlobUtil.fs.dirs.LibraryDir
       : ReactNativeBlobUtil.fs.dirs.DocumentDir;
   const googleCastSession = GoogleCast.getSessionManager();
+  const castState = useCastState();
+  const gCastingState = useMemo(() => castState === 'connected', [castState]);
   const insets = useSafeAreaInsets();
   const { width: wWidth, height: wHeight } = useWindowDimensions();
 
@@ -133,11 +133,10 @@ const Video = forwardRef<
   const [isControlVisible, setIsControlVisible] = useState<boolean>(true);
   const [repeat, setRepeat] = useState<boolean>(false);
   const [liveEnded, setLiveEnded] = useState<boolean>(false);
-  const [buffering, setBuffering] = useState<boolean>(true);
+  const [buffering, setBuffering] = useState<boolean>(!youtubeId);
   const [mp3Length, setMp3Length] = useState<number>(0);
   const [mp3s, setMp3s] = useState<IMp3[]>([]);
-  const [vpe, setVpe] = useState<IVpe[] | undefined>();
-  const [fullscreen, setFullscreen] = useState<boolean>();
+  const [fullscreen, setFullscreen] = useState<boolean>(!IS_TABLET && wWidth > wHeight);
   const [showPoster, setShowPoster] = useState(true);
   const [showCastingOptions, setShowCastingOptions] = useState<boolean>();
   const [tabOrientation, setTabOrientation] = useState<string | undefined>(
@@ -164,7 +163,10 @@ const Video = forwardRef<
   const mp3ActionModalRef = useRef<React.ElementRef<typeof ActionModal>>(null);
   const alertRef = useRef<React.ElementRef<typeof AnimatedCustomAlert>>(null);
   const endVideoFlagRef = useRef<boolean>(false);
-  const eventListnerRef = useRef<boolean>(false);
+  const gCastContinueRef = useRef<boolean>(false);
+  const progressListnerRef = useRef<{
+    remove: () => void;
+  }>();
   const gcastRef = useRef<{ value: boolean; time?: number }>({ value: false });
 
   const minsToStart = (startDate: string): number =>
@@ -186,19 +188,52 @@ const Video = forwardRef<
     liveEnded ||
     (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
 
+  const filterVideosByResolution = (): IVpe[] | undefined => {
+    let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
+      ...v,
+    }));
+    if (!aCasting) {
+      vpeTemp = vpeTemp?.filter(v =>
+        wWidth < wHeight
+          ? (v?.height as number) <= -~wWidth * PIX_R
+          : (v?.height as number) <= -~wHeight * PIX_R
+      );
+    }
+    vpeTemp = aCasting
+      ? vpeTemp?.map(v => ({
+          ...v,
+          selected: v?.height === quality,
+        }))
+      : [
+          ...(vpeTemp?.map(v => ({
+            ...v,
+            selected: v?.height === quality,
+          })) || []),
+          {
+            height: 'Auto',
+            file: vpeTemp?.[vpeTemp?.length - 1]?.file,
+            actualH: vpeTemp?.[vpeTemp?.length - 1]?.height,
+            selected: quality === 'Auto',
+          },
+        ];
+
+    if (!vpeTemp?.find(v => v?.selected)) {
+      return vpeTemp?.map(v => ({
+        ...v,
+        selected: v?.height === 720,
+      }));
+    }
+    return vpeTemp;
+  };
+  const [vpe, setVpe] = useState<IVpe[] | undefined>(
+    !youtubeId ? filterVideosByResolution() : undefined
+  );
+
   useEffect(() => {
     getVideoDimensions();
 
-    if (!youtubeId) {
-      setBuffering(true);
-    }
-
     translateBlueX.current?.setOffset(-11); // Offsets half the timer dot width so its centered.
 
-    if (!youtubeId) {
-      setVpe(filterVideosByResolution());
-    }
-    setFullscreen(!IS_TABLET && wWidth > wHeight);
     setPaused(props?.paused);
     setRepeat(props?.repeat ? props.repeat : false);
     setShowControls(props?.showControls);
@@ -206,111 +241,9 @@ const Video = forwardRef<
       props?.showCastingOptions !== undefined ? props?.showCastingOptions : true
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    props?.aCasting,
-    props?.autoPlay,
-    props?.offlinePath,
-    props?.orientation,
-    props?.paused,
-    props?.quality,
-    props.repeat,
-    props?.showCastingOptions,
-    props?.showControls,
-    props?.startTime,
-    youtubeId,
-  ]);
+  }, [props?.paused, props.repeat, props?.showCastingOptions, props?.showControls]);
 
-  useEffect(() => {
-    if (eventListnerRef.current || vpe === undefined) {
-      return;
-    }
-    eventListnerRef.current = true;
-    if (!youtubeId) {
-      if (gCasting) {
-        setShowControls(false);
-      }
-      googleCastSession?.getCurrentCastSession().then(client => {
-        if (!client) {
-          return (gCasting = false);
-        } else {
-          gCasting = true;
-        }
-        const remoteMediaClient = client.client;
-
-        remoteMediaClient?.getMediaStatus().then(st => {
-          setShowControls(true);
-          setPaused(false);
-          googleCastClient.current = remoteMediaClient;
-          gCastProgressListener();
-          if (gCasting) {
-            gCastMedia(
-              st?.mediaInfo?.metadata?.title === props?.content?.title ? st?.streamPosition : 0
-            );
-          }
-        });
-      });
-      appleCastingListeners();
-      googleCastingListeners();
-      selectQuality(quality || 'Auto');
-    }
-    const handleAppStateChange = (state: string): void => {
-      if (state === (IS_IOS ? 'inactive' : 'background') && !youtubeId) {
-        setPaused(true);
-        updateVideoProgress();
-      }
-      toggleControls(true);
-      clearTimeout(controlsTO.current);
-    };
-    const stateListener = AppState.addEventListener('change', handleAppStateChange);
-
-    Orientation.getOrientation(orientationListener);
-    Orientation.addDeviceOrientationListener(orientationListener);
-
-    return () => {
-      playPressedFirstTime = true;
-      secondsPlayed = 0;
-      clearTimeout(controlsTO.current);
-      if (!youtubeId) {
-        setPaused(true);
-      }
-      if (!!stateListener) {
-        stateListener.remove();
-      }
-      Orientation.removeDeviceOrientationListener(orientationListener);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vpe]);
-
-  useEffect(() => {
-    if (!connection && !youtubeId) {
-      selectQuality('Auto');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection, youtubeId]);
-
-  useEffect(() => {
-    cTime.current = autoPlay ? 0 : content?.last_watch_position_in_seconds || 0;
-    playPressedFirstTime = true;
-    secondsPlayed = 0;
-
-    const updatedMp3s = getMP3Array(content);
-    if (updatedMp3s?.[0]) {
-      updatedMp3s[0].selected = true;
-    }
-    setMp3s(updatedMp3s);
-    if (!youtubeId) {
-      setVpe(filterVideosByResolution());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content?.id]);
-
-  useImperativeHandle(ref, () => ({
-    onSeek,
-    togglePaused,
-    updateVideoProgress,
-  }));
-
-  const appleCastingListeners = (): void => {
+  const appleCastingListeners = (): (() => void) | undefined => {
     if (!IS_IOS) {
       return;
     }
@@ -364,49 +297,128 @@ const Video = forwardRef<
   };
 
   const googleCastingListeners = async (): Promise<void> => {
-    googleCastSession?.onSessionEnding(() => {
+    googleCastSession.onSessionEnding(() => {
+      progressListnerRef.current?.remove();
       delete googleCastClient.current;
-      gCasting = false;
-      onGCastingChange?.(false);
       setVideoRefreshing(false);
       setVpe(filterVideosByResolution());
       setShowPoster(false);
       animateControls(paused ? 1 : 0);
     });
 
-    googleCastSession?.onSessionStarted(({ client }) => {
+    googleCastSession.onSessionStarted(({ client }) => {
       googleCastClient.current = client;
       animateControls(1);
-      gCasting = true;
-      onGCastingChange?.(true);
       gCastMedia();
       gCastProgressListener();
       setShowPoster(true);
     });
   };
 
+  useEffect(() => {
+    if (!youtubeId && castState && !gCastContinueRef.current) {
+      if (castState === 'connected') {
+        setShowControls(false);
+        googleCastSession?.getCurrentCastSession().then(client => {
+          if (client) {
+            const remoteMediaClient = client.client;
+
+            remoteMediaClient?.getMediaStatus().then(st => {
+              setShowControls(true);
+              setPaused(false);
+              googleCastClient.current = remoteMediaClient;
+              gCastProgressListener();
+              gCastMedia(
+                st?.mediaInfo?.metadata?.title === props?.content?.title ? st?.streamPosition : 0
+              );
+            });
+          }
+        });
+      }
+      gCastContinueRef.current = true;
+      appleCastingListeners();
+      googleCastingListeners();
+      selectQuality(quality || 'Auto');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [castState]);
+
+  useEffect(() => {
+    const handleAppStateChange = (state: string): void => {
+      if (state === (IS_IOS ? 'inactive' : 'background') && !youtubeId) {
+        setPaused(true);
+        updateVideoProgress();
+      }
+      toggleControls(true);
+      clearTimeout(controlsTO.current);
+    };
+    const stateListener = AppState.addEventListener('change', handleAppStateChange);
+
+    Orientation.getOrientation(orientationListener);
+    Orientation.addDeviceOrientationListener(orientationListener);
+
+    return () => {
+      if (!!stateListener) {
+        stateListener?.remove();
+      }
+      Orientation.removeDeviceOrientationListener(orientationListener);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!connection && !youtubeId) {
+      selectQuality('Auto');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection, youtubeId]);
+
+  useEffect(() => {
+    cTime.current = autoPlay ? 0 : content?.last_watch_position_in_seconds || 0;
+    playPressedFirstTime = true;
+    secondsPlayed = 0;
+
+    const updatedMp3s = getMP3Array(content);
+    if (updatedMp3s?.[0]) {
+      updatedMp3s[0].selected = true;
+    }
+    setMp3s(updatedMp3s);
+    if (!youtubeId) {
+      setVpe(filterVideosByResolution());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content?.id]);
+
+  useImperativeHandle(ref, () => ({
+    onSeek,
+    togglePaused,
+    updateVideoProgress,
+  }));
+
   const gCastProgressListener = (): void => {
-    googleCastClient.current?.onMediaProgressUpdated?.((progress: number) => {
-      if (!progress) {
-        return;
+    progressListnerRef.current = googleCastClient.current?.onMediaProgressUpdated?.(
+      (progress: number) => {
+        if (!progress) {
+          return;
+        }
+        progress = Math.round(progress);
+        const { length_in_seconds } = content;
+        if (progress === length_in_seconds - 1) {
+          googleCastClient.current?.pause();
+          return onEndVideo();
+        }
+        onProgress({ currentTime: progress });
       }
-      progress = Math.round(progress);
-      const { length_in_seconds } = content;
-      if (progress === length_in_seconds - 1) {
-        googleCastClient.current?.pause();
-        return onEndVideo();
-      }
-      onProgress({ currentTime: progress });
-    });
+    );
   };
 
   useEffect(() => {
-    if (!gcastRef.current?.value) {
+    if (!gcastRef.current?.value || !videoRefreshing) {
       return;
     }
+    gcastRef.current.value = false;
     try {
       const { title, captions, description, length_in_seconds } = content;
-
       const castOptions: MediaLoadRequest = {
         mediaInfo: {
           contentUrl:
@@ -424,8 +436,11 @@ const Video = forwardRef<
           streamDuration: Number(mp3Length || length_in_seconds),
         },
         playbackRate: parseFloat(rate),
-        startTime: Math.round(cTime.current || 0),
+        startTime: Math.round(
+          gcastRef.current?.time !== undefined ? gcastRef.current?.time : cTime.current || 0
+        ),
       };
+      gcastRef.current.time = undefined;
 
       if (captions && castOptions?.mediaInfo) {
         castOptions.mediaInfo.mediaTracks = [
@@ -439,6 +454,7 @@ const Video = forwardRef<
           },
         ];
       }
+
       googleCastClient.current?.loadMedia(castOptions);
       if (captions) {
         if (!captionsHidden) {
@@ -461,18 +477,15 @@ const Video = forwardRef<
           });
         }
       }
-      gcastRef.current = { value: false, time: undefined };
     } catch (e) {
-      gCasting = false;
-      onGCastingChange?.(false);
       googleCastSession?.endCurrentSession();
     }
-  }, [videoRefreshing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoRefreshing, vpe, rate]);
 
   const gCastMedia = useCallback(
     async (time?: number): Promise<void> => {
       const { signal, video_playback_endpoints } = content;
-      const svpe = vpe?.find(v => v?.selected);
 
       try {
         const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
@@ -480,39 +493,43 @@ const Video = forwardRef<
           offlinePath,
           signal
         );
+
         if (networkSpeed.aborted) {
           return;
         }
-        gcastRef.current = { value: true, time };
 
         setPaused(false);
+
         setVideoRefreshing(true);
         if (video_playback_endpoints) {
-          setVpe([
-            ...video_playback_endpoints?.map(v => ({
-              ...v,
-              selected: v?.height === svpe?.height,
-            })),
-            {
-              height: 'Auto',
-              selected: svpe?.height === 'Auto',
-              actualH: networkSpeed.recommendedVideoQuality,
-              file: Object.create(video_playback_endpoints)
-                ?.sort((i: { height: number }, j: { height: number }) =>
-                  i?.height < j?.height ? 1 : -1
-                )
-                ?.find((v: { height: number }) => v?.height <= networkSpeed.recommendedVideoQuality)
-                ?.file,
-            },
-          ]);
+          setVpe(ve => {
+            const svpe = ve?.find(v => v?.selected);
+            return [
+              ...video_playback_endpoints?.map(v => ({
+                ...v,
+                selected: v?.height === svpe?.height,
+              })),
+              {
+                height: 'Auto',
+                selected: svpe?.height === 'Auto',
+                actualH: networkSpeed?.recommendedVideoQuality,
+                file: Object.create(video_playback_endpoints)
+                  ?.sort((i: { height: number }, j: { height: number }) =>
+                    i?.height < j?.height ? 1 : -1
+                  )
+                  ?.find(
+                    (v: { height: number }) => v?.height <= networkSpeed?.recommendedVideoQuality
+                  )?.file,
+              },
+            ];
+          });
         }
+        gcastRef.current = { value: true, time };
       } catch (e) {
-        gCasting = false;
-        onGCastingChange?.(false);
         googleCastSession?.endCurrentSession();
       }
     },
-    [captionsHidden, content, googleCastSession, mp3Length, mp3s, onGCastingChange, rate, type, vpe]
+    [content, googleCastSession]
   );
 
   const updateVideoProgress = async (apiCallDelay?: number): Promise<void> => {
@@ -574,44 +591,6 @@ const Video = forwardRef<
     setFullscreen(fs);
   };
 
-  const filterVideosByResolution = (): IVpe[] | undefined => {
-    let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
-      ...v,
-    }));
-    if (!aCasting) {
-      vpeTemp = vpeTemp?.filter(v =>
-        wWidth < wHeight
-          ? (v?.height as number) <= -~wWidth * PIX_R
-          : (v?.height as number) <= -~wHeight * PIX_R
-      );
-    }
-    vpeTemp = aCasting
-      ? vpeTemp?.map(v => ({
-          ...v,
-          selected: v?.height === quality,
-        }))
-      : [
-          ...(vpeTemp?.map(v => ({
-            ...v,
-            selected: v?.height === quality,
-          })) || []),
-          {
-            height: 'Auto',
-            file: vpeTemp?.[vpeTemp?.length - 1]?.file,
-            actualH: vpeTemp?.[vpeTemp?.length - 1]?.height,
-            selected: quality === 'Auto',
-          },
-        ];
-
-    if (!vpeTemp?.find(v => v?.selected)) {
-      return vpeTemp?.map(v => ({
-        ...v,
-        selected: v?.height === 720,
-      }));
-    }
-    return vpeTemp;
-  };
-
   const updateBlueX = useCallback((): void => {
     if (!translateBlueX.current) {
       return;
@@ -638,8 +617,8 @@ const Video = forwardRef<
       }
 
       if (showPoster) {
-        setShowPoster(gCasting ? true : false);
-      } else if (gCasting) {
+        setShowPoster(!!gCastingState);
+      } else if (!!gCastingState) {
         setShowPoster(true);
       }
       if (videoRef.current) {
@@ -648,7 +627,7 @@ const Video = forwardRef<
       if (webViewRef.current) {
         webViewRef.current?.injectJavaScript(`seekTo(${time})`);
       }
-      if (!IS_IOS || gCasting) {
+      if (!IS_IOS || gCastingState) {
         onProgress({ currentTime: time });
       }
       googleCastClient.current?.seek({ position: time || 0 });
@@ -854,7 +833,7 @@ const Video = forwardRef<
   };
 
   const onBuffer = ({ isBuffering }: OnBufferData): void => {
-    if (!aCasting && !gCasting && !youtubeId) {
+    if (!aCasting && !gCastingState && !youtubeId) {
       setBuffering(isBuffering);
     }
   };
@@ -911,7 +890,11 @@ const Video = forwardRef<
 
   const animateControls = useCallback(
     (toValue?: number, speed?: number): void => {
-      if ((content.type === 'play-along' && listening) || aCasting || gCasting) {
+      if (
+        (content.type === 'play-along' && listening) ||
+        aCasting ||
+        (gCastingState && toValue === 0)
+      ) {
         return;
       }
       const updateValue = toValue !== undefined ? toValue : paused ? 1 : 0;
@@ -923,14 +906,14 @@ const Video = forwardRef<
       translateControlsRef.current = updateValue;
       setIsControlVisible(updateValue === 1 ? true : false);
     },
-    [paused, listening, content?.type]
+    [paused, listening, content?.type, gCastingState]
   );
 
   const togglePaused = (pausedOverwrite?: boolean, skipActionOnCasting?: boolean): void => {
     const pausedState = typeof pausedOverwrite === 'boolean' ? pausedOverwrite : !paused;
 
     let showPosterState = showPoster;
-    if (gCasting) {
+    if (gCastingState) {
       showPosterState = true;
     } else if (showPosterState) {
       showPosterState = false;
@@ -939,7 +922,7 @@ const Video = forwardRef<
       updateVideoProgress();
       playPressedFirstTime = false;
     }
-    if (gCasting && !skipActionOnCasting) {
+    if (gCastingState && !skipActionOnCasting) {
       if (pausedState) {
         googleCastClient.current?.pause();
       } else {
@@ -1093,6 +1076,7 @@ const Video = forwardRef<
   const selectQuality = useCallback(
     async (q: string | number, skipRender?: boolean): Promise<IVpe[] | undefined> => {
       let recommendedVideoQuality: IVpe | undefined;
+
       if (q === 'Auto') {
         recommendedVideoQuality = vpe?.find(v => !v?.file?.includes('http'));
         if (!recommendedVideoQuality) {
@@ -1101,6 +1085,7 @@ const Video = forwardRef<
             offlinePath,
             content?.signal
           );
+
           if (networkSpeed?.aborted) {
             return;
           }
@@ -1122,8 +1107,8 @@ const Video = forwardRef<
               q === 'Auto' && v?.height === 'Auto'
                 ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v?.height === 'Auto'
-                  ? v?.actualH
-                  : v?.height,
+                ? v?.actualH
+                : v?.height,
           }));
       if (!newVPE?.find(v => v.selected)) {
         newVPE = newVPE?.map(v => ({
@@ -1134,12 +1119,12 @@ const Video = forwardRef<
       if (skipRender) {
         return newVPE;
       } else {
-        setVideoRefreshing(gCasting);
+        setVideoRefreshing(!!gCastingState);
         setVpe(newVPE);
         return;
       }
     },
-    [vpe, content?.signal]
+    [vpe, content?.signal, gCastingState]
   );
 
   const onSaveSettings = useCallback(
@@ -1154,13 +1139,13 @@ const Video = forwardRef<
           setVpe(v);
           quality = qual;
           onQualityChange?.(qual);
-          if (gCasting) {
+          if (gCastingState) {
             gCastMedia();
           }
         }, 100);
       });
     },
-    [gCastMedia, onQualityChange, selectQuality, vpe]
+    [gCastMedia, onQualityChange, selectQuality, vpe, gCastingState]
   );
 
   const renderVideoSettings = useMemo(
@@ -1207,11 +1192,11 @@ const Video = forwardRef<
           selected: mp3.id === selectedMp3.id,
         }))
       );
-      if (gCasting) {
+      if (gCastingState) {
         gCastMedia();
       }
     },
-    [mp3s, gCastMedia]
+    [mp3s, gCastMedia, gCastingState]
   );
 
   const renderMp3ActionModal = useMemo(
@@ -1561,7 +1546,7 @@ const Video = forwardRef<
                   </DoubleTapArea>
                 </Animated.View>
               )}
-              {(!gCasting || (gCasting && googleCastClient.current)) && (
+              {(!gCastingState || (gCastingState && !!googleCastClient.current)) && (
                 <Animated.View
                   style={{
                     ...styles.bottomControlsContainer,
@@ -1674,10 +1659,9 @@ const Video = forwardRef<
           )}
         </View>
       </View>
-
       {(!youtubeId || audioOnly) &&
         showControls &&
-        (!gCasting || (gCasting && googleCastClient.current)) && (
+        (!gCastingState || (gCastingState && !!googleCastClient.current)) && (
           <Animated.View
             onLayout={onTimerLayout}
             {...pResponder()}

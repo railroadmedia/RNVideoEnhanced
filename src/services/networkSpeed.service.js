@@ -1,34 +1,26 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 export default {
-  getNetworkSpeed: function (
-    url: string,
-    offPath: any,
-    signal: { addEventListener: (arg0: string, arg1: () => void) => void }
-  ) {
-    const unlink = (): Promise<void> =>
-      ReactNativeBlobUtil.fs.unlink(`${offPath}/networkSpeed`).catch(() => {});
-    return new Promise(res => {
-      let start: number | Date;
-      let end;
+  getNetworkSpeed: function (url, offPath, signal) {
+    const unlink = () => ReactNativeBlobUtil.fs.unlink(`${offPath}/networkSpeed`).catch(() => {});
+    return new Promise((res, rej) => {
+      let start, end;
       try {
         signal?.addEventListener('abort', () => {
-          task.cancel(() => {});
+          task.cancel(err => {});
           res({ aborted: true });
         });
-        const task = ReactNativeBlobUtil.config({
+        let task = ReactNativeBlobUtil.config({
           path: `${offPath}/networkSpeed`,
         }).fetch('GET', url);
         task
           .progress({ count: 10000 }, received => {
-            if (!start) {
-              start = new Date();
-            }
+            if (!start) start = new Date();
             if (received > 512000) {
               end = new Date();
-              task.cancel(() => {});
+              task.cancel(err => {});
               unlink();
-              const mbps = (received * 8) / 1024 / 1024 / ((Number(end) - Number(start)) / 1000);
+              let mbps = (received * 8) / 1024 / 1024 / ((end - start) / 1000);
 
               res({
                 mbps,

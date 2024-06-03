@@ -1158,8 +1158,9 @@ export default class Video extends React.Component {
                           automaticallyAdjustContentInsets={false}
                           style={styles.webview}
                           onShouldStartLoadWithRequest={({ url }) => {
-                             return url.startsWith("https://www.musora.com") || url.includes("youtube.com/embed")
+                            return url.startsWith("https://www.musora.com") || url.includes("youtube.com/embed")
                           }}
+                          setSupportMultipleWindows={false}
                           source={{
                             baseUrl: "https://www.musora.com",
                             html: `
@@ -1197,7 +1198,7 @@ export default class Video extends React.Component {
                                 height: '1000',
                                 videoId: '${youtubeId}',
                                 playerVars: {
-                                  rel: 1,
+                                  rel: 0,
                                   playsinline: 1,
                                   enablejsapi: 1,
                                   start: '${autoPlay ? (startTime ? startTime : 0) : last_watch_position_in_seconds}',

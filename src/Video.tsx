@@ -111,9 +111,7 @@ const Video = forwardRef<
     maxWidth,
     onOrientationChange,
     onQualityChange,
-    styles: {
-      backButtonContainerColor,
-    },
+    styles: { backButtonContainerColor },
   } = props;
   quality = props?.quality || quality;
   aCasting = props?.aCasting || aCasting;
@@ -129,7 +127,12 @@ const Video = forwardRef<
   const { width: wWidth, height: wHeight } = useWindowDimensions();
 
   const [rate, setRate] = useState<string>('1.0');
-  const [paused, setPaused] = useState<boolean>(true);
+  const [paused, _setPaused] = useState<boolean>(true);
+  const pausedRef = React.useRef(paused);
+  const setPaused = (val: boolean) => {
+    pausedRef.current = val;
+    _setPaused(val);
+  };
   const [captionsHidden, setCaptionsHidden] = useState<boolean>(true);
   const [videoRefreshing, setVideoRefreshing] = useState<boolean>(false);
   const [showControls, setShowControls] = useState<boolean>(true);
@@ -306,7 +309,7 @@ const Video = forwardRef<
       setVideoRefreshing(false);
       setVpe(filterVideosByResolution());
       setShowPoster(false);
-      animateControls(paused ? 1 : 0);
+      animateControls(pausedRef.current ? 1 : 0);
     });
 
     googleCastSession.onSessionStarted(({ client }) => {
@@ -752,7 +755,7 @@ const Video = forwardRef<
   };
 
   const onShouldStartLoadWithRequest = ({ url }: WebViewNavigation): boolean => {
-    return url.startsWith("https://www.musora.com") || url.includes("youtube.com/embed")
+    return url.startsWith('https://www.musora.com') || url.includes('youtube.com/embed');
   };
 
   const onEndVideo = (): void => {
@@ -894,7 +897,7 @@ const Video = forwardRef<
       if (
         (content.type === 'play-along' && listening) ||
         aCasting ||
-        (gCastingState && toValue === 0)
+        (gCastingState && toValue !== undefined && toValue === 0)
       ) {
         return;
       }
@@ -1108,8 +1111,8 @@ const Video = forwardRef<
               q === 'Auto' && v?.height === 'Auto'
                 ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v?.height === 'Auto'
-                ? v?.actualH
-                : v?.height,
+                  ? v?.actualH
+                  : v?.height,
           }));
       if (!newVPE?.find(v => v.selected)) {
         newVPE = newVPE?.map(v => ({
@@ -1304,6 +1307,7 @@ const Video = forwardRef<
                   automaticallyAdjustContentInsets={false}
                   style={styles.webview}
                   onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+                  setSupportMultipleWindows={false}
                   source={{
                     baseUrl: 'https://www.musora.com',
                     html: `
@@ -1341,7 +1345,7 @@ const Video = forwardRef<
                                 height: '1000',
                                 videoId: '${youtubeId}',
                                 playerVars: {
-                                  rel: 1,
+                                  rel: 0,
                                   playsinline: 1,
                                   enablejsapi: 1,
                                   start: '${
@@ -1739,7 +1743,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#002039',
     marginLeft: 10,
-    marginBottom: 10
+    marginBottom: 10,
   },
   videoContainer: {
     overflow: 'hidden',

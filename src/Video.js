@@ -120,7 +120,7 @@ export default class Video extends React.Component {
       this.state.mp3s[0].selected = true;
     } catch (e) {}
   }
-  
+
   componentDidMount() {
     if (!this.props.youtubeId) {
       if (gCasting) {
@@ -372,7 +372,7 @@ export default class Video extends React.Component {
               contentUrl:
                 (type === 'video'
                   ? !!this.state.vpe?.find(v => v.selected)?.originalFile
-                  ? this.state.vpe?.find(v => v.selected)?.originalFile 
+                  ? this.state.vpe?.find(v => v.selected)?.originalFile
                   : this.state.vpe?.find(v => v.selected)?.file
                   : mp3s?.find(mp3 => mp3.selected)?.value) || '',
               metadata: {
@@ -869,7 +869,7 @@ export default class Video extends React.Component {
 
   onBuffer = ({ isBuffering }) => {
     if (!aCasting && !gCasting && !this.props.youtubeId) {
-      this.setState({ 
+      this.setState({
         buffering: isBuffering,
       })
     }
@@ -1011,7 +1011,7 @@ export default class Video extends React.Component {
           secondsPlayed = endPlaySec - startPlaySec;
           if (secondsPlayed > 0) {
             this.updateVideoProgress();
-          } 
+          }
         }
         if (parsedData.data?.data === 0) {
           this.onEnd();
@@ -1234,7 +1234,7 @@ export default class Video extends React.Component {
                             function seekTo(time) {
                               player.seekTo(time, true);
                             }
-                        
+
                           </script>
                         </body>
                       </html>
@@ -1428,6 +1428,7 @@ export default class Video extends React.Component {
                               <TouchableOpacity
                                 onPress={this.togglePaused}
                                 style={{ flex: 1, alignItems: "center" }}
+                                testID={"PlayPauseButton"}
                               >
                                 {svgs[paused ? "playSvg" : "pause"]({
                                   ...iconStyle,

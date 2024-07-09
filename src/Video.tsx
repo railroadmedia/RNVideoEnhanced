@@ -1528,7 +1528,11 @@ const Video = forwardRef<
                     )}
                   </DoubleTapArea>
                   {isControlVisible && (
-                    <TouchableOpacity onPress={() => togglePaused()} style={styles.pausedBtn}>
+                    <TouchableOpacity
+                      onPress={() => togglePaused()}
+                      style={styles.pausedBtn}
+                      testID={'PlayPauseButton'}
+                    >
                       {svgs[paused ? 'playSvg' : 'pause'](iconStyle)}
                     </TouchableOpacity>
                   )}

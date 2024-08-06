@@ -20,6 +20,7 @@ import {
   GestureResponderHandlers,
   useWindowDimensions,
   LayoutChangeEvent,
+  DimensionValue,
 } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -111,6 +112,7 @@ const Video = forwardRef<
     maxWidth,
     onOrientationChange,
     onQualityChange,
+    videoEvents,
     styles: { backButtonContainerColor },
   } = props;
   quality = props?.quality || quality;
@@ -651,8 +653,8 @@ const Video = forwardRef<
   };
 
   const getVideoDimensions = useCallback((): {
-    width: number | string;
-    height?: number | string;
+    width: DimensionValue;
+    height?: DimensionValue;
     aspectRatio?: number;
   } => {
     let width;
@@ -924,6 +926,7 @@ const Video = forwardRef<
     }
     if (!pausedState && playPressedFirstTime) {
       updateVideoProgress();
+      videoEvents?.trackVideoStarted?.(cTime.current);
       playPressedFirstTime = false;
     }
     if (gCastingState && !skipActionOnCasting) {

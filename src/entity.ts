@@ -58,10 +58,10 @@ export interface IVideo {
   offlinePath?: string;
   videoEvents?: {
     trackVideoStarted?: (startTime: number) => void;
-    trackVideoPaused?: () => void;
+    trackVideoPaused?: (pauseTime: number) => void;
     trackVideoSeekStarted?: () => void;
     trackVideoSeekCompleted?: () => void;
-    trackVideoResumed?: () => void;
+    trackVideoResumed?: (resumeTime: number) => void;
     trackVideoCompleted?: () => void;
     trackVideoPlaying?: () => void;
   };

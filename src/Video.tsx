@@ -732,13 +732,21 @@ const Video = forwardRef<
         onPlayerReady?.();
         break;
       case 'playerStateChange':
-        cTime.current = parsedData.data?.target?.v?.currentTime;
+        cTime.current = parsedData.data?.target?.playerInfo?.currentTime;
+
         if (parsedData.data?.data === 1 && !!cTime.current) {
           startPlaySec = cTime.current;
+          if (playPressedFirstTime) {
+            videoEvents?.trackVideoStarted?.(Math.round(cTime.current));
+            playPressedFirstTime = false;
+          } else {
+            videoEvents?.trackVideoResumed?.(Math.round(cTime.current));
+          }
         }
         if (parsedData.data?.data === 2 && !!cTime.current) {
           endPlaySec = cTime.current;
           secondsPlayed = endPlaySec - startPlaySec;
+          videoEvents?.trackVideoPaused?.(Math.round(cTime.current));
           if (secondsPlayed > 0) {
             updateVideoProgress();
           }
@@ -926,7 +934,7 @@ const Video = forwardRef<
     }
     if (!pausedState && playPressedFirstTime) {
       updateVideoProgress();
-      videoEvents?.trackVideoStarted?.(cTime.current);
+      videoEvents?.trackVideoStarted?.(Math.round(cTime.current));
       playPressedFirstTime = false;
     }
     if (gCastingState && !skipActionOnCasting) {
@@ -1114,8 +1122,8 @@ const Video = forwardRef<
               q === 'Auto' && v?.height === 'Auto'
                 ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v?.height === 'Auto'
-                  ? v?.actualH
-                  : v?.height,
+                ? v?.actualH
+                : v?.height,
           }));
       if (!newVPE?.find(v => v.selected)) {
         newVPE = newVPE?.map(v => ({
@@ -1532,7 +1540,16 @@ const Video = forwardRef<
                   </DoubleTapArea>
                   {isControlVisible && (
                     <TouchableOpacity
-                      onPress={() => togglePaused()}
+                      onPress={() => {
+                        if (!paused) {
+                          videoEvents?.trackVideoPaused?.(Math.round(cTime.current));
+                        } else {
+                          if (!playPressedFirstTime) {
+                            videoEvents?.trackVideoResumed?.(Math.round(cTime.current));
+                          }
+                        }
+                        togglePaused();
+                      }}
                       style={styles.pausedBtn}
                       testID={'PlayPauseButton'}
                     >

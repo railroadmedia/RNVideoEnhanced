@@ -57,8 +57,16 @@ export interface IVideo {
   aCasting?: boolean;
   offlinePath?: string;
   trackVideoEvent?: (
-    type: 'started' | 'paused' | 'resumed' | 'playing' | 'completed',
-    currentTime: number
+    type:
+      | 'started'
+      | 'paused'
+      | 'resumed'
+      | 'playing'
+      | 'completed'
+      | 'seek-started'
+      | 'seek-completed',
+    currentTime: number,
+    seekStartTime?: number
   ) => void;
   styles: {
     backButtonContainerColor?: string;

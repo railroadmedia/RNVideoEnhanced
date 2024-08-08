@@ -1089,6 +1089,7 @@ const Video = forwardRef<
         controlsTO.current = setTimeout(() => {
           animateControls(updatePauseState ? 1 : 0);
         }, 3000);
+        trackVideoEvent?.('seek-completed', Math.round(cTime.current));
       },
       onPanResponderTerminate: () => {
         delete seeking.current;
@@ -1114,6 +1115,7 @@ const Video = forwardRef<
         if (!IS_IOS) {
           onProgress({ currentTime: seekTime.current });
         }
+        trackVideoEvent?.('seek-started', Math.round(cTime.current), Math.round(seekTime.current));
         googleCastClient.current?.seek({ position: seekTime.current });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },

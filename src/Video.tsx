@@ -73,6 +73,8 @@ let orientation: string;
 let offlinePath: string;
 let quality: string | number = 'Auto';
 
+const HEARTBEAT_INTERVAL = 15000;
+
 const Video = forwardRef<
   {
     onSeek: (timeCode: number | string) => void;
@@ -112,7 +114,7 @@ const Video = forwardRef<
     maxWidth,
     onOrientationChange,
     onQualityChange,
-    videoEvents,
+    trackVideoEvent,
     styles: { backButtonContainerColor },
   } = props;
   quality = props?.quality || quality;
@@ -176,6 +178,8 @@ const Video = forwardRef<
     remove: () => void;
   }>();
   const gcastRef = useRef<{ value: boolean; time?: number }>({ value: false });
+  const trackingTimer = useRef<NodeJS.Timeout | undefined>();
+  const completedEventHasOccured = useRef<boolean>(false);
 
   const minsToStart = (startDate: string): number =>
     Math.ceil((Date.parse(startDate) - Date.now()) / (1000 * 60));
@@ -250,6 +254,38 @@ const Video = forwardRef<
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props?.paused, props.repeat, props?.showCastingOptions, props?.showControls]);
+
+  useEffect(() => {
+    const heartbeatTracker = setInterval(() => {
+      if (videoRef.current && !pausedRef.current && !seeking.current) {
+        trackVideoEvent?.('playing', Math.round(cTime.current));
+      }
+      if (youtubeId && !pausedRef.current) {
+        webViewRef.current?.injectJavaScript(`trackVideoPlaying(); true;`);
+      }
+    }, HEARTBEAT_INTERVAL);
+
+    return () => clearInterval(heartbeatTracker);
+  }, []);
+
+  useEffect(() => {
+    const completionTime = 0.95 * content.length_in_seconds;
+    const checkComplete = setInterval(() => {
+      if (
+        videoRef.current &&
+        cTime.current >= completionTime &&
+        !completedEventHasOccured.current
+      ) {
+        trackVideoEvent?.('completed', Math.round(cTime.current));
+        completedEventHasOccured.current = true;
+      }
+      if (youtubeId) {
+        webViewRef.current?.injectJavaScript(`checkIfInCompletionRange(${completionTime}); true;`);
+      }
+    }, 1000);
+
+    return () => clearInterval(checkComplete);
+  }, []);
 
   const appleCastingListeners = (): (() => void) | undefined => {
     if (!IS_IOS) {
@@ -736,17 +772,19 @@ const Video = forwardRef<
 
         if (parsedData.data?.data === 1 && !!cTime.current) {
           startPlaySec = cTime.current;
+          pausedRef.current = false;
           if (playPressedFirstTime) {
-            videoEvents?.trackVideoStarted?.(Math.round(cTime.current));
+            trackVideoEvent?.('started', Math.round(cTime.current));
             playPressedFirstTime = false;
           } else {
-            videoEvents?.trackVideoResumed?.(Math.round(cTime.current));
+            trackVideoEvent?.('resumed', Math.round(cTime.current));
           }
         }
         if (parsedData.data?.data === 2 && !!cTime.current) {
           endPlaySec = cTime.current;
           secondsPlayed = endPlaySec - startPlaySec;
-          videoEvents?.trackVideoPaused?.(Math.round(cTime.current));
+          pausedRef.current = true;
+          trackVideoEvent?.('paused', Math.round(cTime.current));
           if (secondsPlayed > 0) {
             updateVideoProgress();
           }
@@ -761,6 +799,17 @@ const Video = forwardRef<
         secondsPlayed = endPlaySec - startPlaySec;
         handleBack();
         break;
+      case 'videoPlaying':
+        cTime.current = parsedData.currentTime;
+        trackVideoEvent?.('playing', Math.round(cTime.current));
+        break;
+      case 'checkCurrentTime':
+        cTime.current = parsedData.currentTime;
+        if (cTime.current >= parsedData.completionRange && !completedEventHasOccured.current) {
+          trackVideoEvent?.('completed', Math.round(cTime.current));
+          completedEventHasOccured.current = true;
+        }
+        break;
     }
   };
 
@@ -770,6 +819,7 @@ const Video = forwardRef<
 
   const onEndVideo = (): void => {
     updateVideoProgress();
+    clearTimeout(trackingTimer.current);
     if (autoPlay) {
       goToNextLesson?.();
       return;
@@ -934,7 +984,7 @@ const Video = forwardRef<
     }
     if (!pausedState && playPressedFirstTime) {
       updateVideoProgress();
-      videoEvents?.trackVideoStarted?.(Math.round(cTime.current));
+      trackVideoEvent?.('started', Math.round(cTime.current));
       playPressedFirstTime = false;
     }
     if (gCastingState && !skipActionOnCasting) {
@@ -1375,6 +1425,7 @@ const Video = forwardRef<
                                 events: {
                                   'onReady': onPlayerReady,
                                   'onStateChange': onPlayerStateChange,
+
                                 }
                               });
                             }
@@ -1397,6 +1448,14 @@ const Video = forwardRef<
 
                             function seekTo(time) {
                               player.seekTo(time, true);
+                            }
+
+                            function trackVideoPlaying() {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'videoPlaying', currentTime: player.getCurrentTime()}))
+                            }
+
+                            function checkIfInCompletionRange(range) {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'checkCurrentTime', currentTime: player.getCurrentTime(), completionRange: range}))
                             }
                         
                           </script>
@@ -1542,16 +1601,15 @@ const Video = forwardRef<
                     <TouchableOpacity
                       onPress={() => {
                         if (!paused) {
-                          videoEvents?.trackVideoPaused?.(Math.round(cTime.current));
+                          trackVideoEvent?.('paused', Math.round(cTime.current));
                         } else {
                           if (!playPressedFirstTime) {
-                            videoEvents?.trackVideoResumed?.(Math.round(cTime.current));
+                            trackVideoEvent?.('resumed', Math.round(cTime.current));
                           }
                         }
                         togglePaused();
                       }}
                       style={styles.pausedBtn}
-                      testID={'PlayPauseButton'}
                     >
                       {svgs[paused ? 'playSvg' : 'pause'](iconStyle)}
                     </TouchableOpacity>

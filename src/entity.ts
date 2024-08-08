@@ -56,15 +56,10 @@ export interface IVideo {
   orientation?: string;
   aCasting?: boolean;
   offlinePath?: string;
-  videoEvents?: {
-    trackVideoStarted?: (startTime: number) => void;
-    trackVideoPaused?: (pauseTime: number) => void;
-    trackVideoSeekStarted?: () => void;
-    trackVideoSeekCompleted?: () => void;
-    trackVideoResumed?: (resumeTime: number) => void;
-    trackVideoCompleted?: () => void;
-    trackVideoPlaying?: () => void;
-  };
+  trackVideoEvent?: (
+    type: 'started' | 'paused' | 'resumed' | 'playing' | 'completed',
+    currentTime: number
+  ) => void;
   styles: {
     backButtonContainerColor?: string;
   };

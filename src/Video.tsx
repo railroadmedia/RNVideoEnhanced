@@ -199,6 +199,8 @@ const Video = forwardRef<
     (!!liveData && !liveData?.isLive) ||
     liveEnded ||
     (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
+  const completionTime = 0.95 * content?.length_in_seconds;
+  const timeToComplete = useRef<NodeJS.Timeout | undefined>();
 
   const filterVideosByResolution = (): IVpe[] | undefined => {
     let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
@@ -255,36 +257,40 @@ const Video = forwardRef<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props?.paused, props.repeat, props?.showCastingOptions, props?.showControls]);
 
+  const updateTimeToComplete = (): void => {
+    clearTimeout(timeToComplete.current);
+    if (completedEventHasOccured.current) {
+      return;
+    }
+    const newTime = completionTime - cTime.current;
+
+    if (newTime <= 0) {
+      trackVideoEvent?.('completed', Math.round(cTime.current));
+      completedEventHasOccured.current = true;
+      return;
+    }
+
+    timeToComplete.current = setTimeout(() => {
+      trackVideoEvent?.('completed', Math.round(cTime.current));
+      completedEventHasOccured.current = true;
+    }, newTime * 1000);
+  };
+
   useEffect(() => {
     const heartbeatTracker = setInterval(() => {
       if (videoRef.current && !pausedRef.current && !seeking.current) {
         trackVideoEvent?.('playing', Math.round(cTime.current));
+        updateTimeToComplete();
       }
       if (youtubeId && !pausedRef.current) {
         webViewRef.current?.injectJavaScript(`trackVideoPlaying(); true;`);
       }
     }, HEARTBEAT_INTERVAL);
 
-    return () => clearInterval(heartbeatTracker);
-  }, []);
-
-  useEffect(() => {
-    const completionTime = 0.95 * content.length_in_seconds;
-    const checkComplete = setInterval(() => {
-      if (
-        videoRef.current &&
-        cTime.current >= completionTime &&
-        !completedEventHasOccured.current
-      ) {
-        trackVideoEvent?.('completed', Math.round(cTime.current));
-        completedEventHasOccured.current = true;
-      }
-      if (youtubeId) {
-        webViewRef.current?.injectJavaScript(`checkIfInCompletionRange(${completionTime}); true;`);
-      }
-    }, 1000);
-
-    return () => clearInterval(checkComplete);
+    return () => {
+      clearInterval(heartbeatTracker);
+      clearTimeout(timeToComplete.current);
+    };
   }, []);
 
   const appleCastingListeners = (): (() => void) | undefined => {
@@ -395,6 +401,7 @@ const Video = forwardRef<
       }
       toggleControls(true);
       clearTimeout(controlsTO.current);
+      clearTimeout(timeToComplete.current);
     };
     const stateListener = AppState.addEventListener('change', handleAppStateChange);
 
@@ -779,12 +786,14 @@ const Video = forwardRef<
           } else {
             trackVideoEvent?.('resumed', Math.round(cTime.current));
           }
+          updateTimeToComplete();
         }
         if (parsedData.data?.data === 2 && !!cTime.current) {
           endPlaySec = cTime.current;
           secondsPlayed = endPlaySec - startPlaySec;
           pausedRef.current = true;
           trackVideoEvent?.('paused', Math.round(cTime.current));
+          clearTimeout(timeToComplete.current);
           if (secondsPlayed > 0) {
             updateVideoProgress();
           }
@@ -802,13 +811,7 @@ const Video = forwardRef<
       case 'videoPlaying':
         cTime.current = parsedData.currentTime;
         trackVideoEvent?.('playing', Math.round(cTime.current));
-        break;
-      case 'checkCurrentTime':
-        cTime.current = parsedData.currentTime;
-        if (cTime.current >= parsedData.completionRange && !completedEventHasOccured.current) {
-          trackVideoEvent?.('completed', Math.round(cTime.current));
-          completedEventHasOccured.current = true;
-        }
+        updateTimeToComplete();
         break;
     }
   };
@@ -1102,6 +1105,7 @@ const Video = forwardRef<
         onSeek(seekTime.current);
         cTime.current = seekTime.current;
         updateVideoProgress();
+        updateTimeToComplete();
         clearTimeout(controlsTO.current);
         controlsTO.current = setTimeout(() => {
           animateControls(updatePauseState ? 1 : 0);
@@ -1109,6 +1113,7 @@ const Video = forwardRef<
       },
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(controlsTO.current);
+        clearTimeout(timeToComplete.current);
         animateControls(1);
         seekTime.current =
           (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
@@ -1455,10 +1460,6 @@ const Video = forwardRef<
                             function trackVideoPlaying() {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'videoPlaying', currentTime: player.getCurrentTime()}))
                             }
-
-                            function checkIfInCompletionRange(range) {
-                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'checkCurrentTime', currentTime: player.getCurrentTime(), completionRange: range}))
-                            }
                         
                           </script>
                         </body>
@@ -1604,9 +1605,11 @@ const Video = forwardRef<
                       onPress={() => {
                         if (!paused) {
                           trackVideoEvent?.('paused', Math.round(cTime.current));
+                          clearTimeout(timeToComplete.current); // removes completion timer when paused
                         } else {
                           if (!playPressedFirstTime) {
                             trackVideoEvent?.('resumed', Math.round(cTime.current));
+                            updateTimeToComplete(); // restarts completion timer when resumed
                           }
                         }
                         togglePaused();

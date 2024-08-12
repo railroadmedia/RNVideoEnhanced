@@ -1615,6 +1615,7 @@ const Video = forwardRef<
                         togglePaused();
                       }}
                       style={styles.pausedBtn}
+                      testID={'PlayPauseButton'}
                     >
                       {svgs[paused ? 'playSvg' : 'pause'](iconStyle)}
                     </TouchableOpacity>

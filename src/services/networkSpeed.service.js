@@ -2,8 +2,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 export default {
   getNetworkSpeed: function (url, offPath, signal) {
-    const unlink = () =>
-      ReactNativeBlobUtil.fs.unlink(`${offPath}/networkSpeed`).catch(() => {});
+    const unlink = () => ReactNativeBlobUtil.fs.unlink(`${offPath}/networkSpeed`).catch(() => {});
     return new Promise((res, rej) => {
       let start, end;
       try {
@@ -12,7 +11,7 @@ export default {
           res({ aborted: true });
         });
         let task = ReactNativeBlobUtil.config({
-          path: `${offPath}/networkSpeed`
+          path: `${offPath}/networkSpeed`,
         }).fetch('GET', url);
         task
           .progress({ count: 10000 }, received => {
@@ -29,14 +28,14 @@ export default {
                   mbps < 3
                     ? 360
                     : mbps < 5
-                    ? 540
-                    : mbps < 7
-                    ? 720
-                    : mbps < 12
-                    ? 1080
-                    : mbps < 22
-                    ? 1440
-                    : 2160
+                      ? 540
+                      : mbps < 7
+                        ? 720
+                        : mbps < 12
+                          ? 1080
+                          : mbps < 22
+                            ? 1440
+                            : 2160,
               });
             }
           })
@@ -45,5 +44,5 @@ export default {
         unlink();
       }
     });
-  }
+  },
 };

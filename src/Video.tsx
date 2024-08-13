@@ -1432,7 +1432,6 @@ const Video = forwardRef<
                                 events: {
                                   'onReady': onPlayerReady,
                                   'onStateChange': onPlayerStateChange,
-
                                 }
                               });
                             }

@@ -115,7 +115,7 @@ const Video = forwardRef<
     onOrientationChange,
     onQualityChange,
     trackVideoEvent,
-    styles: { backButtonContainerColor },
+    styles: propStyles,
   } = props;
   quality = props?.quality || quality;
   aCasting = props?.aCasting || aCasting;
@@ -1339,7 +1339,12 @@ const Video = forwardRef<
       {!maxWidth && <View style={styles.maxWidth} />}
       {(!!liveData || (!!youtubeId && !audioOnly && !fullscreen)) && onBack && (
         <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: backButtonContainerColor }]}
+          style={[
+            styles.backBtn,
+            !!propStyles?.backButtonContainerColor && {
+              backgroundColor: propStyles?.backButtonContainerColor,
+            },
+          ]}
           onPress={!!liveData ? handleLiveBack : handleYtBack}
         >
           {svgs.arrowLeft({

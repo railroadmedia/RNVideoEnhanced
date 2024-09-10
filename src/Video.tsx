@@ -178,7 +178,6 @@ const Video = forwardRef<
     remove: () => void;
   }>();
   const gcastRef = useRef<{ value: boolean; time?: number }>({ value: false });
-  const trackingTimer = useRef<NodeJS.Timeout | undefined>();
   const completedEventHasOccured = useRef<boolean>(false);
 
   const minsToStart = (startDate: string): number =>
@@ -201,6 +200,7 @@ const Video = forwardRef<
     (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
   const completionTime = 0.95 * content?.length_in_seconds;
   const timeToComplete = useRef<NodeJS.Timeout | undefined>();
+  const heartbeatInterval = useRef<NodeJS.Timeout | undefined>();
 
   const filterVideosByResolution = (): IVpe[] | undefined => {
     let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
@@ -276,8 +276,10 @@ const Video = forwardRef<
     }, newTime * 1000);
   };
 
-  useEffect(() => {
-    const heartbeatTracker = setInterval(() => {
+  const startHeartbeatEvents = (): void => {
+    trackVideoEvent?.('playing', Math.round(cTime.current));
+    updateTimeToComplete();
+    heartbeatInterval.current = setInterval(() => {
       if (videoRef.current && !pausedRef.current && !seeking.current) {
         trackVideoEvent?.('playing', Math.round(cTime.current));
         updateTimeToComplete();
@@ -286,9 +288,15 @@ const Video = forwardRef<
         webViewRef.current?.injectJavaScript(`trackVideoPlaying(); true;`);
       }
     }, HEARTBEAT_INTERVAL);
+  };
 
+  const stopHeartbeatEvents = (): void => {
+    clearInterval(heartbeatInterval.current);
+  };
+
+  useEffect(() => {
     return () => {
-      clearInterval(heartbeatTracker);
+      clearInterval(heartbeatInterval.current);
       clearTimeout(timeToComplete.current);
     };
   }, []);
@@ -786,7 +794,7 @@ const Video = forwardRef<
           } else {
             trackVideoEvent?.('resumed', Math.round(cTime.current));
           }
-          updateTimeToComplete();
+          startHeartbeatEvents();
         }
         if (parsedData.data?.data === 2 && !!cTime.current) {
           endPlaySec = cTime.current;
@@ -794,6 +802,7 @@ const Video = forwardRef<
           pausedRef.current = true;
           trackVideoEvent?.('paused', Math.round(cTime.current));
           clearTimeout(timeToComplete.current);
+          stopHeartbeatEvents();
           if (secondsPlayed > 0) {
             updateVideoProgress();
           }
@@ -822,7 +831,7 @@ const Video = forwardRef<
 
   const onEndVideo = (): void => {
     updateVideoProgress();
-    clearTimeout(trackingTimer.current);
+    stopHeartbeatEvents();
     if (autoPlay) {
       goToNextLesson?.();
       return;
@@ -988,6 +997,7 @@ const Video = forwardRef<
     if (!pausedState && playPressedFirstTime) {
       updateVideoProgress();
       trackVideoEvent?.('started', Math.round(cTime.current));
+      startHeartbeatEvents();
       playPressedFirstTime = false;
     }
     if (gCastingState && !skipActionOnCasting) {
@@ -1084,7 +1094,6 @@ const Video = forwardRef<
           updatePauseState = !paused;
           togglePaused();
         }
-        delete videoPlayStatus.current;
         onSeek(seekTime.current);
         cTime.current = seekTime.current;
         updateVideoProgress();
@@ -1092,7 +1101,12 @@ const Video = forwardRef<
         controlsTO.current = setTimeout(() => {
           animateControls(updatePauseState ? 1 : 0);
         }, 3000);
+        updateTimeToComplete();
         trackVideoEvent?.('seek-completed', Math.round(cTime.current));
+        if (videoPlayStatus.current) {
+          startHeartbeatEvents();
+        }
+        delete videoPlayStatus.current;
       },
       onPanResponderTerminate: () => {
         delete seeking.current;
@@ -1105,7 +1119,6 @@ const Video = forwardRef<
         onSeek(seekTime.current);
         cTime.current = seekTime.current;
         updateVideoProgress();
-        updateTimeToComplete();
         clearTimeout(controlsTO.current);
         controlsTO.current = setTimeout(() => {
           animateControls(updatePauseState ? 1 : 0);
@@ -1114,6 +1127,7 @@ const Video = forwardRef<
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(controlsTO.current);
         clearTimeout(timeToComplete.current);
+        stopHeartbeatEvents();
         animateControls(1);
         seekTime.current =
           (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
@@ -1609,11 +1623,12 @@ const Video = forwardRef<
                       onPress={() => {
                         if (!paused) {
                           trackVideoEvent?.('paused', Math.round(cTime.current));
+                          stopHeartbeatEvents();
                           clearTimeout(timeToComplete.current); // removes completion timer when paused
                         } else {
                           if (!playPressedFirstTime) {
                             trackVideoEvent?.('resumed', Math.round(cTime.current));
-                            updateTimeToComplete(); // restarts completion timer when resumed
+                            startHeartbeatEvents();
                           }
                         }
                         togglePaused();

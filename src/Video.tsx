@@ -201,6 +201,7 @@ const Video = forwardRef<
   const completionTime = 0.95 * content?.length_in_seconds;
   const timeToComplete = useRef<NodeJS.Timeout | undefined>();
   const heartbeatInterval = useRef<NodeJS.Timeout | undefined>();
+  const videoSpeedRef = useRef<number>(1.0);
 
   const filterVideosByResolution = (): IVpe[] | undefined => {
     let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
@@ -262,7 +263,7 @@ const Video = forwardRef<
     if (completedEventHasOccured.current) {
       return;
     }
-    const newTime = completionTime - cTime.current;
+    const newTime = (completionTime - cTime.current) / videoSpeedRef.current;
 
     if (newTime <= 0) {
       trackVideoEvent?.('completed', Math.round(cTime.current));
@@ -822,6 +823,10 @@ const Video = forwardRef<
         trackVideoEvent?.('playing', Math.round(cTime.current));
         updateTimeToComplete();
         break;
+      case 'playerRateChange':
+        videoSpeedRef.current = parsedData?.data?.data;
+        updateTimeToComplete();
+        break;
     }
   };
 
@@ -1097,12 +1102,13 @@ const Video = forwardRef<
         onSeek(seekTime.current);
         cTime.current = seekTime.current;
         updateVideoProgress();
+        updateTimeToComplete();
         clearTimeout(controlsTO.current);
         controlsTO.current = setTimeout(() => {
           animateControls(updatePauseState ? 1 : 0);
         }, 3000);
-        updateTimeToComplete();
-        trackVideoEvent?.('seek-completed', Math.round(cTime.current));
+        // Commenting out seek events for now.
+        // trackVideoEvent?.('seek-completed', Math.round(cTime.current));
         if (videoPlayStatus.current) {
           startHeartbeatEvents();
         }
@@ -1134,7 +1140,8 @@ const Video = forwardRef<
         if (!IS_IOS) {
           onProgress({ currentTime: seekTime.current });
         }
-        trackVideoEvent?.('seek-started', Math.round(cTime.current), Math.round(seekTime.current));
+        // Commenting out seek events for now.
+        // trackVideoEvent?.('seek-started', Math.round(cTime.current), Math.round(seekTime.current));
         googleCastClient.current?.seek({ position: seekTime.current });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
@@ -1216,6 +1223,8 @@ const Video = forwardRef<
   const onSaveSettings = useCallback(
     (newRate: string, qual: string | number, captions: string): void => {
       setRate(newRate);
+      videoSpeedRef.current = parseFloat(newRate);
+      updateTimeToComplete();
       setCaptionsHidden(captions === 'Off');
       selectQuality(qual, true).then(v => {
         if (JSON.stringify(vpe) !== JSON.stringify(v)) {
@@ -1451,6 +1460,7 @@ const Video = forwardRef<
                                 events: {
                                   'onReady': onPlayerReady,
                                   'onStateChange': onPlayerStateChange,
+                                  'onPlaybackRateChange': onPlayerRateChange,
                                 }
                               });
                             }
@@ -1477,6 +1487,10 @@ const Video = forwardRef<
 
                             function trackVideoPlaying() {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'videoPlaying', currentTime: player.getCurrentTime()}))
+                            }
+
+                            function onPlayerRateChange(event) {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerRateChange', data: event}))
                             }
                         
                           </script>

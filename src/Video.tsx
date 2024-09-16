@@ -297,7 +297,7 @@ const Video = forwardRef<
 
   useEffect(() => {
     return () => {
-      clearInterval(heartbeatInterval.current);
+      stopHeartbeatEvents();
       clearTimeout(timeToComplete.current);
     };
   }, []);
@@ -406,6 +406,7 @@ const Video = forwardRef<
     const handleAppStateChange = (state: string): void => {
       if (state === (IS_IOS ? 'inactive' : 'background') && !youtubeId) {
         setPaused(true);
+        stopHeartbeatEvents();
         updateVideoProgress();
       }
       toggleControls(true);

@@ -278,6 +278,7 @@ const Video = forwardRef<
   };
 
   const startHeartbeatEvents = (): void => {
+    clearInterval(heartbeatInterval.current); // in the case we start it when one already exists.
     trackVideoEvent?.('playing', Math.round(cTime.current));
     updateTimeToComplete();
     heartbeatInterval.current = setInterval(() => {
@@ -406,6 +407,7 @@ const Video = forwardRef<
     const handleAppStateChange = (state: string): void => {
       if (state === (IS_IOS ? 'inactive' : 'background') && !youtubeId) {
         setPaused(true);
+        trackVideoEvent?.('paused', Math.round(cTime.current));
         stopHeartbeatEvents();
         updateVideoProgress();
       }
@@ -838,6 +840,8 @@ const Video = forwardRef<
   const onEndVideo = (): void => {
     updateVideoProgress();
     stopHeartbeatEvents();
+    // added by Alex's request. This is intentionally a playing event and not a completed event. 
+    trackVideoEvent?.('playing', Math.round(cTime.current));
     if (autoPlay) {
       goToNextLesson?.();
       return;
@@ -1095,13 +1099,15 @@ const Video = forwardRef<
       onStartShouldSetPanResponderCapture: () => false,
       onPanResponderRelease: () => {
         delete seeking.current;
+        onSeek(seekTime.current);
+        cTime.current = seekTime.current;
         let updatePauseState = paused;
         if (videoPlayStatus.current) {
           updatePauseState = !paused;
           togglePaused();
+          startHeartbeatEvents();
         }
-        onSeek(seekTime.current);
-        cTime.current = seekTime.current;
+        delete videoPlayStatus.current;
         updateVideoProgress();
         updateTimeToComplete();
         clearTimeout(controlsTO.current);
@@ -1110,10 +1116,6 @@ const Video = forwardRef<
         }, 3000);
         // Commenting out seek events for now.
         // trackVideoEvent?.('seek-completed', Math.round(cTime.current));
-        if (videoPlayStatus.current) {
-          startHeartbeatEvents();
-        }
-        delete videoPlayStatus.current;
       },
       onPanResponderTerminate: () => {
         delete seeking.current;
@@ -1134,7 +1136,6 @@ const Video = forwardRef<
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(controlsTO.current);
         clearTimeout(timeToComplete.current);
-        stopHeartbeatEvents();
         animateControls(1);
         seekTime.current =
           (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
@@ -1148,6 +1149,7 @@ const Video = forwardRef<
       },
       onPanResponderMove: (_, { moveX }) => {
         seeking.current = true;
+        stopHeartbeatEvents();
         if (!paused) {
           videoPlayStatus.current = true;
           togglePaused();

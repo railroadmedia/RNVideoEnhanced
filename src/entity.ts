@@ -56,9 +56,21 @@ export interface IVideo {
   orientation?: string;
   aCasting?: boolean;
   offlinePath?: string;
+  trackVideoEvent?: (
+    type:
+      | 'started'
+      | 'paused'
+      | 'resumed'
+      | 'playing'
+      | 'completed'
+      | 'seek-started'
+      | 'seek-completed',
+    currentTime: number,
+    seekStartTime?: number
+  ) => void;
   styles: {
     backButtonContainerColor?: string;
-  }
+  };
 }
 
 export interface IContent {

@@ -20,6 +20,7 @@ import {
   GestureResponderHandlers,
   useWindowDimensions,
   LayoutChangeEvent,
+  DimensionValue,
 } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,6 +73,8 @@ let orientation: string;
 let offlinePath: string;
 let quality: string | number = 'Auto';
 
+const HEARTBEAT_INTERVAL = 15000;
+
 const Video = forwardRef<
   {
     onSeek: (timeCode: number | string) => void;
@@ -111,6 +114,7 @@ const Video = forwardRef<
     maxWidth,
     onOrientationChange,
     onQualityChange,
+    trackVideoEvent,
     styles: propStyles,
   } = props;
   quality = props?.quality || quality;
@@ -174,6 +178,7 @@ const Video = forwardRef<
     remove: () => void;
   }>();
   const gcastRef = useRef<{ value: boolean; time?: number }>({ value: false });
+  const completedEventHasOccured = useRef<boolean>(false);
 
   const minsToStart = (startDate: string): number =>
     Math.ceil((Date.parse(startDate) - Date.now()) / (1000 * 60));
@@ -193,6 +198,10 @@ const Video = forwardRef<
     (!!liveData && !liveData?.isLive) ||
     liveEnded ||
     (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
+  const completionTime = 0.95 * content?.length_in_seconds;
+  const timeToComplete = useRef<NodeJS.Timeout | undefined>();
+  const heartbeatInterval = useRef<NodeJS.Timeout | undefined>();
+  const videoSpeedRef = useRef<number>(1.0);
 
   const filterVideosByResolution = (): IVpe[] | undefined => {
     let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
@@ -248,6 +257,51 @@ const Video = forwardRef<
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props?.paused, props.repeat, props?.showCastingOptions, props?.showControls]);
+
+  const updateTimeToComplete = (): void => {
+    clearTimeout(timeToComplete.current);
+    if (completedEventHasOccured.current) {
+      return;
+    }
+    const newTime = (completionTime - cTime.current) / videoSpeedRef.current;
+
+    if (newTime <= 0) {
+      trackVideoEvent?.('completed', Math.round(cTime.current));
+      completedEventHasOccured.current = true;
+      return;
+    }
+
+    timeToComplete.current = setTimeout(() => {
+      trackVideoEvent?.('completed', Math.round(cTime.current));
+      completedEventHasOccured.current = true;
+    }, newTime * 1000);
+  };
+
+  const startHeartbeatEvents = (): void => {
+    clearInterval(heartbeatInterval.current); // in the case we start it when one already exists.
+    trackVideoEvent?.('playing', Math.round(cTime.current));
+    updateTimeToComplete();
+    heartbeatInterval.current = setInterval(() => {
+      if (videoRef.current && !pausedRef.current && !seeking.current) {
+        trackVideoEvent?.('playing', Math.round(cTime.current));
+        updateTimeToComplete();
+      }
+      if (youtubeId && !pausedRef.current) {
+        webViewRef.current?.injectJavaScript(`trackVideoPlaying(); true;`);
+      }
+    }, HEARTBEAT_INTERVAL);
+  };
+
+  const stopHeartbeatEvents = (): void => {
+    clearInterval(heartbeatInterval.current);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopHeartbeatEvents();
+      clearTimeout(timeToComplete.current);
+    };
+  }, []);
 
   const appleCastingListeners = (): (() => void) | undefined => {
     if (!IS_IOS) {
@@ -353,10 +407,13 @@ const Video = forwardRef<
     const handleAppStateChange = (state: string): void => {
       if (state === (IS_IOS ? 'inactive' : 'background') && !youtubeId) {
         setPaused(true);
+        trackVideoEvent?.('paused', Math.round(cTime.current));
+        stopHeartbeatEvents();
         updateVideoProgress();
       }
       toggleControls(true);
       clearTimeout(controlsTO.current);
+      clearTimeout(timeToComplete.current);
     };
     const stateListener = AppState.addEventListener('change', handleAppStateChange);
 
@@ -651,8 +708,8 @@ const Video = forwardRef<
   };
 
   const getVideoDimensions = useCallback((): {
-    width: number | string;
-    height?: number | string;
+    width: DimensionValue;
+    height?: DimensionValue;
     aspectRatio?: number;
   } => {
     let width;
@@ -730,13 +787,26 @@ const Video = forwardRef<
         onPlayerReady?.();
         break;
       case 'playerStateChange':
-        cTime.current = parsedData.data?.target?.v?.currentTime;
+        cTime.current = parsedData.data?.target?.playerInfo?.currentTime;
+
         if (parsedData.data?.data === 1 && !!cTime.current) {
           startPlaySec = cTime.current;
+          pausedRef.current = false;
+          if (playPressedFirstTime) {
+            trackVideoEvent?.('started', Math.round(cTime.current));
+            playPressedFirstTime = false;
+          } else {
+            trackVideoEvent?.('resumed', Math.round(cTime.current));
+          }
+          startHeartbeatEvents();
         }
         if (parsedData.data?.data === 2 && !!cTime.current) {
           endPlaySec = cTime.current;
           secondsPlayed = endPlaySec - startPlaySec;
+          pausedRef.current = true;
+          trackVideoEvent?.('paused', Math.round(cTime.current));
+          clearTimeout(timeToComplete.current);
+          stopHeartbeatEvents();
           if (secondsPlayed > 0) {
             updateVideoProgress();
           }
@@ -751,6 +821,15 @@ const Video = forwardRef<
         secondsPlayed = endPlaySec - startPlaySec;
         handleBack();
         break;
+      case 'videoPlaying':
+        cTime.current = parsedData.currentTime;
+        trackVideoEvent?.('playing', Math.round(cTime.current));
+        updateTimeToComplete();
+        break;
+      case 'playerRateChange':
+        videoSpeedRef.current = parsedData?.data?.data;
+        updateTimeToComplete();
+        break;
     }
   };
 
@@ -760,6 +839,9 @@ const Video = forwardRef<
 
   const onEndVideo = (): void => {
     updateVideoProgress();
+    stopHeartbeatEvents();
+    // added by Alex's request. This is intentionally a playing event and not a completed event. 
+    trackVideoEvent?.('playing', Math.round(cTime.current));
     if (autoPlay) {
       goToNextLesson?.();
       return;
@@ -924,6 +1006,8 @@ const Video = forwardRef<
     }
     if (!pausedState && playPressedFirstTime) {
       updateVideoProgress();
+      trackVideoEvent?.('started', Math.round(cTime.current));
+      startHeartbeatEvents();
       playPressedFirstTime = false;
     }
     if (gCastingState && !skipActionOnCasting) {
@@ -1015,19 +1099,23 @@ const Video = forwardRef<
       onStartShouldSetPanResponderCapture: () => false,
       onPanResponderRelease: () => {
         delete seeking.current;
+        onSeek(seekTime.current);
+        cTime.current = seekTime.current;
         let updatePauseState = paused;
         if (videoPlayStatus.current) {
           updatePauseState = !paused;
           togglePaused();
+          startHeartbeatEvents();
         }
         delete videoPlayStatus.current;
-        onSeek(seekTime.current);
-        cTime.current = seekTime.current;
         updateVideoProgress();
+        updateTimeToComplete();
         clearTimeout(controlsTO.current);
         controlsTO.current = setTimeout(() => {
           animateControls(updatePauseState ? 1 : 0);
         }, 3000);
+        // Commenting out seek events for now.
+        // trackVideoEvent?.('seek-completed', Math.round(cTime.current));
       },
       onPanResponderTerminate: () => {
         delete seeking.current;
@@ -1047,17 +1135,21 @@ const Video = forwardRef<
       },
       onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
         clearTimeout(controlsTO.current);
+        clearTimeout(timeToComplete.current);
         animateControls(1);
         seekTime.current =
           (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
         if (!IS_IOS) {
           onProgress({ currentTime: seekTime.current });
         }
+        // Commenting out seek events for now.
+        // trackVideoEvent?.('seek-started', Math.round(cTime.current), Math.round(seekTime.current));
         googleCastClient.current?.seek({ position: seekTime.current });
         return Math.abs(dx) > 2 || Math.abs(dy) > 2;
       },
       onPanResponderMove: (_, { moveX }) => {
         seeking.current = true;
+        stopHeartbeatEvents();
         if (!paused) {
           videoPlayStatus.current = true;
           togglePaused();
@@ -1111,8 +1203,8 @@ const Video = forwardRef<
               q === 'Auto' && v?.height === 'Auto'
                 ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v?.height === 'Auto'
-                  ? v?.actualH
-                  : v?.height,
+                ? v?.actualH
+                : v?.height,
           }));
       if (!newVPE?.find(v => v.selected)) {
         newVPE = newVPE?.map(v => ({
@@ -1134,6 +1226,8 @@ const Video = forwardRef<
   const onSaveSettings = useCallback(
     (newRate: string, qual: string | number, captions: string): void => {
       setRate(newRate);
+      videoSpeedRef.current = parseFloat(newRate);
+      updateTimeToComplete();
       setCaptionsHidden(captions === 'Off');
       selectQuality(qual, true).then(v => {
         if (JSON.stringify(vpe) !== JSON.stringify(v)) {
@@ -1369,6 +1463,7 @@ const Video = forwardRef<
                                 events: {
                                   'onReady': onPlayerReady,
                                   'onStateChange': onPlayerStateChange,
+                                  'onPlaybackRateChange': onPlayerRateChange,
                                 }
                               });
                             }
@@ -1391,6 +1486,14 @@ const Video = forwardRef<
 
                             function seekTo(time) {
                               player.seekTo(time, true);
+                            }
+
+                            function trackVideoPlaying() {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'videoPlaying', currentTime: player.getCurrentTime()}))
+                            }
+
+                            function onPlayerRateChange(event) {
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerRateChange', data: event}))
                             }
                         
                           </script>
@@ -1534,7 +1637,19 @@ const Video = forwardRef<
                   </DoubleTapArea>
                   {isControlVisible && (
                     <TouchableOpacity
-                      onPress={() => togglePaused()}
+                      onPress={() => {
+                        if (!paused) {
+                          trackVideoEvent?.('paused', Math.round(cTime.current));
+                          stopHeartbeatEvents();
+                          clearTimeout(timeToComplete.current); // removes completion timer when paused
+                        } else {
+                          if (!playPressedFirstTime) {
+                            trackVideoEvent?.('resumed', Math.round(cTime.current));
+                            startHeartbeatEvents();
+                          }
+                        }
+                        togglePaused();
+                      }}
                       style={styles.pausedBtn}
                       testID={'PlayPauseButton'}
                     >

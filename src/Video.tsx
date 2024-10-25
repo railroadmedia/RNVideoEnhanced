@@ -840,7 +840,7 @@ const Video = forwardRef<
   const onEndVideo = (): void => {
     updateVideoProgress();
     stopHeartbeatEvents();
-    // added by Alex's request. This is intentionally a playing event and not a completed event. 
+    // added by Alex's request. This is intentionally a playing event and not a completed event.
     trackVideoEvent?.('playing', Math.round(cTime.current));
     if (autoPlay) {
       goToNextLesson?.();
@@ -1495,7 +1495,7 @@ const Video = forwardRef<
                             function onPlayerRateChange(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerRateChange', data: event}))
                             }
-                        
+
                           </script>
                         </body>
                       </html>
@@ -1543,7 +1543,8 @@ const Video = forwardRef<
                               ? [
                                   {
                                     language: 'en',
-                                    uri: 'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
+                                    uri:
+                                      'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
                                     title: 'Disabled',
                                     type: TextTrackType.VTT, // "text/vtt"
                                   },

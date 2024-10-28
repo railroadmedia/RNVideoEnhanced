@@ -1185,9 +1185,19 @@ const Video = forwardRef<
           if (networkSpeed?.aborted) {
             return;
           }
-          recommendedVideoQuality = Object.create(vpe || [])
-            .sort((i: IVpe, j: IVpe) => (i?.height < j?.height ? 1 : -1))
-            .find((rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality);
+
+          const sortedVPE = Object.create(vpe || []).sort((i: IVpe, j: IVpe) =>
+            i?.height < j?.height ? 1 : -1
+          );
+
+          if (networkSpeed?.mbps === 0 && !!sortedVPE.length) {
+            const filtered = sortedVPE.filter((v: IVpe) => v?.height !== 'Auto');
+            recommendedVideoQuality = filtered[sortedVPE.length - 1];
+          } else {
+            recommendedVideoQuality = sortedVPE.find(
+              (rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality
+            );
+          }
         }
       }
       let newVPE = aCasting
@@ -1203,8 +1213,8 @@ const Video = forwardRef<
               q === 'Auto' && v?.height === 'Auto'
                 ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v?.height === 'Auto'
-                ? v?.actualH
-                : v?.height,
+                  ? v?.actualH
+                  : v?.height,
           }));
       if (!newVPE?.find(v => v.selected)) {
         newVPE = newVPE?.map(v => ({
@@ -1543,8 +1553,7 @@ const Video = forwardRef<
                               ? [
                                   {
                                     language: 'en',
-                                    uri:
-                                      'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
+                                    uri: 'https://raw.githubusercontent.com/bogdan-vol/react-native-video/master/disabled.vtt',
                                     title: 'Disabled',
                                     type: TextTrackType.VTT, // "text/vtt"
                                   },

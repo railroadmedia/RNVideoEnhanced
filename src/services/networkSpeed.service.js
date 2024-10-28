@@ -28,22 +28,29 @@ export default {
                   mbps < 0.5
                     ? 144
                     : mbps < 1
-                    ? 240
-                    : mbps < 3
-                    ? 360
-                    : mbps < 5
-                    ? 540
-                    : mbps < 7
-                    ? 720
-                    : mbps < 12
-                    ? 1080
-                    : mbps < 22
-                    ? 1440
-                    : 2160,
+                      ? 240
+                      : mbps < 3
+                        ? 360
+                        : mbps < 5
+                          ? 540
+                          : mbps < 7
+                            ? 720
+                            : mbps < 12
+                              ? 1080
+                              : mbps < 22
+                                ? 1440
+                                : 2160,
               });
             }
           })
           .catch(unlink);
+        setTimeout(() => {
+          if (!end) {
+            task.cancel(err => {});
+            unlink();
+            res({ mbps: 0 });
+          }
+        }, 5000);
       } catch (e) {
         unlink();
       }

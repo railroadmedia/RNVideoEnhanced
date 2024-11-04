@@ -1192,7 +1192,7 @@ const Video = forwardRef<
 
           if (networkSpeed?.mbps === 0 && !!sortedVPE.length) {
             const filtered = sortedVPE.filter((v: IVpe) => v?.height !== 'Auto');
-            recommendedVideoQuality = filtered[sortedVPE.length - 1];
+            recommendedVideoQuality = filtered[filtered.length - 1];
           } else {
             recommendedVideoQuality = sortedVPE.find(
               (rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality

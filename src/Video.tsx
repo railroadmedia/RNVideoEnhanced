@@ -598,7 +598,6 @@ const Video = forwardRef<
 
   const updateVideoProgress = async (apiCallDelay?: number): Promise<void> => {
     onUpdateVideoProgress?.(
-      youtubeId ? youtubeId : content?.video?.external_id ? content?.video?.external_id : '',
       content?.id,
       mp3Length || content?.length_in_seconds || 0,
       cTime.current,

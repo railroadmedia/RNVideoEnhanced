@@ -34,7 +34,6 @@ export interface IVideo {
   orientationIsLocked?: boolean;
   repeat: boolean;
   onUpdateVideoProgress?: (
-    videoId: number | string,
     id: number,
     lengthInSec: number,
     currentTime: number,

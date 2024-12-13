@@ -62,7 +62,7 @@ const LiveTimer: FunctionComponent<ILiveTimer> = props => {
   );
 
   useEffect(() => {
-    const parsedStartTime = new Date(startTime).getTime() - new Date().getTime() / 1000;
+    const parsedStartTime = Math.ceil((new Date(startTime).getTime() - new Date().getTime()) / 1000);
     const parsedEndTime = (new Date(endTime).getTime() - new Date().getTime()) / 1000 + 15 * 60;
     if (!!parsedStartTime) {
       if (parsedStartTime >= 0) {

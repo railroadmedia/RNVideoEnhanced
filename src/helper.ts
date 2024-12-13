@@ -42,13 +42,19 @@ export interface IFormattedTime {
 }
 
 export const formatTimer = (seconds: number): IFormattedTime => {
-  const hours = seconds / 3600;
-  const minutes = (seconds -= hours * 3600) / 60;
-  seconds -= minutes * 60;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  console.log(hours,minutes,remainingSeconds)
+  const hDisplay = hours > 0 ? hours : "--";
+  const mDisplay = minutes > 0 ? minutes  : "--";
+  const sDisplay = remainingSeconds;
+
   return {
-    hours: `${hours < 10 ? 0 : ''}${hours}`,
-    minutes: `${minutes < 10 ? 0 : ''}${minutes}`,
-    seconds: `${seconds < 10 ? 0 : ''}${seconds}`,
+    hours: `${hDisplay}`,
+    minutes: `${mDisplay}`,
+    seconds: `${sDisplay}`,
   };
 };
 

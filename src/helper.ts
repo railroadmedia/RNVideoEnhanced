@@ -46,7 +46,6 @@ export const formatTimer = (seconds: number): IFormattedTime => {
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
 
-  console.log(hours,minutes,remainingSeconds)
   const hDisplay = hours > 0 ? hours : "00";
   const mDisplay = minutes > 0 ? minutes  : "00";
   const sDisplay = remainingSeconds;

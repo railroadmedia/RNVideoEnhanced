@@ -194,15 +194,11 @@ const Video = forwardRef<
       : content?.next_lesson && (content?.next_lesson.id || content?.next_lesson.mobile_app_url);
   const audioOnly = content?.type === 'play-along' && listening;
   const minsToStartValue = minsToStart(liveData?.live_event_start_time_in_timezone || '');
-  const showTimer =
-    (!!liveData && !liveData?.isLive) ||
-    liveEnded ||
-    (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
+  const showTimer = liveEnded || (!!liveData && minsToStartValue < 15 && minsToStartValue > 0);
   const completionTime = 0.95 * content?.length_in_seconds;
   const timeToComplete = useRef<NodeJS.Timeout | undefined>();
   const heartbeatInterval = useRef<NodeJS.Timeout | undefined>();
   const videoSpeedRef = useRef<number>(1.0);
-
   const filterVideosByResolution = (): IVpe[] | undefined => {
     let vpeTemp: IVpe[] | undefined = content?.video?.video_playback_endpoints?.map(v => ({
       ...v,
@@ -1563,9 +1559,9 @@ const Video = forwardRef<
           )}
           {live && (
             <LiveTimer
-              endTime={`${liveData?.live_event_end_time} UTC`}
-              startTime={`${liveData?.live_event_start_time} UTC`}
-              thumbnailUrl={content?.thumbnail_url}
+              endTime={`${liveData?.live_event_end_time}`}
+              startTime={`${liveData?.live_event_start_time}`}
+              thumbnailUrl={content?.thumbnail_url || content?.image}
               visible={!!showTimer}
               onStart={onStartLiveTimer}
               onEnd={onEndLiveTimer}
@@ -1573,10 +1569,10 @@ const Video = forwardRef<
           )}
           {(!youtubeId || audioOnly) && (
             <TouchableOpacity onPress={() => toggleControls()} style={styles.controlsContainer}>
-              {(audioOnly || showPoster) && (
+              {(audioOnly || showPoster) && (!!content?.thumbnail_url || !!content?.image) && (
                 <Image
                   source={{
-                    uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url}`,
+                    uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url || content?.image}`,
                   }}
                   style={styles.imgBackground}
                 />

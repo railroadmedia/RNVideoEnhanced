@@ -52,6 +52,11 @@ const LiveTimer: FunctionComponent<ILiveTimer> = props => {
             time--;
           } else {
             onEnd?.();
+            updateStateTime({
+              hours: '--',
+              minutes: '--',
+              seconds: '--',
+            });
             onEndInterval.current && clearInterval(onEndInterval.current);
           }
         }, 1000);
@@ -62,8 +67,8 @@ const LiveTimer: FunctionComponent<ILiveTimer> = props => {
   );
 
   useEffect(() => {
-    const parsedStartTime = new Date(startTime).getTime() - new Date().getTime() / 1000;
-    const parsedEndTime = (new Date(endTime).getTime() - new Date().getTime()) / 1000 + 15 * 60;
+    const parsedStartTime = Math.ceil((new Date(startTime).getTime() - new Date().getTime()) / 1000);
+    const parsedEndTime = (new Date(endTime).getTime() - new Date().getTime()) / 1000;
     if (!!parsedStartTime) {
       if (parsedStartTime >= 0) {
         updateStateTime(formatTimer(parsedStartTime));

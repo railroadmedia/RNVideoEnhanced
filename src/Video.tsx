@@ -1561,7 +1561,7 @@ const Video = forwardRef<
             <LiveTimer
               endTime={`${liveData?.live_event_end_time}`}
               startTime={`${liveData?.live_event_start_time}`}
-              thumbnailUrl={content?.thumbnail_url}
+              thumbnailUrl={content?.thumbnail_url || content?.image}
               visible={!!showTimer}
               onStart={onStartLiveTimer}
               onEnd={onEndLiveTimer}
@@ -1569,10 +1569,10 @@ const Video = forwardRef<
           )}
           {(!youtubeId || audioOnly) && (
             <TouchableOpacity onPress={() => toggleControls()} style={styles.controlsContainer}>
-              {(audioOnly || showPoster) && (
+              {(audioOnly || showPoster) && (!!content?.thumbnail_url || !!content?.image) && (
                 <Image
                   source={{
-                    uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url}`,
+                    uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url || content?.image}`,
                   }}
                   style={styles.imgBackground}
                 />

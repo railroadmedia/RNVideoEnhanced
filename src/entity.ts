@@ -81,6 +81,7 @@ export interface IContent {
   live_event_start_time?: string;
   captions?: string;
   thumbnail_url: string;
+  image: string;
   length_in_seconds: number;
   description?: string;
   mp3_no_drums_no_click_url?: string;

@@ -836,7 +836,7 @@ const Video = forwardRef<
   const onEndVideo = (): void => {
     updateVideoProgress();
     stopHeartbeatEvents();
-    // added by Alex's request. This is intentionally a playing event and not a completed event. 
+    // added by Alex's request. This is intentionally a playing event and not a completed event.
     trackVideoEvent?.('playing', Math.round(cTime.current));
     if (autoPlay) {
       goToNextLesson?.();
@@ -1181,9 +1181,19 @@ const Video = forwardRef<
           if (networkSpeed?.aborted) {
             return;
           }
-          recommendedVideoQuality = Object.create(vpe || [])
-            .sort((i: IVpe, j: IVpe) => (i?.height < j?.height ? 1 : -1))
-            .find((rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality);
+
+          const sortedVPE = Object.create(vpe || []).sort((i: IVpe, j: IVpe) =>
+            i?.height < j?.height ? 1 : -1
+          );
+
+          if (networkSpeed?.mbps === 0 && !!sortedVPE.length) {
+            const filtered = sortedVPE.filter((v: IVpe) => v?.height !== 'Auto');
+            recommendedVideoQuality = filtered[filtered.length - 1];
+          } else {
+            recommendedVideoQuality = sortedVPE.find(
+              (rsv: IVpe) => rsv?.height <= networkSpeed?.recommendedVideoQuality
+            );
+          }
         }
       }
       let newVPE = aCasting
@@ -1199,8 +1209,8 @@ const Video = forwardRef<
               q === 'Auto' && v?.height === 'Auto'
                 ? recommendedVideoQuality?.actualH || recommendedVideoQuality?.height
                 : v?.height === 'Auto'
-                ? v?.actualH
-                : v?.height,
+                  ? v?.actualH
+                  : v?.height,
           }));
       if (!newVPE?.find(v => v.selected)) {
         newVPE = newVPE?.map(v => ({
@@ -1491,7 +1501,7 @@ const Video = forwardRef<
                             function onPlayerRateChange(event) {
                               window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerRateChange', data: event}))
                             }
-                        
+
                           </script>
                         </body>
                       </html>

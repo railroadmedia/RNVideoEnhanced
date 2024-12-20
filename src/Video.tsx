@@ -194,7 +194,7 @@ const Video = forwardRef<
       : content?.next_lesson && (content?.next_lesson.id || content?.next_lesson.mobile_app_url);
   const audioOnly = content?.type === 'play-along' && listening;
   const minsToStartValue = minsToStart(liveData?.live_event_start_time_in_timezone || '');
-  const showTimer = liveEnded || (!!liveData && minsToStartValue < 15 && minsToStartValue > 0);
+  const showTimer = liveEnded || (!!liveData && minsToStartValue > 0);
   const completionTime = 0.95 * content?.length_in_seconds;
   const timeToComplete = useRef<NodeJS.Timeout | undefined>();
   const heartbeatInterval = useRef<NodeJS.Timeout | undefined>();
@@ -1033,9 +1033,7 @@ const Video = forwardRef<
   const onStartLiveTimer = (): void => onStart?.();
 
   const onEndLiveTimer = (): void => {
-    webViewRef.current?.injectJavaScript(`(function() {
-        window.video.pause();
-      })()`);
+    webViewRef.current?.injectJavaScript(`player.pauseVideo(); true;`);
     setLiveEnded(true);
     onEnd?.();
   };

@@ -194,17 +194,13 @@ const Video = forwardRef<
       : content?.next_lesson && (content?.next_lesson.id || content?.next_lesson.mobile_app_url);
   const audioOnly = content?.type === 'play-along' && listening;
   const minsToStartValue = minsToStart(liveData?.live_event_start_time_in_timezone || '');
-  const showTimer =
-    (!!liveData && !liveData?.isLive) ||
-    liveEnded ||
-    (!!liveData && liveData?.isLive && minsToStartValue < 15 && minsToStartValue > 0);
+  const showTimer = liveEnded || (!!liveData && minsToStartValue > 0);
   const completionTime = 0.95 * content?.length_in_seconds;
   const timeToComplete = useRef<NodeJS.Timeout | undefined>();
   const heartbeatInterval = useRef<NodeJS.Timeout | undefined>();
   const videoSpeedRef = useRef<number>(1.0);
-
   const filterVideosByResolution = (): IVpe[] | undefined => {
-    let vpeTemp: IVpe[] | undefined = content?.video_playback_endpoints?.map(v => ({
+    let vpeTemp: IVpe[] | undefined = content?.video?.video_playback_endpoints?.map(v => ({
       ...v,
     }));
     if (!aCasting) {
@@ -307,7 +303,8 @@ const Video = forwardRef<
     if (!IS_IOS) {
       return;
     }
-    const { captions, signal, video_playback_endpoints } = content;
+    const { captions, signal } = content;
+    const { video_playback_endpoints } = content.video || {};
     AirPlayListener.addListener('deviceConnected', async ({ devices }: any) => {
       try {
         if (devices[0]?.portType === 'AirPlay') {
@@ -548,8 +545,8 @@ const Video = forwardRef<
 
   const gCastMedia = useCallback(
     async (time?: number): Promise<void> => {
-      const { signal, video_playback_endpoints } = content;
-
+      const { signal } = content;
+      const { video_playback_endpoints } = content.video  || {};
       try {
         const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
           vpe?.[0]?.file || '',
@@ -597,7 +594,6 @@ const Video = forwardRef<
 
   const updateVideoProgress = async (apiCallDelay?: number): Promise<void> => {
     onUpdateVideoProgress?.(
-      youtubeId || content?.vimeo_video_id,
       content?.id,
       mp3Length || content?.length_in_seconds || 0,
       cTime.current,
@@ -736,8 +732,8 @@ const Video = forwardRef<
         return { width: '100%', aspectRatio: 16 / 9 };
       }
     } else {
-      width = content?.video_playback_endpoints?.[0]?.width || 0;
-      height = content?.video_playback_endpoints?.[0]?.height || 0;
+      width = content?.video?.video_playback_endpoints?.[0]?.width || 0;
+      height = content?.video?.video_playback_endpoints?.[0]?.height || 0;
     }
 
     const greaterVDim = width < height ? height : width;
@@ -764,7 +760,7 @@ const Video = forwardRef<
     updateBlueX();
     return { width: videoW, height: videoH };
   }, [
-    content?.video_playback_endpoints,
+    content?.video?.video_playback_endpoints,
     fullscreen,
     insets?.bottom,
     live,
@@ -1037,9 +1033,7 @@ const Video = forwardRef<
   const onStartLiveTimer = (): void => onStart?.();
 
   const onEndLiveTimer = (): void => {
-    webViewRef.current?.injectJavaScript(`(function() {
-        window.video.pause();
-      })()`);
+    webViewRef.current?.injectJavaScript(`player.pauseVideo(); true;`);
     setLiveEnded(true);
     onEnd?.();
   };
@@ -1573,9 +1567,9 @@ const Video = forwardRef<
           )}
           {live && (
             <LiveTimer
-              endTime={`${liveData?.live_event_end_time} UTC`}
-              startTime={`${liveData?.live_event_start_time} UTC`}
-              thumbnailUrl={content?.thumbnail_url}
+              endTime={`${liveData?.live_event_end_time}`}
+              startTime={`${liveData?.live_event_start_time}`}
+              thumbnailUrl={content?.thumbnail_url || content?.image}
               visible={!!showTimer}
               onStart={onStartLiveTimer}
               onEnd={onEndLiveTimer}
@@ -1583,10 +1577,10 @@ const Video = forwardRef<
           )}
           {(!youtubeId || audioOnly) && (
             <TouchableOpacity onPress={() => toggleControls()} style={styles.controlsContainer}>
-              {(audioOnly || showPoster) && (
+              {(audioOnly || showPoster) && (!!content?.thumbnail_url || !!content?.image) && (
                 <Image
                   source={{
-                    uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url}`,
+                    uri: `https://www.musora.com/musora-cdn/image/${content?.thumbnail_url || content?.image}`,
                   }}
                   style={styles.imgBackground}
                 />

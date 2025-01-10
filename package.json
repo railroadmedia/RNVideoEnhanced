@@ -18,7 +18,7 @@
     "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#RN-update",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-orientation-locker": "github:railroadmedia/react-native-orientation-locker#RN-update",
-    "react-native-safe-area-context": "^3.4.1",
+    "react-native-safe-area-context": "^5.1.0",
     "react-native-svg": "^15.11.1",
     "react-native-video": "https://github.com/railroadmedia/react-native-video.git",
     "react-native-webview": "https://github.com/railroadmedia/react-native-webview.git"

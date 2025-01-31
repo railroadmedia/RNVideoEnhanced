@@ -12,7 +12,6 @@ import {
   Text,
   Image,
   AppState,
-  Animated,
   StyleSheet,
   PanResponder,
   TouchableOpacity,
@@ -22,6 +21,14 @@ import {
   LayoutChangeEvent,
   DimensionValue,
 } from 'react-native';
+import Animated, {
+  interpolate,
+  withTiming,
+  useSharedValue,
+  useAnimatedStyle,
+  Easing,
+  cancelAnimation,
+} from 'react-native-reanimated';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,11 +40,12 @@ import Orientation, {
   PORTRAIT,
 } from 'react-native-orientation-locker';
 import RNVideo, {
-  LoadError,
   OnBufferData,
   OnLoadData,
   OnProgressData,
+  SelectedTrackType,
   TextTrackType,
+  VideoRef,
 } from 'react-native-video';
 import GoogleCast, {
   CastButton,
@@ -112,7 +120,6 @@ const Video = forwardRef<
     type,
     youtubeId,
     maxWidth,
-    onOrientationChange,
     onQualityChange,
     trackVideoEvent,
     styles: propStyles,
@@ -131,11 +138,11 @@ const Video = forwardRef<
   const { width: wWidth, height: wHeight } = useWindowDimensions();
 
   const [rate, setRate] = useState<string>('1.0');
-  const [paused, _setPaused] = useState<boolean>(true);
+  const [paused, setPausedState] = useState<boolean>(true);
   const pausedRef = React.useRef(paused);
-  const setPaused = (val: boolean) => {
+  const setPaused = (val: boolean): void => {
     pausedRef.current = val;
-    _setPaused(val);
+    setPausedState(val);
   };
   const [captionsHidden, setCaptionsHidden] = useState<boolean>(true);
   const [videoRefreshing, setVideoRefreshing] = useState<boolean>(false);
@@ -161,13 +168,13 @@ const Video = forwardRef<
   const videoPlayStatus = useRef<boolean>();
   const progressBarPositionX = useRef<number>(0);
 
-  const translateControls = useRef<any>(new Animated.Value(1));
+  const translateControls = useSharedValue(1);
+  const translateBlueX = useSharedValue<number | undefined>(undefined);
   const translateControlsRef = useRef<number>();
-  const translateBlueX = useRef(new Animated.Value(-videoW + 11));
   const googleCastClient = useRef<RemoteMediaClient>();
   const controlsTO = useRef<NodeJS.Timeout | undefined>();
   const webViewRef = useRef<WebView>(null);
-  const videoRef = useRef<RNVideo>(null);
+  const videoRef = useRef<VideoRef>(null);
   const videoTimerRef = useRef<React.ElementRef<typeof VideoTimer>>(null);
   const videoSettingsRef = useRef<React.ElementRef<typeof VideoSettings>>(null);
   const mp3ActionModalRef = useRef<React.ElementRef<typeof ActionModal>>(null);
@@ -240,11 +247,92 @@ const Video = forwardRef<
     !youtubeId ? filterVideosByResolution() : undefined
   );
 
+  const getVideoDimensions = useCallback((): {
+    width: DimensionValue;
+    height?: DimensionValue;
+    aspectRatio?: number;
+  } => {
+    let width;
+    let height;
+
+    if (youtubeId) {
+      if (fullscreen && !IS_TABLET) {
+        if (live) {
+          return {
+            width: '100%',
+            aspectRatio: 16 / 9,
+            height: undefined,
+          };
+        }
+        return {
+          width: '100%',
+          height: '100%',
+        };
+      }
+      if (type === 'audio') {
+        width = 640;
+        height = 360;
+      } else {
+        return { width: '100%', aspectRatio: 16 / 9 };
+      }
+    } else {
+      width = content?.video?.video_playback_endpoints?.[0]?.width || 0;
+      height = content?.video?.video_playback_endpoints?.[0]?.height || 0;
+    }
+
+    const greaterVDim = width < height ? height : width;
+    const lowerVDim = width < height ? width : height;
+
+    videoW = fullscreen
+      ? ((IS_IOS ? wHeight - (insets?.bottom || 0) : wHeight) * width) / height
+      : maxWidth || wWidth;
+    videoH = fullscreen
+      ? IS_IOS
+        ? wHeight - (insets?.bottom || 0)
+        : wHeight
+      : ((maxWidth || wWidth) / width) * height;
+
+    if (videoW > wWidth) {
+      videoW = Math.round(wWidth);
+      videoH = Math.round((videoW * lowerVDim) / greaterVDim);
+    }
+
+    if (wWidth > wHeight && IS_TABLET && !fullscreen && !maxWidth) {
+      videoW = Math.round((wWidth * 2) / 3);
+      videoH = Math.round((videoW * lowerVDim) / greaterVDim);
+    }
+    return { width: videoW, height: videoH };
+  }, [
+    content?.video?.video_playback_endpoints,
+    fullscreen,
+    insets?.bottom,
+    live,
+    maxWidth,
+    type,
+    wHeight,
+    wWidth,
+    youtubeId,
+  ]);
+
+  const [videoDimensions, setVideoDimensions] = useState<{
+    width: DimensionValue;
+    height?: DimensionValue;
+    aspectRatio?: number;
+  }>(getVideoDimensions());
+
+  const updateBlueX = useCallback((): void => {
+    const secLength = mp3Length > 0 ? mp3Length : content?.length_in_seconds;
+    const translate =
+      cTime.current !== undefined && !!secLength
+        ? (cTime.current * videoW) / secLength - videoW
+        : -videoW;
+
+    if (!isNaN(translate) && isFinite(translate)) {
+      translateBlueX.value = translate;
+    }
+  }, [content?.length_in_seconds, mp3Length, translateBlueX]);
+
   useEffect(() => {
-    getVideoDimensions();
-
-    translateBlueX.current?.setOffset(-11); // Offsets half the timer dot width so its centered.
-
     setPaused(props?.paused);
     setRepeat(props?.repeat ? props.repeat : false);
     setShowControls(props?.showControls);
@@ -254,7 +342,28 @@ const Video = forwardRef<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props?.paused, props.repeat, props?.showCastingOptions, props?.showControls]);
 
-  const updateTimeToComplete = (): void => {
+  useEffect(() => {
+    setVideoDimensions(getVideoDimensions());
+    if (translateBlueX.value === undefined) {
+      translateBlueX.value = -videoW + 11;
+    }
+    updateBlueX();
+  }, [getVideoDimensions, translateBlueX, updateBlueX]);
+
+  const animatedControlsStyle = useAnimatedStyle(() => ({
+    opacity: type === 'video' ? translateControls.value : 1,
+  }));
+
+  const animatedBlueXStyle = useAnimatedStyle(() => ({
+    transform:
+      translateBlueX.value !== undefined ? [{ translateX: translateBlueX.value }] : undefined,
+  }));
+
+  const animatedControlsInterpolatedStyle = useAnimatedStyle(() => ({
+    opacity: type === 'video' ? interpolate(translateControls.value, [0, 1], [0, 0.5]) : 0.5,
+  }));
+
+  const updateTimeToComplete = useCallback((): void => {
     clearTimeout(timeToComplete.current);
     if (completedEventHasOccured.current) {
       return;
@@ -271,7 +380,7 @@ const Video = forwardRef<
       trackVideoEvent?.('completed', Math.round(cTime.current));
       completedEventHasOccured.current = true;
     }, newTime * 1000);
-  };
+  }, [completionTime, trackVideoEvent]);
 
   const startHeartbeatEvents = (): void => {
     clearInterval(heartbeatInterval.current); // in the case we start it when one already exists.
@@ -292,12 +401,13 @@ const Video = forwardRef<
     clearInterval(heartbeatInterval.current);
   };
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       stopHeartbeatEvents();
       clearTimeout(timeToComplete.current);
-    };
-  }, []);
+    },
+    []
+  );
 
   const appleCastingListeners = (): (() => void) | undefined => {
     if (!IS_IOS) {
@@ -546,7 +656,7 @@ const Video = forwardRef<
   const gCastMedia = useCallback(
     async (time?: number): Promise<void> => {
       const { signal } = content;
-      const { video_playback_endpoints } = content.video  || {};
+      const { video_playback_endpoints } = content.video || {};
       try {
         const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
           vpe?.[0]?.file || '',
@@ -589,7 +699,7 @@ const Video = forwardRef<
         googleCastSession?.endCurrentSession();
       }
     },
-    [content, googleCastSession]
+    [content, googleCastSession, vpe]
   );
 
   const updateVideoProgress = async (apiCallDelay?: number): Promise<void> => {
@@ -629,7 +739,6 @@ const Video = forwardRef<
     }
     const fs = !IS_TABLET || live ? isLandscape : force ? !fullscreen : fullscreen;
 
-    onOrientationChange?.(o);
     if (mp3Length > 0) {
       if (Math.trunc(cTime.current) !== mp3Length) {
         onProgress({ currentTime: cTime.current || 0 });
@@ -649,21 +758,6 @@ const Video = forwardRef<
 
     setFullscreen(fs);
   };
-
-  const updateBlueX = useCallback((): void => {
-    if (!translateBlueX.current) {
-      return;
-    }
-    const secLength = mp3Length > 0 ? mp3Length : content?.length_in_seconds;
-    const translate =
-      cTime.current !== undefined && !!secLength
-        ? (cTime.current * videoW) / secLength - videoW
-        : -videoW;
-
-    if (!isNaN(translate) && isFinite(translate)) {
-      translateBlueX.current.setValue(translate);
-    }
-  }, [content?.length_in_seconds, mp3Length]);
 
   const onSeek = (time: string | number): void => {
     time = parseFloat(time as string);
@@ -702,75 +796,6 @@ const Video = forwardRef<
       onBack();
     })()`);
   };
-
-  const getVideoDimensions = useCallback((): {
-    width: DimensionValue;
-    height?: DimensionValue;
-    aspectRatio?: number;
-  } => {
-    let width;
-    let height;
-
-    if (youtubeId) {
-      if (fullscreen && !IS_TABLET) {
-        if (live) {
-          return {
-            width: '100%',
-            aspectRatio: 16 / 9,
-            height: undefined,
-          };
-        }
-        return {
-          width: '100%',
-          height: '100%',
-        };
-      }
-      if (type === 'audio') {
-        width = 640;
-        height = 360;
-      } else {
-        return { width: '100%', aspectRatio: 16 / 9 };
-      }
-    } else {
-      width = content?.video?.video_playback_endpoints?.[0]?.width || 0;
-      height = content?.video?.video_playback_endpoints?.[0]?.height || 0;
-    }
-
-    const greaterVDim = width < height ? height : width;
-    const lowerVDim = width < height ? width : height;
-
-    videoW = fullscreen
-      ? ((IS_IOS ? wHeight - (insets?.bottom || 0) : wHeight) * width) / height
-      : maxWidth || wWidth;
-    videoH = fullscreen
-      ? IS_IOS
-        ? wHeight - (insets?.bottom || 0)
-        : wHeight
-      : ((maxWidth || wWidth) / width) * height;
-
-    if (videoW > wWidth) {
-      videoW = Math.round(wWidth);
-      videoH = Math.round((videoW * lowerVDim) / greaterVDim);
-    }
-
-    if (wWidth > wHeight && IS_TABLET && !fullscreen && !maxWidth) {
-      videoW = Math.round((wWidth * 2) / 3);
-      videoH = Math.round((videoW * lowerVDim) / greaterVDim);
-    }
-    updateBlueX();
-    return { width: videoW, height: videoH };
-  }, [
-    content?.video?.video_playback_endpoints,
-    fullscreen,
-    insets?.bottom,
-    live,
-    maxWidth,
-    type,
-    updateBlueX,
-    wHeight,
-    wWidth,
-    youtubeId,
-  ]);
 
   const onWebViewMessage = ({ nativeEvent: { data } }: WebViewMessageEvent): void => {
     const parsedData = JSON.parse(data);
@@ -826,12 +851,15 @@ const Video = forwardRef<
         videoSpeedRef.current = parsedData?.data?.data;
         updateTimeToComplete();
         break;
+      case 'fsChange':
+        // TODO: WIP. Fix Android glitchy youtube player when going fullscreen.
+        // orientationListener(fullscreen ? 'LANDSCAPE-LEFT' : 'PORTRAIT', true);
+        break;
     }
   };
 
-  const onShouldStartLoadWithRequest = ({ url }: WebViewNavigation): boolean => {
-    return url.startsWith('https://www.musora.com') || url.includes('youtube.com/embed');
-  };
+  const onShouldStartLoadWithRequest = ({ url }: WebViewNavigation): boolean =>
+    url.startsWith('https://www.musora.com') || url.includes('youtube.com/embed');
 
   const onEndVideo = (): void => {
     updateVideoProgress();
@@ -888,6 +916,7 @@ const Video = forwardRef<
     googleCastClient.current?.seek({
       position: position,
     });
+    updateBlueX();
     setBuffering(false);
     if (autoPlay) {
       toggleControls();
@@ -895,7 +924,7 @@ const Video = forwardRef<
     }
   };
 
-  const onError = ({ error }: LoadError): void => {
+  const onError = ({ error }: any): void => {
     const { code } = error;
 
     if (code === -11855) {
@@ -924,17 +953,16 @@ const Video = forwardRef<
     if (currentTime === undefined) {
       return;
     }
-
     if (currentTime > 0) {
       secondsPlayed++;
     }
-    getVideoDimensions();
+
     cTime.current = currentTime;
+    updateBlueX();
 
     if (seeking.current) {
       return;
     }
-    updateBlueX();
     if (videoTimerRef.current) {
       videoTimerRef.current?.setProgress(currentTime);
     }
@@ -965,9 +993,8 @@ const Video = forwardRef<
         animateControls(0);
       }
     }, 3000);
-    translateControls.current?.stopAnimation(() => {
-      animateControls(controlsOverwrite ? 1 : 0);
-    });
+    cancelAnimation(translateControls);
+    animateControls(controlsOverwrite ? 1 : 0);
   };
 
   const animateControls = useCallback(
@@ -980,15 +1007,14 @@ const Video = forwardRef<
         return;
       }
       const updateValue = toValue !== undefined ? toValue : paused ? 1 : 0;
-      Animated.timing(translateControls.current, {
-        toValue: updateValue,
+      translateControls.value = withTiming(updateValue, {
         duration: speed || 100,
-        useNativeDriver: true,
-      }).start();
+        easing: Easing.quad,
+      });
       translateControlsRef.current = updateValue;
       setIsControlVisible(updateValue === 1 ? true : false);
     },
-    [paused, listening, content?.type, gCastingState]
+    [content.type, listening, gCastingState, paused, translateControls]
   );
 
   const togglePaused = (pausedOverwrite?: boolean, skipActionOnCasting?: boolean): void => {
@@ -1127,12 +1153,17 @@ const Video = forwardRef<
           animateControls(updatePauseState ? 1 : 0);
         }, 3000);
       },
-      onPanResponderGrant: ({ nativeEvent: { locationX } }, { dx, dy }) => {
+      onPanResponderGrant: ({ nativeEvent: { pageX } }, { dx, dy }) => {
         clearTimeout(controlsTO.current);
         clearTimeout(timeToComplete.current);
         animateControls(1);
+        // wWidth - videoW / 2 accounts for the videoW being smaller than wWidth.
+        // Subtracting this from pageX ensures we get the correct seek pos.
+        // leftInset accounts for video on android being pushed to the right.
+        const leftInset = !IS_IOS ? insets.left ?? 0 : 0;
         seekTime.current =
-          (locationX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
+          ((pageX - ((wWidth - videoW) / 2 + leftInset)) / videoW) *
+          (mp3Length > 0 ? mp3Length : content.length_in_seconds);
         if (!IS_IOS) {
           onProgress({ currentTime: seekTime.current });
         }
@@ -1153,12 +1184,13 @@ const Video = forwardRef<
         if (moveX < 0 || translate > 0) {
           return;
         }
-        translateBlueX.current.setValue(translate);
+        translateBlueX.value = translate;
         seekTime.current =
           (moveX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
-        if (!IS_IOS) {
-          onProgress({ currentTime: seekTime.current });
-        }
+        // Why is this here? It's calling onProgress a ton while seeking.
+        // if (!IS_IOS) {
+        //   onProgress({ currentTime: seekTime.current });
+        // }
         videoTimerRef.current?.setProgress(seekTime.current);
       },
     }).panHandlers;
@@ -1247,7 +1279,7 @@ const Video = forwardRef<
         }, 100);
       });
     },
-    [gCastMedia, onQualityChange, selectQuality, vpe, gCastingState]
+    [updateTimeToComplete, selectQuality, vpe, onQualityChange, gCastingState, gCastMedia]
   );
 
   const renderVideoSettings = useMemo(
@@ -1385,7 +1417,7 @@ const Video = forwardRef<
         </TouchableOpacity>
       )}
       <View style={[styles.videoContainer, fullscreen ? styles.videoContainerFullscreen : {}]}>
-        <View style={getVideoDimensions()}>
+        <View style={videoDimensions}>
           {!videoRefreshing && (
             <>
               {!!youtubeId && !audioOnly ? (
@@ -1397,7 +1429,7 @@ const Video = forwardRef<
                   domStorageEnabled={false}
                   mixedContentMode='always'
                   startInLoadingState={false}
-                  allowsFullscreenVideo={true}
+                  allowsFullscreenVideo={false}
                   userAgent={
                     IS_TABLET && IS_IOS
                       ? `Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/ 604.1.21 (KHTML, like Gecko) Version/ 12.0 Mobile/17A6278a Safari/602.1.26`
@@ -1440,6 +1472,14 @@ const Video = forwardRef<
                             tag.src = "https://www.youtube.com/iframe_api";
                             var firstScriptTag = document.getElementsByTagName('script')[0];
                             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+                            window.addEventListener('fullscreenchange', function(event) {
+                             window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'fsChange'}));
+                            });
+
+                            window.addEventListener('webkitfullscreenchange', function(event) {
+                             window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'fsChange'}));
+                            });
 
                             var player;
                             function onYouTubeIframeAPIReady() {
@@ -1520,13 +1560,11 @@ const Video = forwardRef<
                     rate={parseFloat(rate)}
                     playInBackground={false}
                     playWhenInactive={true}
-                    audioOnly={audioOnly}
                     onProgress={onProgress}
                     ignoreSilentSwitch={'ignore'}
                     progressUpdateInterval={1000}
                     ref={videoRef}
-                    onRemotePlayPause={togglePaused}
-                    fullscreen={IS_IOS ? false : fullscreen}
+                    fullscreen={false}
                     style={styles.videoStyles}
                     onAudioBecomingNoisy={onAudioBecomingNoisy}
                     source={{
@@ -1539,7 +1577,7 @@ const Video = forwardRef<
                       ? {}
                       : {
                           selectedTextTrack: {
-                            type: 'title',
+                            type: SelectedTrackType.TITLE,
                             value: captionsHidden ? 'Disabled' : 'English',
                           },
                           textTracks:
@@ -1587,22 +1625,13 @@ const Video = forwardRef<
               )}
               {!!isControlVisible && (
                 <Animated.View
-                  style={{
-                    ...styles.constrolsBackground,
-                    opacity:
-                      type === 'video'
-                        ? translateControls.current?.interpolate({
-                            outputRange: [0, 0.5],
-                            inputRange: [0, 1],
-                          })
-                        : 0.5,
-                  }}
+                  style={[styles.constrolsBackground, animatedControlsInterpolatedStyle]}
                 />
               )}
               {!!buffering && !paused && (
-                <Animated.View style={styles.actIndicatorView}>
+                <View style={styles.actIndicatorView}>
                   <ActivityIndicator color={'white'} size={'large'} animating={buffering} />
-                </Animated.View>
+                </View>
               )}
               {!youtubeId && (
                 <View style={styles.controlsContainer}>
@@ -1619,12 +1648,7 @@ const Video = forwardRef<
                 </View>
               )}
               {showControls && (
-                <Animated.View
-                  style={{
-                    flexDirection: 'row',
-                    opacity: type === 'video' ? translateControls.current : 1,
-                  }}
-                >
+                <Animated.View style={[{ flexDirection: 'row' }, animatedControlsStyle]}>
                   <DoubleTapArea styles={styles.doubleTapArea} onDoubleTap={onDoubleTapBackward}>
                     {goToPreviousLesson && isControlVisible && (
                       <TouchableOpacity
@@ -1681,11 +1705,11 @@ const Video = forwardRef<
               )}
               {(!gCastingState || (gCastingState && !!googleCastClient.current)) && (
                 <Animated.View
-                  style={{
-                    ...styles.bottomControlsContainer,
-                    bottom: fullscreen ? 30 + 25 : 11,
-                    opacity: type === 'video' ? translateControls.current : 1,
-                  }}
+                  style={[
+                    styles.bottomControlsContainer,
+                    { bottom: fullscreen ? 30 : 11 },
+                    animatedControlsStyle,
+                  ]}
                 >
                   <VideoTimer
                     live={live}
@@ -1743,14 +1767,9 @@ const Video = forwardRef<
               )}
 
               {onBack && (
-                <Animated.View
-                  style={{
-                    ...styles.backContainer,
-                    opacity: type === 'video' ? translateControls.current : 1,
-                  }}
-                >
+                <Animated.View style={[styles.backContainer, animatedControlsStyle]}>
                   {!!isControlVisible && (
-                    <TouchableOpacity onPress={handleBack}>
+                    <TouchableOpacity onPress={handleBack} hitSlop={15}>
                       {svgs[fullscreen ? 'x' : 'arrowLeft']({
                         width: 18,
                         height: 18,
@@ -1765,13 +1784,7 @@ const Video = forwardRef<
           {!youtubeId && showCastingOptions && (
             <>
               {IS_IOS && (
-                <Animated.View
-                  style={{
-                    ...styles.airPlayContainer,
-                    right: 49,
-                    opacity: type === 'video' ? translateControls.current : 1,
-                  }}
-                >
+                <Animated.View style={[styles.airPlayContainer, animatedControlsStyle]}>
                   {!!isControlVisible && (
                     <TouchableOpacity activeOpacity={1} onPress={onPressAirPlay}>
                       <AirPlayButton />
@@ -1779,13 +1792,7 @@ const Video = forwardRef<
                   )}
                 </Animated.View>
               )}
-              <Animated.View
-                style={{
-                  ...styles.castBtnContainer,
-                  right: 10,
-                  opacity: type === 'video' ? translateControls.current : 1,
-                }}
-              >
+              <Animated.View style={[styles.castBtnContainer, animatedControlsStyle]}>
                 {!!isControlVisible && <CastButton style={styles.castBtn} />}
               </Animated.View>
             </>
@@ -1798,13 +1805,15 @@ const Video = forwardRef<
           <Animated.View
             onLayout={onTimerLayout}
             {...pResponder()}
-            style={{
-              ...getVideoDimensions(),
-              ...styles.timerContainer,
-              position: fullscreen ? 'absolute' : 'relative',
-              bottom: fullscreen ? (wHeight > videoH ? (wHeight - videoH) / 2 : 5) : 0,
-              opacity: fullscreen ? (type === 'video' ? translateControls.current : 1) : 1,
-            }}
+            style={[
+              videoDimensions,
+              styles.timerContainer,
+              {
+                position: fullscreen ? 'absolute' : 'relative',
+                bottom: fullscreen ? (wHeight > videoH ? (wHeight - videoH) / 2 : 20) : 0,
+              },
+              fullscreen ? animatedControlsStyle : { opacity: 1 },
+            ]}
           >
             <View
               style={{
@@ -1813,19 +1822,19 @@ const Video = forwardRef<
               }}
             >
               <Animated.View
-                style={{
-                  ...styles.timerBlue,
-                  transform: [{ translateX: translateBlueX.current }],
-                  backgroundColor: primaryColor || 'red',
-                }}
+                style={[
+                  styles.timerBlue,
+                  { backgroundColor: primaryColor || 'red' },
+                  animatedBlueXStyle,
+                ]}
               />
               <Animated.View
-                style={{
-                  ...styles.timerDot,
-                  backgroundColor: primaryColor || 'red',
-                  transform: [{ translateX: translateBlueX.current }],
-                  opacity: type === 'video' ? translateControls.current : 1,
-                }}
+                style={[
+                  styles.timerDot,
+                  { backgroundColor: primaryColor || 'red' },
+                  animatedControlsStyle,
+                  animatedBlueXStyle,
+                ]}
               />
             </View>
             <View style={styles.timerCover} />
@@ -1983,10 +1992,12 @@ const styles = StyleSheet.create({
     width: 66,
     height: 34,
     position: 'absolute',
+    right: 49,
   },
   castBtnContainer: {
     top: 7,
     position: 'absolute',
+    right: 10,
   },
   castBtn: {
     width: 29,

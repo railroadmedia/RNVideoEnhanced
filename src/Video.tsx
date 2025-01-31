@@ -851,10 +851,6 @@ const Video = forwardRef<
         videoSpeedRef.current = parsedData?.data?.data;
         updateTimeToComplete();
         break;
-      case 'fsChange':
-        // TODO: WIP. Fix Android glitchy youtube player when going fullscreen.
-        // orientationListener(fullscreen ? 'LANDSCAPE-LEFT' : 'PORTRAIT', true);
-        break;
     }
   };
 
@@ -1160,7 +1156,7 @@ const Video = forwardRef<
         // wWidth - videoW / 2 accounts for the videoW being smaller than wWidth.
         // Subtracting this from pageX ensures we get the correct seek pos.
         // leftInset accounts for video on android being pushed to the right.
-        const leftInset = !IS_IOS ? insets.left ?? 0 : 0;
+        const leftInset = !IS_IOS ? (insets.left ?? 0) : 0;
         seekTime.current =
           ((pageX - ((wWidth - videoW) / 2 + leftInset)) / videoW) *
           (mp3Length > 0 ? mp3Length : content.length_in_seconds);
@@ -1429,7 +1425,7 @@ const Video = forwardRef<
                   domStorageEnabled={false}
                   mixedContentMode='always'
                   startInLoadingState={false}
-                  allowsFullscreenVideo={false}
+                  allowsFullscreenVideo={true}
                   userAgent={
                     IS_TABLET && IS_IOS
                       ? `Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/ 604.1.21 (KHTML, like Gecko) Version/ 12.0 Mobile/17A6278a Safari/602.1.26`
@@ -1473,14 +1469,6 @@ const Video = forwardRef<
                             var firstScriptTag = document.getElementsByTagName('script')[0];
                             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-                            window.addEventListener('fullscreenchange', function(event) {
-                             window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'fsChange'}));
-                            });
-
-                            window.addEventListener('webkitfullscreenchange', function(event) {
-                             window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'fsChange'}));
-                            });
-
                             var player;
                             function onYouTubeIframeAPIReady() {
                               player = new YT.Player('player', {
@@ -1502,7 +1490,7 @@ const Video = forwardRef<
                                   controls: 1,
                                   fs: 1,
                                   origin: 'https://www.musora.com',
-                                  modestbranding: 1
+                                  modestbranding: 1,
                                 },
                                 events: {
                                   'onReady': onPlayerReady,
@@ -1513,15 +1501,15 @@ const Video = forwardRef<
                             }
 
                             function onPlayerReady(event) {
-                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerReady'}))
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerReady'}));
                             }
 
                             function onPlayerStateChange(event) {
-                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}))
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerStateChange', data: event}));
                             }
 
                             function onBack() {
-                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'back', currentTime: player.getCurrentTime()}))
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'back', currentTime: player.getCurrentTime()}));
                             }
 
                             function playVideo() {
@@ -1533,11 +1521,11 @@ const Video = forwardRef<
                             }
 
                             function trackVideoPlaying() {
-                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'videoPlaying', currentTime: player.getCurrentTime()}))
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'videoPlaying', currentTime: player.getCurrentTime()}));
                             }
 
                             function onPlayerRateChange(event) {
-                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerRateChange', data: event}))
+                              window.ReactNativeWebView.postMessage(JSON.stringify({eventType: 'playerRateChange', data: event}));
                             }
 
                           </script>

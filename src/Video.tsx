@@ -20,15 +20,9 @@ import {
   useWindowDimensions,
   LayoutChangeEvent,
   DimensionValue,
+  Animated,
+  useAnimatedValue,
 } from 'react-native';
-import Animated, {
-  interpolate,
-  withTiming,
-  useSharedValue,
-  useAnimatedStyle,
-  Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -168,8 +162,8 @@ const Video = forwardRef<
   const videoPlayStatus = useRef<boolean>();
   const progressBarPositionX = useRef<number>(0);
 
-  const translateControls = useSharedValue(1);
-  const translateBlueX = useSharedValue<number | undefined>(undefined);
+  const translateControls = useAnimatedValue(1);
+  const translateBlueX = useAnimatedValue(0);
   const translateControlsRef = useRef<number>();
   const googleCastClient = useRef<RemoteMediaClient>();
   const controlsTO = useRef<NodeJS.Timeout | undefined>();
@@ -321,6 +315,9 @@ const Video = forwardRef<
   }>(getVideoDimensions());
 
   const updateBlueX = useCallback((): void => {
+    if (!translateBlueX) {
+      return;
+    }
     const secLength = mp3Length > 0 ? mp3Length : content?.length_in_seconds;
     const translate =
       cTime.current !== undefined && !!secLength
@@ -328,7 +325,7 @@ const Video = forwardRef<
         : -videoW;
 
     if (!isNaN(translate) && isFinite(translate)) {
-      translateBlueX.value = translate;
+      translateBlueX.setValue(translate);
     }
   }, [content?.length_in_seconds, mp3Length, translateBlueX]);
 
@@ -344,24 +341,27 @@ const Video = forwardRef<
 
   useEffect(() => {
     setVideoDimensions(getVideoDimensions());
-    if (translateBlueX.value === undefined) {
-      translateBlueX.value = -videoW + 11;
+    if (translateBlueX) {
+      translateBlueX.setValue(-videoW + 11);
+      translateBlueX.setOffset(-11);
     }
     updateBlueX();
   }, [getVideoDimensions, translateBlueX, updateBlueX]);
 
-  const animatedControlsStyle = useAnimatedStyle(() => ({
-    opacity: type === 'video' ? translateControls.value : 1,
-  }));
+  const animatedControlsStyle = {
+    opacity: type === 'video' ? translateControls : 1,
+  };
 
-  const animatedBlueXStyle = useAnimatedStyle(() => ({
-    transform:
-      translateBlueX.value !== undefined ? [{ translateX: translateBlueX.value }] : undefined,
-  }));
+  const animatedBlueXStyle = {
+    transform: translateBlueX !== undefined ? [{ translateX: translateBlueX }] : undefined,
+  };
 
-  const animatedControlsInterpolatedStyle = useAnimatedStyle(() => ({
-    opacity: type === 'video' ? interpolate(translateControls.value, [0, 1], [0, 0.5]) : 0.5,
-  }));
+  const animatedControlsInterpolatedStyle = {
+    opacity:
+      type === 'video'
+        ? translateControls?.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] })
+        : 0.5,
+  };
 
   const updateTimeToComplete = useCallback((): void => {
     clearTimeout(timeToComplete.current);
@@ -989,8 +989,9 @@ const Video = forwardRef<
         animateControls(0);
       }
     }, 3000);
-    cancelAnimation(translateControls);
-    animateControls(controlsOverwrite ? 1 : 0);
+    translateControls?.stopAnimation(() => {
+      animateControls(controlsOverwrite ? 1 : 0);
+    });
   };
 
   const animateControls = useCallback(
@@ -1003,10 +1004,11 @@ const Video = forwardRef<
         return;
       }
       const updateValue = toValue !== undefined ? toValue : paused ? 1 : 0;
-      translateControls.value = withTiming(updateValue, {
+      Animated.timing(translateControls, {
+        toValue: updateValue,
         duration: speed || 100,
-        easing: Easing.quad,
-      });
+        useNativeDriver: false,
+      }).start();
       translateControlsRef.current = updateValue;
       setIsControlVisible(updateValue === 1 ? true : false);
     },
@@ -1175,12 +1177,13 @@ const Video = forwardRef<
           videoPlayStatus.current = true;
           togglePaused();
         }
+        const leftInset = !IS_IOS ? (insets.left ?? 0) : 0;
         moveX = moveX - progressBarPositionX.current;
-        const translate = moveX - videoW;
+        const translate = moveX - videoW - leftInset;
         if (moveX < 0 || translate > 0) {
           return;
         }
-        translateBlueX.value = translate;
+        translateBlueX.setValue(translate);
         seekTime.current =
           (moveX / videoW) * (mp3Length > 0 ? mp3Length : content.length_in_seconds);
         // Why is this here? It's calling onProgress a ton while seeking.

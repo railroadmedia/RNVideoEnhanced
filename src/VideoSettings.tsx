@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Orientation from 'react-native-orientation-locker';
 
@@ -123,64 +123,66 @@ const VideoSettings = forwardRef<{ toggle: () => void }, IVideoSettings>((props,
         onPress={onCancel}
         accessible={Platform.OS === 'ios' ? false : true}
       >
-        <SafeAreaView style={styles.modalContent}>
-          <ScrollView style={styles.scrollView}>
-            <View style={styles.scrollView}>
-              <SettingsOption
-                title={
-                  quality?.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality?.height}p`
-                }
-                iconName={'CameraSvg'}
-                data={qualities}
-                onSelect={item => onQualityChange(item as IVpe)}
-                itemTitle={item =>
-                  (item as IVpe)?.height === 'Auto'
-                    ? `Auto ${(item as IVpe)?.actualH}p`
-                    : `${(item as IVpe)?.height}p`
-                }
-                selected={quality}
-              />
-              {showRate && (
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.modalContent}>
+            <ScrollView style={styles.scrollView}>
+              <View style={styles.scrollView}>
                 <SettingsOption
-                  title={`${rate}X`}
-                  iconName={'RateSvg'}
-                  data={rates}
-                  onSelect={item => onRateChange(item as string)}
-                  itemTitle={item => `${item}X`}
-                  selected={rate}
+                  title={
+                    quality?.height === 'Auto' ? `Auto ${quality.actualH}p` : `${quality?.height}p`
+                  }
+                  iconName={'CameraSvg'}
+                  data={qualities}
+                  onSelect={item => onQualityChange(item as IVpe)}
+                  itemTitle={item =>
+                    (item as IVpe)?.height === 'Auto'
+                      ? `Auto ${(item as IVpe)?.actualH}p`
+                      : `${(item as IVpe)?.height}p`
+                  }
+                  selected={quality}
                 />
-              )}
-              {showCaptions && (
-                <SettingsOption
-                  title={`Captions ${captions}`}
-                  data={['On', 'Off']}
-                  iconName={'CaptionsSvg'}
-                  itemTitle={item => item as string}
-                  onSelect={item => onCaptionsChange(item as string)}
-                  selected={captions}
-                />
-              )}
-            </View>
-          </ScrollView>
+                {showRate && (
+                  <SettingsOption
+                    title={`${rate}X`}
+                    iconName={'RateSvg'}
+                    data={rates}
+                    onSelect={item => onRateChange(item as string)}
+                    itemTitle={item => `${item}X`}
+                    selected={rate}
+                  />
+                )}
+                {showCaptions && (
+                  <SettingsOption
+                    title={`Captions ${captions}`}
+                    data={['On', 'Off']}
+                    iconName={'CaptionsSvg'}
+                    itemTitle={item => item as string}
+                    onSelect={item => onCaptionsChange(item as string)}
+                    selected={captions}
+                  />
+                )}
+              </View>
+            </ScrollView>
 
-          <TouchableOpacity
-            onPress={onSave}
-            style={[
-              styles.action,
-              {
-                marginTop: isLandscape ? 10 : 50,
-                marginBottom: isLandscape ? 10 : 70,
-              },
-            ]}
-          >
-            <Text maxFontSizeMultiplier={maxFontMultiplier} style={styles.actionText}>
-              {'SAVE'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onCancel}>
-            <Text style={styles.cancelBtnText}>{'Close'}</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
+            <TouchableOpacity
+              onPress={onSave}
+              style={[
+                styles.action,
+                {
+                  marginTop: isLandscape ? 10 : 50,
+                  marginBottom: isLandscape ? 10 : 70,
+                },
+              ]}
+            >
+              <Text maxFontSizeMultiplier={maxFontMultiplier} style={styles.actionText}>
+                {'SAVE'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onCancel}>
+              <Text style={styles.cancelBtnText}>{'Close'}</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        </SafeAreaProvider>
       </TouchableOpacity>
     </Modal>
   );

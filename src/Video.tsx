@@ -546,7 +546,7 @@ const Video = forwardRef<
   const gCastMedia = useCallback(
     async (time?: number): Promise<void> => {
       const { signal } = content;
-      const { video_playback_endpoints } = content.video  || {};
+      const { video_playback_endpoints } = content.video || {};
       try {
         const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
           vpe?.[0]?.file || '',
@@ -635,7 +635,13 @@ const Video = forwardRef<
         onProgress({ currentTime: cTime.current || 0 });
       }
     } else {
-      if (Math.trunc(cTime.current) !== content?.length_in_seconds) {
+      if (
+        Math.trunc(cTime.current) !== content?.length_in_seconds &&
+        !(
+          content.type.includes('challenge') &&
+          (cTime.current / content.length_in_seconds) * 100 >= 98.5
+        )
+      ) {
         onProgress({ currentTime: cTime.current || 0 });
       }
     }
@@ -946,6 +952,11 @@ const Video = forwardRef<
     } else if (
       content?.length_in_seconds &&
       content?.length_in_seconds === Math.floor(currentTime)
+    ) {
+      onEndVideo();
+    } else if (
+      content.type.includes('challenge') &&
+      (currentTime / content.length_in_seconds) * 100 >= 98.5
     ) {
       onEndVideo();
     }

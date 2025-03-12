@@ -1779,13 +1779,13 @@ const Video = forwardRef<
                 <Animated.View
                   style={{
                     ...styles.airPlayContainer,
-                    right: 49,
+                    right: 50,
                     opacity: type === 'video' ? translateControls.current : 1,
                   }}
                 >
                   {!!isControlVisible && (
                     <TouchableOpacity activeOpacity={1} onPress={onPressAirPlay}>
-                      <AirPlayButton />
+                      <AirPlayButton style={{ width: 46, height: 46 }} />
                     </TouchableOpacity>
                   )}
                 </Animated.View>
@@ -1990,9 +1990,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#081825',
   },
   airPlayContainer: {
-    top: 4.5,
-    width: 66,
-    height: 34,
+    top: -2,
     position: 'absolute',
   },
   castBtnContainer: {

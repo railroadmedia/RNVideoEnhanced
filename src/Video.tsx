@@ -59,11 +59,7 @@ import { svgs } from './img/svgs';
 import { IS_IOS, IS_TABLET, PIX_R, getMP3Array } from './helper';
 import type { IMp3, IVideo, IVpe } from './entity';
 import Mp3Option from './Mp3Option';
-import {
-  AirplayButton,
-  useAirplayConnectivity,
-  useExternalPlaybackAvailability,
-} from 'react-airplay';
+const { AirPlay, AirPlayButton, AirPlayListener } = require('react-native-airplay-ios');
 
 const iconStyle = { width: 40, height: 40, fill: 'white' };
 let playPressedFirstTime = true;
@@ -131,8 +127,6 @@ const Video = forwardRef<
   const googleCastSession = GoogleCast.getSessionManager();
   const castState = useCastState();
   const gCastingState = useMemo(() => castState === 'connected', [castState]);
-  const isAirplayConnected = useAirplayConnectivity();
-  const isExternalPlaybackAvailable = useExternalPlaybackAvailability();
   const insets = useSafeAreaInsets();
   const { width: wWidth, height: wHeight } = useWindowDimensions();
 
@@ -305,60 +299,59 @@ const Video = forwardRef<
     };
   }, []);
 
-  const handleAirplayConnected = useCallback(async (): Promise<void> => {
+  const appleCastingListeners = (): (() => void) | undefined => {
     if (!IS_IOS) {
       return;
     }
     const { captions, signal } = content;
     const { video_playback_endpoints } = content.video || {};
-    try {
-      if (isAirplayConnected) {
-        animateControls(1);
-        aCasting = true;
-        onACastingChange?.(true);
-        const svpe = vpe?.find(v => v?.selected);
-        const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
-          vpe?.[0]?.file || '',
-          offlinePath,
-          signal
-        );
-        if (networkSpeed?.aborted) {
-          return;
+    AirPlayListener.addListener('deviceConnected', async ({ devices }: any) => {
+      try {
+        if (devices[0]?.portType === 'AirPlay') {
+          animateControls(1);
+          aCasting = true;
+          onACastingChange?.(true);
+          const svpe = vpe?.find(v => v?.selected);
+          const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
+            vpe?.[0]?.file || '',
+            offlinePath,
+            signal
+          );
+          if (networkSpeed?.aborted) {
+            return;
+          }
+          setVideoRefreshing(!!captions);
+          setVideoRefreshing(false);
+          if (video_playback_endpoints) {
+            setVpe([
+              ...video_playback_endpoints?.map(v => ({
+                ...v,
+                selected: v?.height === svpe?.height,
+              })),
+              {
+                height: 'Auto',
+                selected: svpe?.height === 'Auto',
+                actualH: networkSpeed.recommendedVideoQuality,
+                file: Object.create(video_playback_endpoints)
+                  ?.sort((i: { height: number }, j: { height: number }) =>
+                    i?.height < j?.height ? 1 : -1
+                  )
+                  ?.find(
+                    (v: { height: number }) => v?.height <= networkSpeed.recommendedVideoQuality
+                  )?.file,
+              },
+            ]);
+          }
+        } else {
+          aCasting = undefined;
+          onACastingChange?.();
+          setVideoRefreshing(!!captions);
+          setVideoRefreshing(false);
+          setVpe(filterVideosByResolution());
         }
-        setVideoRefreshing(!!captions);
-        setVideoRefreshing(false);
-        if (video_playback_endpoints) {
-          setVpe([
-            ...video_playback_endpoints?.map(v => ({
-              ...v,
-              selected: v?.height === svpe?.height,
-            })),
-            {
-              height: 'Auto',
-              selected: svpe?.height === 'Auto',
-              actualH: networkSpeed.recommendedVideoQuality,
-              file: Object.create(video_playback_endpoints)
-                ?.sort((i: { height: number }, j: { height: number }) =>
-                  i?.height < j?.height ? 1 : -1
-                )
-                ?.find((v: { height: number }) => v?.height <= networkSpeed.recommendedVideoQuality)
-                ?.file,
-            },
-          ]);
-        }
-      } else {
-        aCasting = undefined;
-        onACastingChange?.();
-        setVideoRefreshing(!!captions);
-        setVideoRefreshing(false);
-        setVpe(filterVideosByResolution());
-      }
-    } catch (e) {}
-  }, [content, filterVideosByResolution, isAirplayConnected, onACastingChange, vpe]);
-
-  useEffect(() => {
-    handleAirplayConnected();
-  }, [isAirplayConnected]);
+      } catch (e) {}
+    });
+  };
 
   const googleCastingListeners = async (): Promise<void> => {
     googleCastSession.onSessionEnding(() => {
@@ -1043,10 +1036,9 @@ const Video = forwardRef<
   };
 
   const onExternalPlaybackChange = (): void => {
-    console.log('External playback change');
-    // if (IS_IOS) {
-    //   AirPlay.startScan();
-    // }
+    if (IS_IOS) {
+      AirPlay.startScan();
+    }
   };
 
   const onStartLiveTimer = (): void => onStart?.();
@@ -1091,6 +1083,8 @@ const Video = forwardRef<
     animateControls(1, 1);
     onBack?.();
   };
+
+  const onPressAirPlay = (): void => AirPlay.startScan();
 
   const onTimerLayout = (event: LayoutChangeEvent): void => {
     const {
@@ -1789,8 +1783,10 @@ const Video = forwardRef<
                     opacity: type === 'video' ? translateControls.current : 1,
                   }}
                 >
-                  {!!isControlVisible && isExternalPlaybackAvailable && (
-                    <AirplayButton prioritizesVideoDevices={true} />
+                  {!!isControlVisible && (
+                    <TouchableOpacity activeOpacity={1} onPress={onPressAirPlay}>
+                      <AirPlayButton />
+                    </TouchableOpacity>
                   )}
                 </Animated.View>
               )}

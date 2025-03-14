@@ -839,7 +839,7 @@ const Video = forwardRef<
     return url.startsWith('https://www.musora.com') || url.includes('youtube.com/embed');
   };
 
-  const onEndVideo = (): void => {
+  const onEndVideo = (shouldPause: boolean = true): void => {
     updateVideoProgress();
     stopHeartbeatEvents();
     // added by Alex's request. This is intentionally a playing event and not a completed event.
@@ -849,8 +849,8 @@ const Video = forwardRef<
       return;
     }
     orientationListener(tabOrientation || 'PORT', !IS_TABLET);
-    endVideoFlagRef.current = true;
-    setPaused(true);
+    endVideoFlagRef.current = shouldPause;
+    setPaused(shouldPause);
   };
 
   useEffect(() => {
@@ -958,7 +958,7 @@ const Video = forwardRef<
       content.type.includes('challenge') &&
       (currentTime / content.length_in_seconds) * 100 >= 98.5
     ) {
-      onEndVideo();
+      onEndVideo(false);
     }
   };
 

@@ -10,7 +10,7 @@
     "lint": "eslint ."
   },
   "peerDependencies": {
-    "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#BR-98",
+    "react-native-airplay-ios": "github:railroadmedia/react-native-airplay-ios#musora-app",
     "react-native-android-keyboard-adjust": "^1.2.0",
     "react-native-blob-util": "^0.19.11",
     "react-native-device-info": "^11.0.0",

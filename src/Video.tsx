@@ -311,36 +311,38 @@ const Video = forwardRef<
           animateControls(1);
           aCasting = true;
           onACastingChange?.(true);
-          const svpe = vpe?.find(v => v?.selected);
+
+          const currentTime = cTime.current;
+
+          // Get current selected quality
+          const currentQuality = vpe?.find(v => v?.selected)?.height;
+
+          // Get network speed and recommended quality
           const networkSpeed: any = await networkSpeedService.getNetworkSpeed(
             vpe?.[0]?.file || '',
             offlinePath,
             signal
           );
+
           if (networkSpeed?.aborted) {
             return;
           }
+
           setVideoRefreshing(!!captions);
           setVideoRefreshing(false);
+
           if (video_playback_endpoints) {
-            setVpe([
-              ...video_playback_endpoints?.map(v => ({
+            setVpe(
+              video_playback_endpoints.map(v => ({
                 ...v,
-                selected: v?.height === svpe?.height,
-              })),
-              {
-                height: 'Auto',
-                selected: svpe?.height === 'Auto',
-                actualH: networkSpeed.recommendedVideoQuality,
-                file: Object.create(video_playback_endpoints)
-                  ?.sort((i: { height: number }, j: { height: number }) =>
-                    i?.height < j?.height ? 1 : -1
-                  )
-                  ?.find(
-                    (v: { height: number }) => v?.height <= networkSpeed.recommendedVideoQuality
-                  )?.file,
-              },
-            ]);
+                selected: v.height === currentQuality,
+              }))
+            );
+
+            // Restore video position after quality change
+            if (videoRef.current) {
+              videoRef.current.seek(currentTime);
+            }
           }
         } else {
           aCasting = undefined;
@@ -1244,6 +1246,7 @@ const Video = forwardRef<
       videoSpeedRef.current = parseFloat(newRate);
       updateTimeToComplete();
       setCaptionsHidden(captions === 'Off');
+      const currentTime = cTime.current;
       selectQuality(qual, true).then(v => {
         if (JSON.stringify(vpe) !== JSON.stringify(v)) {
           setBuffering(true);
@@ -1252,6 +1255,12 @@ const Video = forwardRef<
           setVpe(v);
           quality = qual;
           onQualityChange?.(qual);
+
+          // Restore video position after quality change
+          if (videoRef.current) {
+            videoRef.current.seek(currentTime);
+          }
+
           if (gCastingState) {
             gCastMedia();
           }
@@ -1779,13 +1788,13 @@ const Video = forwardRef<
                 <Animated.View
                   style={{
                     ...styles.airPlayContainer,
-                    right: 49,
+                    right: 50,
                     opacity: type === 'video' ? translateControls.current : 1,
                   }}
                 >
                   {!!isControlVisible && (
                     <TouchableOpacity activeOpacity={1} onPress={onPressAirPlay}>
-                      <AirPlayButton />
+                      <AirPlayButton style={{ width: 46, height: 46 }} />
                     </TouchableOpacity>
                   )}
                 </Animated.View>
@@ -1990,9 +1999,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#081825',
   },
   airPlayContainer: {
-    top: 4.5,
-    width: 66,
-    height: 34,
+    top: -2,
     position: 'absolute',
   },
   castBtnContainer: {

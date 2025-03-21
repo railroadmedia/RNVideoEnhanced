@@ -951,7 +951,8 @@ const Video = forwardRef<
       onEndVideo();
     } else if (
       content?.length_in_seconds &&
-      content?.length_in_seconds === Math.floor(currentTime)
+      content?.length_in_seconds === Math.floor(currentTime) &&
+      !content?.type.includes('challenge')
     ) {
       onEndVideo();
     } else if (
@@ -1523,7 +1524,9 @@ const Video = forwardRef<
                     paused={paused}
                     repeat={repeat}
                     controls={false}
-                    onEnd={onEndVideo}
+                    // Sending onEndVideo directly a crash on android
+                    // because onEnd sends an empty object as a parameter.
+                    onEnd={() => onEndVideo()}
                     resizeMode='cover'
                     onLoad={onLoad}
                     onError={onError}

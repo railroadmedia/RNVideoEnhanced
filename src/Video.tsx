@@ -239,6 +239,8 @@ const Video = forwardRef<
   const [vpe, setVpe] = useState<IVpe[] | undefined>(
     !youtubeId ? filterVideosByResolution() : undefined
   );
+  // This prevents the issue where autocomplete was sending the complete event every second after 98.5%.
+  const endingChallenge = useRef<boolean>(false);
 
   useEffect(() => {
     getVideoDimensions();
@@ -959,8 +961,10 @@ const Video = forwardRef<
       onEndVideo();
     } else if (
       content.type.includes('challenge') &&
-      (currentTime / content.length_in_seconds) * 100 >= 98.5
+      (currentTime / content.length_in_seconds) * 100 >= 98.5 &&
+      !endingChallenge.current
     ) {
+      endingChallenge.current = true;
       onEndVideo(false);
     }
   };

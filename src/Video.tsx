@@ -640,7 +640,7 @@ const Video = forwardRef<
       if (
         Math.trunc(cTime.current) !== content?.length_in_seconds &&
         !(
-          content.type.includes('challenge') &&
+          content.type?.includes('challenge') &&
           (cTime.current / content.length_in_seconds) * 100 >= 98.5
         )
       ) {
@@ -958,7 +958,7 @@ const Video = forwardRef<
     ) {
       onEndVideo();
     } else if (
-      content.type.includes('challenge') &&
+      content.type?.includes('challenge') &&
       (currentTime / content.length_in_seconds) * 100 >= 98.5
     ) {
       onEndVideo(false);

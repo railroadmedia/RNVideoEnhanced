@@ -14,7 +14,7 @@
     "react-native-android-keyboard-adjust": "^1.2.0",
     "react-native-blob-util": "^0.19.11",
     "react-native-device-info": "^11.0.0",
-    "react-native-google-cast": "4.6.2",
+    "react-native-google-cast": "4.8.3",
     "react-native-home-indicator": "github:railroadmedia/react-native-home-indicator#musora-app",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-orientation-locker": "github:railroadmedia/react-native-orientation-locker#musora-app",

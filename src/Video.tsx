@@ -56,7 +56,7 @@ import networkSpeedService from './services/networkSpeed.service';
 import LiveTimer from './LiveTimer';
 
 import { svgs } from './img/svgs';
-import { IS_IOS, IS_TABLET, PIX_R, getMP3Array } from './helper';
+import { IS_IOS, IS_TABLET, PIX_R, getMP3Array, validateVideoSource } from './helper';
 import type { IMp3, IVideo, IVpe } from './entity';
 import Mp3Option from './Mp3Option';
 const { AirPlay, AirPlayButton, AirPlayListener } = require('react-native-airplay-ios');
@@ -904,7 +904,28 @@ const Video = forwardRef<
   };
 
   const onError = ({ error }: LoadError): void => {
-    const { code } = error;
+    const { code } = error || {};
+
+    try {
+      const Sentry = require('@sentry/react-native');
+      if (Sentry) {
+        Sentry.withScope((scope: any) => {
+          scope.setTag('component', 'RNVideoEnhanced');
+          scope.setTag('error_code', error?.code?.toString() || '');
+
+          scope.setContext('video_error', {
+            errorCode: error?.code || '',
+            errorDescription: error?.localizedDescription || '',
+            audioOnly,
+            connection,
+            selectedQuality:
+              vpe?.find(v => v?.selected)?.height || mp3s?.find(mp3 => mp3?.selected)?.value,
+          });
+
+          Sentry.captureException(error);
+        });
+      }
+    } catch (sentryError) {}
 
     if (code === -11855) {
       const selectedHeight = vpe?.find(v => v?.selected)?.height;
@@ -1553,9 +1574,11 @@ const Video = forwardRef<
                     style={styles.videoStyles}
                     onAudioBecomingNoisy={onAudioBecomingNoisy}
                     source={{
-                      uri: audioOnly
-                        ? mp3s?.find(mp3 => mp3?.selected)?.value
-                        : vpe?.find(v => v?.selected)?.file,
+                      uri: validateVideoSource(
+                        audioOnly
+                          ? mp3s?.find(mp3 => mp3?.selected)?.value
+                          : vpe?.find(v => v?.selected)?.file
+                      ),
                     }}
                     onExternalPlaybackChange={onExternalPlaybackChange}
                     {...(aCasting || !content?.captions || typeof content?.captions !== 'string'

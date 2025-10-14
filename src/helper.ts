@@ -70,6 +70,13 @@ export const formatVideoTime = (seconds: number): string => {
   return h ? `${h}:${m}:${s}` : `${m}:${s}`;
 };
 
+export const validateVideoSource = (uri: string | undefined): string | undefined => {
+  if (!uri || uri.trim() === '' || uri === 'undefined' || uri === 'null') {
+    return undefined;
+  }
+  return uri;
+};
+
 export const IS_IOS = Platform.OS === 'ios';
 export const PIX_R = PixelRatio.get();
 export const IS_TABLET = DeviceInfo.isTablet();
